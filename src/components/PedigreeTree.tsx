@@ -27,6 +27,7 @@ import { useAppSelector } from "../store";
 import { buildGraph, getDescendants, getAncestors } from "../utils/relationshipUtils";
 import { Individual } from "../types/individual";
 import FamilyNode from "./FamilyNode";
+import MarriageNode from "./MarriageNode";
 
 const fitViewOptions: FitViewOptions = { padding: 0.2, includeHiddenNodes: true };
 
@@ -107,7 +108,9 @@ function PedigreeInner({
       panOnScroll
       selectionOnDrag
       selectionMode={SelectionMode.Full}
-      nodeTypes={{ family: FamilyNode }} // 👈 custom node with side handles
+      nodeTypes={{ family: FamilyNode,
+        marriage: MarriageNode,
+       }} // 👈 custom node with side handles
     >
       <Background />
       <MiniMap pannable zoomable />

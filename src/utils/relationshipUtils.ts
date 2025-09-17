@@ -197,16 +197,21 @@ export function buildGraph(
     else if (rel.type === "spouse" && includeSpouseEdges) {
       const a = (rel as any).person1Id;
       const b = (rel as any).person2Id;
-      if (byId.has(a) && byId.has(b)) {
-        edges.push({
-          id: `sp-${a}-${b}`,
-          source: a,
-          target: b,
-          sourceHandle: direction === "TB" ? "right" : "bottom",
-          targetHandle: direction === "TB" ? "left" : "top",
-          style: { strokeDasharray: "6 4", stroke: "#9e9e9e" },
-        });
-      }
+    
+      const marriageId = `m-${a}-${b}`;
+    
+      // Create a hidden "marriage" node
+      nodes.push({
+        id: marriageId,
+        type: "marriage",
+        data: { spouses: [a, b] },
+        position: { x: 0, y: 0 },
+        style: { width: 1, height: 1, opacity: 0 },
+      });
+    
+      // Link spouses to marriage node
+      edges.push({ id: `${a}->${marriageId}`, source: a, target: marriageId });
+      edges.push({ id: `${b}->${marriageId}`, source: b, target: marriageId });
     }
   }
 
