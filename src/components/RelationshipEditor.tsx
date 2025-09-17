@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -6,200 +6,235 @@ import {
   DialogActions,
   Button,
   TextField,
-  MenuItem,
-  Typography,
+  Autocomplete,
+  ToggleButtonGroup,
+  ToggleButton,
+  Grid,
 } from "@mui/material";
 import { v4 as uuidv4 } from "uuid";
-import IndividualPicker from "./IndividualPicker";
-import {
-  Relationship,
-  RelationshipSchema,
-} from "../types/relationship";
-import { useAppSelector } from "../store";
+import { useAppDispatch, useAppSelector } from "../store";
+import { addRelationship, updateRelationship } from "../features/relationshipsSlice";
+import { Relationship } from "../types/relationship";
 import { wouldCreateCycle } from "../utils/relationshipUtils";
 
-interface Props {
+type Props = {
   open: boolean;
   onClose: () => void;
-  onSave: (rel: Relationship) => void;
-  editing?: Relationship | null;
-}
+  relationship?: Relationship; // edit mode if provided
+};
 
-export default function RelationshipEditor({
-  open,
-  onClose,
-  onSave,
-  editing,
-}: Props) {
-  const [form, setForm] = useState<Partial<Relationship>>(
-    editing || { type: "spouse" }
-  );
-  const [errors, setErrors] = useState<Record<string, string>>({});
+export default function RelationshipEditor({ open, onClose, relationship }: Props) {
+  const dispatch = useAppDispatch();
+  const individuals = useAppSelector((s) => s.individuals.items);
   const relationships = useAppSelector((s) => s.relationships.items);
 
-  const handleChange =
-    (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-      setForm({ ...form, [field]: e.target.value });
-    };
+  const isEdit = !!relationship;
+  const [type, setType] = useState<"spouse" | "parent-child">("spouse");
+
+  // Spouse fields (person1/person2 + wedding + per-spouse location)
+  const [groom, setGroom] = useState("");
+  const [bride, setBride] = useState("");
+  const [weddingDate, setWeddingDate] = useState("");
+  const [groomRegion, setGroomRegion] = useState("");
+  const [groomCongregation, setGroomCongregation] = useState("");
+  const [groomCity, setGroomCity] = useState("");
+  const [brideRegion, setBrideRegion] = useState("");
+  const [brideCongregation, setBrideCongregation] = useState("");
+  const [brideCity, setBrideCity] = useState("");
+
+  // Parent-child fields (note: parentIds is an array)
+  const [parentIds, setParentIds] = useState<string[]>([]);
+  const [childId, setChildId] = useState("");
+
+  // Sync when opening / when relationship changes
+  useEffect(() => {
+    if (open && relationship) {
+      if (relationship.type === "spouse") {
+        setType("spouse");
+        setGroom(relationship.person1Id);
+        setBride(relationship.person2Id);
+        setWeddingDate(relationship.weddingDate ?? "");
+        setGroomRegion(relationship.groomRegion ?? "");
+        setGroomCongregation(relationship.groomCongregation ?? "");
+        setGroomCity(relationship.groomCity ?? "");
+        setBrideRegion(relationship.brideRegion ?? "");
+        setBrideCongregation(relationship.brideCongregation ?? "");
+        setBrideCity(relationship.brideCity ?? "");
+        setParentIds([]);
+        setChildId("");
+      } else {
+        setType("parent-child");
+        setParentIds(relationship.parentIds);
+        setChildId(relationship.childId);
+        setGroom("");
+        setBride("");
+        setWeddingDate("");
+        setGroomRegion("");
+        setGroomCongregation("");
+        setGroomCity("");
+        setBrideRegion("");
+        setBrideCongregation("");
+        setBrideCity("");
+      }
+    } else if(open && !relationship) {
+      // reset for "new"
+      setType("spouse");
+      setGroom("");
+      setBride("");
+      setWeddingDate("");
+      setGroomRegion("");
+      setGroomCongregation("");
+      setGroomCity("");
+      setBrideRegion("");
+      setBrideCongregation("");
+      setBrideCity("");
+      setParentIds([]);
+      setChildId("");
+    }
+  }, [relationship, open]);
 
   const handleSave = () => {
-    const candidate: Relationship = {
-      ...(form as any),
-      id: editing?.id || uuidv4(),
-    };
-
-    // Schema validation
-    const result = RelationshipSchema.safeParse(candidate);
-    if (!result.success) {
-      const errMap: Record<string, string> = {};
-      result.error.issues.forEach(
-        (i) => (errMap[i.path[0] as string] = i.message)
-      );
-      setErrors(errMap);
-      return;
-    }
-
-    // Parent–child specific validation
-    if (candidate.type === "parent-child") {
-      const pc = candidate as any;
-
-      // Self reference check
-      if (pc.parentIds.includes(pc.childId)) {
-        setErrors({ childId: "Ett barn kan inte också vara förälder" });
+    if (type === "spouse") {
+      const newRel: Relationship = {
+        id: isEdit ? relationship!.id : uuidv4(),
+        type: "spouse",
+        person1Id: groom,
+        person2Id: bride,
+        weddingDate,
+        groomRegion,
+        groomCongregation,
+        groomCity,
+        brideRegion,
+        brideCongregation,
+        brideCity,
+      };
+      isEdit ? dispatch(updateRelationship(newRel)) : dispatch(addRelationship(newRel));
+    } else {
+      // Basic validation
+      if (!childId) {
+        alert("Välj ett barn.");
+        return;
+      }
+      if (parentIds.length === 0) {
+        alert("Välj minst en förälder.");
+        return;
+      }
+      if (parentIds.includes(childId)) {
+        alert("Ett barn kan inte också vara förälder.");
+        return;
+      }
+      // Cycle detection: if any parent would create a cycle
+      if (parentIds.some((pid) => wouldCreateCycle(relationships, pid, childId))) {
+        alert("Det här skulle skapa en cykel i släktträdet.");
         return;
       }
 
-      // Cycle detection
-      if (
-        wouldCreateCycle(relationships, {
-          parentIds: pc.parentIds,
-          childId: pc.childId,
-        })
-      ) {
-        setErrors({
-          childId: "Det här skulle skapa en cykel i släktträdet",
-        });
-        return;
-      }
+      const newRel: Relationship = {
+        id: isEdit ? relationship!.id : uuidv4(),
+        type: "parent-child",
+        parentIds,
+        childId,
+      };
+      isEdit ? dispatch(updateRelationship(newRel)) : dispatch(addRelationship(newRel));
     }
-
-    onSave(result.data);
     onClose();
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>
-        {editing ? "Redigera relation" : "Ny relation"}
-      </DialogTitle>
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>{isEdit ? "Redigera relation" : "Ny relation"}</DialogTitle>
       <DialogContent>
-        <TextField
-          select
-          label="Typ"
-          value={form.type || "spouse"}
-          onChange={handleChange("type")}
-          fullWidth
-          margin="normal"
+        <ToggleButtonGroup
+          value={type}
+          exclusive
+          onChange={(_, val) => val && setType(val)}
+          sx={{ mb: 2 }}
         >
-          <MenuItem value="spouse">Äktenskap</MenuItem>
-          <MenuItem value="parent-child">Förälder–barn</MenuItem>
-        </TextField>
+          <ToggleButton value="spouse">Äktenskap</ToggleButton>
+          <ToggleButton value="parent-child">Förälder–Barn</ToggleButton>
+        </ToggleButtonGroup>
 
-        {form.type === "spouse" && (
+        {type === "spouse" && (
           <>
-            <IndividualPicker
-              label="Make"
-              value={(form as any).person1Id || null}
-              onChange={(id) => setForm({ ...form, person1Id: id })}
+            <Autocomplete
+              options={individuals}
+              getOptionLabel={(o) => o.name}
+              value={individuals.find((i) => i.id === groom) ?? null}
+              onChange={(_, v) => setGroom(v?.id ?? "")}
+              renderInput={(p) => <TextField {...p} label="Man" />}
+              sx={{ mb: 2 }}
             />
-            <IndividualPicker
-              label="Maka"
-              value={(form as any).person2Id || null}
-              onChange={(id) => setForm({ ...form, person2Id: id })}
-            />
-            <TextField
-              label="Vigsel datum"
-              value={(form as any).weddingDate || ""}
-              onChange={handleChange("weddingDate")}
-              fullWidth
-              margin="normal"
-            />
-            <Typography variant="subtitle1" sx={{ mt: 2 }}>
-              Brudgum
-            </Typography>
-            <TextField
-              label="Region"
-              value={(form as any).groomRegion || ""}
-              onChange={handleChange("groomRegion")}
-              fullWidth
-              margin="normal"
+            <Autocomplete
+              options={individuals}
+              getOptionLabel={(o) => o.name}
+              value={individuals.find((i) => i.id === bride) ?? null}
+              onChange={(_, v) => setBride(v?.id ?? "")}
+              renderInput={(p) => <TextField {...p} label="Kvinna" />}
+              sx={{ mb: 2 }}
             />
             <TextField
-              label="Församling"
-              value={(form as any).groomCongregation || ""}
-              onChange={handleChange("groomCongregation")}
+              label="Vigseldatum"
+              type="date"
+              value={weddingDate}
+              onChange={(e) => setWeddingDate(e.target.value)}
               fullWidth
-              margin="normal"
+              margin="dense"
+              InputLabelProps={{ shrink: true }}
+              sx={{ mb: 2 }}
             />
-            <TextField
-              label="Stad"
-              value={(form as any).groomCity || ""}
-              onChange={handleChange("groomCity")}
-              fullWidth
-              margin="normal"
-            />
-            <Typography variant="subtitle1" sx={{ mt: 2 }}>
-              Brud
-            </Typography>
-            <TextField
-              label="Region"
-              value={(form as any).brideRegion || ""}
-              onChange={handleChange("brideRegion")}
-              fullWidth
-              margin="normal"
-            />
-            <TextField
-              label="Församling"
-              value={(form as any).brideCongregation || ""}
-              onChange={handleChange("brideCongregation")}
-              fullWidth
-              margin="normal"
-            />
-            <TextField
-              label="Stad"
-              value={(form as any).brideCity || ""}
-              onChange={handleChange("brideCity")}
-              fullWidth
-              margin="normal"
-            />
+
+            <Grid container spacing={1} sx={{ mb: 1 }}>
+              <Grid item xs={12} sm={4}>
+                <TextField label="Region (man)" value={groomRegion} onChange={(e) => setGroomRegion(e.target.value)} fullWidth />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField label="Församling (man)" value={groomCongregation} onChange={(e) => setGroomCongregation(e.target.value)} fullWidth />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField label="Stad (man)" value={groomCity} onChange={(e) => setGroomCity(e.target.value)} fullWidth />
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={1}>
+              <Grid item xs={12} sm={4}>
+                <TextField label="Region (kvinna)" value={brideRegion} onChange={(e) => setBrideRegion(e.target.value)} fullWidth />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField label="Församling (kvinna)" value={brideCongregation} onChange={(e) => setBrideCongregation(e.target.value)} fullWidth />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField label="Stad (kvinna)" value={brideCity} onChange={(e) => setBrideCity(e.target.value)} fullWidth />
+              </Grid>
+            </Grid>
           </>
         )}
 
-        {form.type === "parent-child" && (
+        {type === "parent-child" && (
           <>
-            <IndividualPicker
-              label="Föräldrar"
-              value={(form as any).parentIds || []}
-              onChange={(ids) => setForm({ ...form, parentIds: ids })}
+            <Autocomplete
               multiple
+              options={individuals}
+              getOptionLabel={(o) => o.name}
+              value={individuals.filter((i) => parentIds.includes(i.id))}
+              onChange={(_, vals) => setParentIds(vals.map((v) => v.id))}
+              renderInput={(p) => <TextField {...p} label="Förälder/Föräldrar" />}
+              sx={{ mb: 2 }}
             />
-            <IndividualPicker
-              label="Barn"
-              value={(form as any).childId || null}
-              onChange={(id) => setForm({ ...form, childId: id })}
+            <Autocomplete
+              options={individuals}
+              getOptionLabel={(o) => o.name}
+              value={individuals.find((i) => i.id === childId) ?? null}
+              onChange={(_, v) => setChildId(v?.id ?? "")}
+              renderInput={(p) => <TextField {...p} label="Barn" />}
+              sx={{ mb: 2 }}
             />
-            {errors.childId && (
-              <Typography color="error" variant="body2">
-                {errors.childId}
-              </Typography>
-            )}
           </>
         )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Avbryt</Button>
-        <Button variant="contained" onClick={handleSave}>
-          Spara
+        <Button onClick={handleSave} variant="contained">
+          {isEdit ? "Spara ändringar" : "Lägg till"}
         </Button>
       </DialogActions>
     </Dialog>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Box, Button, IconButton, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
-import { Add, Delete } from "@mui/icons-material";
+import { Add, Delete, Edit } from "@mui/icons-material";
 import { useAppDispatch, useAppSelector } from "../store";
 import { fetchRelationships, addRelationship, deleteRelationship } from "../features/relationshipsSlice";
 import RelationshipEditor from "../components/RelationshipEditor";
@@ -11,7 +11,9 @@ export default function RelationshipsPage() {
   const relationships = useAppSelector((s) => s.relationships.items);
   const individuals = useAppSelector((s) => s.individuals.items);
 
-  const [open, setOpen] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingRel, setEditingRel] = useState<Relationship | undefined>();
+
 
   useEffect(() => {
     dispatch(fetchRelationships());
@@ -19,8 +21,14 @@ export default function RelationshipsPage() {
 
   const resolveName = (id: string) => individuals.find((i) => i.id === id)?.name || id;
 
-  const handleSave = (rel: Relationship) => {
-    dispatch(addRelationship(rel));
+  const handleNew = () => {
+    setEditingRel(undefined);
+    setEditorOpen(true);
+  };
+
+  const handleEdit = (rel: Relationship) => {
+    setEditingRel(rel);
+    setEditorOpen(true);
   };
 
   const handleDelete = (id: string) => {
@@ -30,7 +38,7 @@ export default function RelationshipsPage() {
   return (
     <Box p={2}>
       <Typography variant="h4" gutterBottom>Relationer</Typography>
-      <Button startIcon={<Add />} variant="contained" onClick={() => setOpen(true)}>
+      <Button startIcon={<Add />} variant="contained" onClick={() => handleNew()}>
         Ny relation
       </Button>
 
@@ -53,6 +61,9 @@ export default function RelationshipsPage() {
                   `${(r as any).parentIds.map(resolveName).join(" & ")} → ${resolveName((r as any).childId)}`}
               </TableCell>
               <TableCell>
+                <IconButton onClick={() => handleEdit(r)}>
+                  <Edit />
+                </IconButton>
                 <IconButton onClick={() => handleDelete(r.id)}>
                   <Delete />
                 </IconButton>
@@ -62,7 +73,7 @@ export default function RelationshipsPage() {
         </TableBody>
       </Table>
 
-      <RelationshipEditor open={open} onClose={() => setOpen(false)} onSave={handleSave} />
+      <RelationshipEditor open={editorOpen} onClose={() => setEditorOpen(false)} relationship={editingRel} />
     </Box>
   );
 }

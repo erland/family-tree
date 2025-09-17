@@ -18,8 +18,8 @@ export const addRelationship = createAsyncThunk("relationships/add", async (rel:
 
 export const updateRelationship = createAsyncThunk(
   "relationships/update",
-  async ({ id, updates }: { id: string; updates: Partial<Relationship> }) => {
-    return await window.genealogyAPI.updateRelationship(id, updates);
+  async (rel: Relationship) => {
+    return await window.genealogyAPI.updateRelationship(rel.id, rel);
   }
 );
 
