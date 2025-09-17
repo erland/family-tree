@@ -1,117 +1,58 @@
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
-import { Individual } from "../types/genealogy";
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { Individual } from "../types/individual";
 
-export interface IndividualsState {
-  list: Individual[];
+interface IndividualsState {
+  items: Individual[];
   status: "idle" | "loading" | "failed";
-  error?: string;
 }
 
 const initialState: IndividualsState = {
-  list: [],
+  items: [],
   status: "idle",
 };
 
-// ─────────────── Async thunks ───────────────
-export const fetchIndividuals = createAsyncThunk(
-  "individuals/fetchAll",
-  async () => {
-    return await window.genealogyAPI.listIndividuals();
-  }
-);
+// Async thunks via preload API
+export const fetchIndividuals = createAsyncThunk("individuals/fetchAll", async () => {
+  return await window.genealogyAPI.listIndividuals();
+});
 
-export const createIndividual = createAsyncThunk(
-  "individuals/create",
-  async (individual: Individual, { rejectWithValue }) => {
-    try {
-      return await window.genealogyAPI.addIndividual(individual);
-    } catch (err: any) {
-      return rejectWithValue(err.message);
-    }
-  }
-);
+export const addIndividual = createAsyncThunk("individuals/add", async (ind: Individual) => {
+  return await window.genealogyAPI.addIndividual(ind);
+});
 
-export const editIndividual = createAsyncThunk(
+export const updateIndividual = createAsyncThunk(
   "individuals/update",
-  async (
-    { id, updates }: { id: string; updates: Partial<Individual> },
-    { rejectWithValue }
-  ) => {
-    try {
-      return await window.genealogyAPI.updateIndividual(id, updates);
-    } catch (err: any) {
-      return rejectWithValue(err.message);
-    }
+  async ({ id, updates }: { id: string; updates: Partial<Individual> }) => {
+    return await window.genealogyAPI.updateIndividual(id, updates);
   }
 );
 
-export const removeIndividual = createAsyncThunk(
-  "individuals/delete",
-  async (id: string, { rejectWithValue }) => {
-    try {
-      await window.genealogyAPI.deleteIndividual(id);
-      return id;
-    } catch (err: any) {
-      return rejectWithValue(err.message);
-    }
-  }
-);
+export const deleteIndividual = createAsyncThunk("individuals/delete", async (id: string) => {
+  await window.genealogyAPI.deleteIndividual(id);
+  return id;
+});
 
-// ─────────────── Slice ───────────────
 const individualsSlice = createSlice({
   name: "individuals",
   initialState,
-  reducers: {
-    // Optimistic update for create
-    optimisticAdd: (state, action: PayloadAction<Individual>) => {
-      state.list.push(action.payload);
-    },
-    // Optimistic update for delete
-    optimisticRemove: (state, action: PayloadAction<string>) => {
-      state.list = state.list.filter((i) => i.id !== action.payload);
-    },
-  },
+  reducers: {},
   extraReducers: (builder) => {
     builder
-      // fetch
-      .addCase(fetchIndividuals.pending, (state) => {
-        state.status = "loading";
-      })
-      .addCase(fetchIndividuals.fulfilled, (state, action) => {
+      .addCase(fetchIndividuals.fulfilled, (state, action: PayloadAction<Individual[]>) => {
+        state.items = action.payload;
         state.status = "idle";
-        state.list = action.payload;
       })
-      .addCase(fetchIndividuals.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = action.error.message;
+      .addCase(addIndividual.fulfilled, (state, action: PayloadAction<Individual>) => {
+        state.items.push(action.payload);
       })
-
-      // create
-      .addCase(createIndividual.fulfilled, (state, action) => {
-        state.list.push(action.payload);
+      .addCase(updateIndividual.fulfilled, (state, action: PayloadAction<Individual>) => {
+        const idx = state.items.findIndex((i) => i.id === action.payload.id);
+        if (idx >= 0) state.items[idx] = action.payload;
       })
-      .addCase(createIndividual.rejected, (state, action) => {
-        state.error = action.payload as string;
-      })
-
-      // update
-      .addCase(editIndividual.fulfilled, (state, action) => {
-        const idx = state.list.findIndex((i) => i.id === action.payload.id);
-        if (idx >= 0) state.list[idx] = action.payload;
-      })
-      .addCase(editIndividual.rejected, (state, action) => {
-        state.error = action.payload as string;
-      })
-
-      // delete
-      .addCase(removeIndividual.fulfilled, (state, action) => {
-        state.list = state.list.filter((i) => i.id !== action.payload);
-      })
-      .addCase(removeIndividual.rejected, (state, action) => {
-        state.error = action.payload as string;
+      .addCase(deleteIndividual.fulfilled, (state, action: PayloadAction<string>) => {
+        state.items = state.items.filter((i) => i.id !== action.payload);
       });
   },
 });
 
-export const { optimisticAdd, optimisticRemove } = individualsSlice.actions;
 export default individualsSlice.reducer;

@@ -13,6 +13,7 @@ import Tree from "./pages/Tree";
 import Profile from "./pages/Profile";
 import Timeline from "./pages/Timeline";
 import Reports from "./pages/Reports";
+import IndividualsPage from "./pages/Individuals";
 
 import "./i18n";
 
@@ -27,6 +28,7 @@ const router = createHashRouter([
       { path: "profile", element: <Profile /> },
       { path: "timeline", element: <Timeline /> },
       { path: "reports", element: <Reports /> },
+      { path: "individuals", element: <IndividualsPage /> },
     ],
   },
 ]);

@@ -17,7 +17,7 @@ export function registerIpcHandlers() {
   ipcMain.handle("individuals:update", async (_e, id, updates) => await updateIndividual(id, updates));
   ipcMain.handle("individuals:delete", async (_e, id) => {
     await deleteIndividual(id);
-    return { success: true };
+    return id;
   });
 
   // Relationships
@@ -26,6 +26,6 @@ export function registerIpcHandlers() {
   ipcMain.handle("relationships:update", async (_e, id, updates) => await updateRelationship(id, updates));
   ipcMain.handle("relationships:delete", async (_e, id) => {
     await deleteRelationship(id);
-    return { success: true };
+    return id;
   });
 }

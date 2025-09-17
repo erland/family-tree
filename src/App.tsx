@@ -21,6 +21,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import TimelineIcon from "@mui/icons-material/Timeline";
 import DescriptionIcon from "@mui/icons-material/Description";
 import MenuIcon from "@mui/icons-material/Menu";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
 
 import { useTranslation } from "react-i18next";
 
@@ -32,6 +33,7 @@ const navItems = [
   { to: "/profile", labelKey: "profile", icon: <PersonIcon /> },
   { to: "/timeline", labelKey: "timeline", icon: <TimelineIcon /> },
   { to: "/reports", labelKey: "reports", icon: <DescriptionIcon /> },
+  { to: "/individuals", labelKey: "individuals", icon: <PersonAddIcon /> } 
 ];
 
 export default function AppLayout() {

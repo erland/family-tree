@@ -1,20 +1,23 @@
 {
   "name": "genealogy-app",
-  "version": "2.1.0",
+  "version": "2.3.0",
   "type": "module",
   "main": "dist-electron/electron/main.js",
-"scripts": {
-  "react:start": "vite",
-  "build:react": "vite build",
-
-  "build:electron": "tsc -p tsconfig.electron.json",
-  "watch:electron": "tsc -w -p tsconfig.electron.json",
-
-  "electron:start": "npm run build:electron && electronmon dist-electron/electron/main.js",
-
-  "start": "concurrently \"npm run react:start\" \"npm run electron:start\"",
-  "build": "npm run build:react && npm run build:electron"
-  },
+  "scripts": {
+    "react:start": "vite",
+    "build:react": "vite build",
+  
+    "build:electron:main": "tsc -p tsconfig.electron.json",
+    "build:electron:preload": "tsc -p tsconfig.preload.json",
+    "build:electron": "npm run build:electron:main && npm run build:electron:preload",
+  
+    "watch:electron": "tsc -w -p tsconfig.electron.json",
+  
+    "electron:start": "npm run build:electron && electronmon dist-electron/electron/main.js",
+  
+    "start": "concurrently \"npm run react:start\" \"npm run electron:start\"",
+    "build": "npm run build:react && npm run build:electron"
+    },
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
@@ -29,6 +32,7 @@
     "react-redux": "^8.1.3",
     "react-router-dom": "^6.26.2",
     "reactflow": "^11.10.0",
+    "uuid": "^9.0.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -36,6 +40,7 @@
     "@types/node": "^20.12.12",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.2",
+    "@types/uuid": "^9.0.7",
     "concurrently": "^8.2.2",
     "electron": "^30.0.0",
     "electron-builder": "^24.13.3",

@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+      "target": "ES2020",
+      "module": "CommonJS",              // 👈 compile preload as CJS
+      "moduleResolution": "Node",
+      "outDir": "dist-electron",
+      "esModuleInterop": true,
+      "strict": true,
+      "skipLibCheck": true,
+      "types": ["node", "electron"]
+    },
+    "include": ["electron/preload.ts"]
+  }

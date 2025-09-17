@@ -11,6 +11,7 @@ const resources = {
       profile: "Profil",
       timeline: "Tidslinje",
       reports: "Rapporter",
+      individuals: "Personer"
     },
   },
 };
