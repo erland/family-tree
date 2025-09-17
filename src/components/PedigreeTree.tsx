@@ -22,9 +22,11 @@ import {
   ToggleButtonGroup,
   Button,
 } from "@mui/material";
+
 import { useAppSelector } from "../store";
-import { buildGraph, getDescendants, getAncestors } from "../utils/treeLayout";
+import { buildGraph, getDescendants, getAncestors } from "../utils/relationshipUtils";
 import { Individual } from "../types/individual";
+import FamilyNode from "./FamilyNode";
 
 const fitViewOptions: FitViewOptions = { padding: 0.2, includeHiddenNodes: true };
 
@@ -34,14 +36,14 @@ function PedigreeInner({
   mode,
 }: {
   direction: "TB" | "LR";
-  rootId: string | null;
+  rootId?: string;
   mode: "descendants" | "ancestors";
 }) {
   const individuals = useAppSelector((s) => s.individuals.items);
   const relationships = useAppSelector((s) => s.relationships.items);
   const { fitView } = useReactFlow();
 
-const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     let ids: string[] | null = null;
     if (rootId) {
       const related =
@@ -59,12 +61,13 @@ const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
       ? relationships.filter((r) => {
           if (r.type === "parent-child") {
             return (
-              (r.parentIds.some((p) => ids!.includes(p)) && ids!.includes(r.childId))
+              r.parentIds.some((p) => ids!.includes(p)) && ids!.includes(r.childId)
             );
           }
           if (r.type === "spouse") {
             return (
-              ids!.includes((r as any).person1Id) && ids!.includes((r as any).person2Id)
+              ids!.includes((r as any).person1Id) &&
+              ids!.includes((r as any).person2Id)
             );
           }
           return false;
@@ -72,11 +75,12 @@ const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
       : relationships;
 
     return buildGraph(filteredIndividuals, filteredRelationships, {
-    direction,
-    includeSpouseEdges: true,
-    rootId: rootId ?? undefined,
-  });
-}, [individuals, relationships, rootId, mode, direction]);
+      direction,
+      includeSpouseEdges: true,
+      rootId,
+    });
+  }, [individuals, relationships, rootId, mode, direction]);
+
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
 
@@ -103,6 +107,7 @@ const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
       panOnScroll
       selectionOnDrag
       selectionMode={SelectionMode.Full}
+      nodeTypes={{ family: FamilyNode }} // 👈 custom node with side handles
     >
       <Background />
       <MiniMap pannable zoomable />
@@ -125,14 +130,24 @@ export default function PedigreeTree({ direction = "TB" }: { direction?: "TB" | 
         flexDirection: "column",
       }}
     >
-      {/* Toolbar with search, mode toggle, clear */}
-      <Box sx={{ p: 1, background: "#f5f5f5", display: "flex", gap: 2, alignItems: "center" }}>
+      {/* Toolbar */}
+      <Box
+        sx={{
+          p: 1,
+          background: "#f5f5f5",
+          display: "flex",
+          gap: 2,
+          alignItems: "center",
+        }}
+      >
         <Autocomplete
           options={individuals}
           getOptionLabel={(o) => o.name}
           value={root}
           onChange={(_e, val) => setRoot(val)}
-          renderInput={(params) => <TextField {...params} label="Välj rotperson" />}
+          renderInput={(params) => (
+            <TextField {...params} label="Välj rotperson" size="small" />
+          )}
           sx={{ width: 300 }}
         />
         <ToggleButtonGroup
@@ -145,16 +160,20 @@ export default function PedigreeTree({ direction = "TB" }: { direction?: "TB" | 
           <ToggleButton value="ancestors">Förfäder</ToggleButton>
         </ToggleButtonGroup>
         {root && (
-          <Button variant="outlined" onClick={() => setRoot(null)}>
+          <Button variant="outlined" size="small" onClick={() => setRoot(null)}>
             Rensa
           </Button>
         )}
       </Box>
 
-      {/* React Flow Graph */}
+      {/* Graph */}
       <Box sx={{ flexGrow: 1 }}>
         <ReactFlowProvider>
-          <PedigreeInner direction={direction} rootId={root?.id ?? undefined} mode={mode} />
+          <PedigreeInner
+            direction={direction}
+            rootId={root?.id ?? undefined}
+            mode={mode}
+          />
         </ReactFlowProvider>
       </Box>
     </Box>
