@@ -2,22 +2,30 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { Provider } from "react-redux";
 import { store } from "./store";
-import {
-  createHashRouter,
-  RouterProvider,
-} from "react-router-dom";
+import { createHashRouter, RouterProvider } from "react-router-dom";
 
-import AppLayout from "./App";
+import AppLayout from "./AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Tree from "./pages/Tree";
 import Profile from "./pages/Profile";
 import Timeline from "./pages/Timeline";
 import Reports from "./pages/Reports";
 import IndividualsPage from "./pages/Individuals";
+import RelationshipsPage from "./pages/Relationships";
 
 import "./i18n";
 
-// Router config with HashRouter
+import { CssBaseline } from "@mui/material";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+
+const theme = createTheme({
+  palette: {
+    mode: "light",
+    primary: { main: "#1976d2" },
+    secondary: { main: "#9c27b0" },
+  },
+});
+
 const router = createHashRouter([
   {
     path: "/",
@@ -29,12 +37,16 @@ const router = createHashRouter([
       { path: "timeline", element: <Timeline /> },
       { path: "reports", element: <Reports /> },
       { path: "individuals", element: <IndividualsPage /> },
+      { path: "relationships", element: <RelationshipsPage /> },
     ],
   },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <Provider store={store}>
-    <RouterProvider router={router} />
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <RouterProvider router={router} />
+    </ThemeProvider>
   </Provider>
 );

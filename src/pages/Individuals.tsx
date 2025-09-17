@@ -39,7 +39,6 @@ export default function IndividualsPage() {
   const [form, setForm] = useState<Partial<Individual>>({});
 
   useEffect(() => {
-    dispatch(fetchIndividuals());
   }, [dispatch]);
 
   const handleOpen = (ind?: Individual) => {
