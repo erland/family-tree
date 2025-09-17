@@ -1,0 +1,1 @@
+export default function Dashboard(){return <h2>Översikt</h2>}

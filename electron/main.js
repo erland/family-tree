@@ -1,16 +1,26 @@
 const { app, BrowserWindow } = require("electron");
 const path = require("path");
+const { registerIpcHandlers } = require("./ipcHandlers");
+const { initDB } = require("./db");
 
-function createWindow() {
+async function createWindow() {
+  await initDB();
+  registerIpcHandlers();
+
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, "preload.js")
-    }
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
   });
 
-  win.loadURL("http://localhost:5173"); // Vite dev server
+  win.loadURL("http://localhost:5173");
+
+  // 👇 automatically open DevTools
+  win.webContents.openDevTools();
 }
 
-app.on("ready", createWindow);
+app.whenReady().then(createWindow);

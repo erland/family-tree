@@ -1,0 +1,1 @@
+export default function Tree(){return <h2>Träd</h2>}

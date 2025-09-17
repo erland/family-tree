@@ -1,37 +1,38 @@
-import React, { useEffect } from "react";
+import React from "react";
 import ReactDOM from "react-dom/client";
-import { Provider, useDispatch } from "react-redux";
+import { Provider } from "react-redux";
 import { store } from "./store";
-import App from "./App";
-import { addIndividual } from "./features/individualsSlice";
+import {
+  createHashRouter,
+  RouterProvider,
+} from "react-router-dom";
 
-function DemoLoader() {
-  const dispatch = useDispatch();
+import AppLayout from "./App";
+import Dashboard from "./pages/Dashboard";
+import Tree from "./pages/Tree";
+import Profile from "./pages/Profile";
+import Timeline from "./pages/Timeline";
+import Reports from "./pages/Reports";
 
-  useEffect(() => {
-    async function load() {
-      // Example: call the preload API
-      const people = await window.genealogyAPI.listIndividuals();
-      console.log("Individuals from DB:", people);
+import "./i18n";
 
-      // Example: add a new person
-      const newPerson = await window.genealogyAPI.addIndividual({
-        id: crypto.randomUUID(),
-        name: "John Doe",
-      });
-
-      // Sync with Redux store
-      dispatch(addIndividual(newPerson));
-    }
-
-    load();
-  }, [dispatch]);
-
-  return <App />;
-}
+// Router config with HashRouter
+const router = createHashRouter([
+  {
+    path: "/",
+    element: <AppLayout />,
+    children: [
+      { index: true, element: <Dashboard /> },
+      { path: "tree", element: <Tree /> },
+      { path: "profile", element: <Profile /> },
+      { path: "timeline", element: <Timeline /> },
+      { path: "reports", element: <Reports /> },
+    ],
+  },
+]);
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <Provider store={store}>
-    <DemoLoader />
+    <RouterProvider router={router} />
   </Provider>
 );

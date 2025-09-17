@@ -1,0 +1,1 @@
+export default function Timeline(){return <h2>Tidslinje</h2>}
