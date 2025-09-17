@@ -5,40 +5,79 @@ import { Edge, Node, Position } from "reactflow";
 
 type Direction = "TB" | "LR"; // Top-to-Bottom (pedigree) or Left-to-Right
 
+
+/** Collect all descendants (recursive) of a person */
+export function getDescendants(relationships: Relationship[], rootId: string): string[] {
+  const result = new Set<string>();
+  function dfs(id: string) {
+    for (const rel of relationships) {
+      if (rel.type === "parent-child" && rel.parentIds.includes(id)) {
+        if (!result.has(rel.childId)) {
+          result.add(rel.childId);
+          dfs(rel.childId);
+        }
+      }
+    }
+  }
+  dfs(rootId);
+  return Array.from(result);
+}
+
+/** Collect all ancestors (recursive) of a person */
+export function getAncestors(relationships: Relationship[], rootId: string): string[] {
+  const result = new Set<string>();
+  function dfs(id: string) {
+    for (const rel of relationships) {
+      if (rel.type === "parent-child" && rel.childId === id) {
+        for (const pid of rel.parentIds) {
+          if (!result.has(pid)) {
+            result.add(pid);
+            dfs(pid);
+          }
+        }
+      }
+    }
+  }
+  dfs(rootId);
+  return Array.from(result);
+}
+
 export function buildGraph(
   individuals: Individual[],
   relationships: Relationship[],
-  opts?: { direction?: Direction; includeSpouseEdges?: boolean }
+  opts?: { direction?: Direction; includeSpouseEdges?: boolean; rootId?: string }
 ): { nodes: Node[]; edges: Edge[] } {
   const direction: Direction = opts?.direction ?? "TB";
   const includeSpouseEdges = opts?.includeSpouseEdges ?? true;
+  const rootId = opts?.rootId;
 
   const g = new dagre.graphlib.Graph();
   g.setGraph({ rankdir: direction, nodesep: 40, ranksep: 80, marginx: 20, marginy: 20 });
   g.setDefaultEdgeLabel(() => ({}));
 
-  // Index people
   const byId = new Map(individuals.map((i) => [i.id, i]));
 
-  // Create one node per individual
   const nodes: Node[] = individuals.map((i) => ({
     id: i.id,
     type: "default",
-    data: { label: i.name },
+    data: {
+      label: i.name,
+      isRoot: i.id === rootId, // 👈 mark root
+    },
     position: { x: 0, y: 0 },
     sourcePosition: direction === "LR" ? Position.Right : Position.Bottom,
     targetPosition: direction === "LR" ? Position.Left : Position.Top,
     style: {
       padding: 8,
       borderRadius: 8,
-      border: "1px solid #90caf9",
-      background: "#e3f2fd",
+      border: i.id === rootId ? "2px solid #f44336" : "1px solid #90caf9",
+      background: i.id === rootId ? "#ffebee" : "#e3f2fd",
       fontSize: 12,
       width: 180,
+      textAlign: "center",
     },
   }));
 
-  // Edges: parent -> child
   const edges: Edge[] = [];
   for (const rel of relationships) {
     if (rel.type === "parent-child") {
@@ -66,9 +105,7 @@ export function buildGraph(
     }
   }
 
-  // Register with dagre and compute layout
   for (const n of nodes) {
-    // Rough width/height for layout box
     g.setNode(n.id, { width: 180, height: 42 });
   }
   for (const e of edges) {
@@ -77,7 +114,6 @@ export function buildGraph(
 
   dagre.layout(g);
 
-  // Apply positions back to nodes
   for (const n of nodes) {
     const gp = g.node(n.id);
     if (gp) {
