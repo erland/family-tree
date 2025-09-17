@@ -14,7 +14,7 @@
     "@reduxjs/toolkit": "^2.0.0",
     "react-redux": "^8.0.0",
     "lowdb": "^7.0.0",
-    "react-flow-renderer": "^11.0.0",
+    "reactflow": "^11.0.0",
     "@mui/material": "^6.0.0",
     "@emotion/react": "^11.0.0",
     "@emotion/styled": "^11.0.0",
