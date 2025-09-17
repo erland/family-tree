@@ -1,12 +1,19 @@
 {
   "name": "genealogy-app",
-  "version": "2.0.2",
-  "main": "electron/main.js",
-  "scripts": {
-    "start": "concurrently \"npm run electron:dev\" \"npm run react:start\"",
-    "react:start": "vite",
-    "electron:dev": "electronmon electron/main.js",
-    "build": "vite build && electron-builder"
+  "version": "2.1.0",
+  "type": "module",
+  "main": "dist-electron/electron/main.js",
+"scripts": {
+  "react:start": "vite",
+  "build:react": "vite build",
+
+  "build:electron": "tsc -p tsconfig.electron.json",
+  "watch:electron": "tsc -w -p tsconfig.electron.json",
+
+  "electron:start": "npm run build:electron && electronmon dist-electron/electron/main.js",
+
+  "start": "concurrently \"npm run react:start\" \"npm run electron:start\"",
+  "build": "npm run build:react && npm run build:electron"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
@@ -25,6 +32,8 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/electron": "^1.6.12",
+    "@types/node": "^20.12.12",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.2",
     "concurrently": "^8.2.2",

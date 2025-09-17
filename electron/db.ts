@@ -1,16 +1,19 @@
-const { app } = require("electron");
-const path = require("path");
+import { app } from "electron";
+import path from "path";
 
-let Low, JSONFile, db;
+let Low: any;
+let JSONFile: any;
+let db: any;
 
 const defaultData = {
   individuals: [],
   relationships: [],
 };
 
-async function initDB() {
+// Initialize the DB
+export async function initDB() {
   if (!Low || !JSONFile) {
-    // dynamically import ESM modules
+    // 👇 Dynamic import of ESM-only lowdb
     const lowdb = await import("lowdb");
     const lowdbNode = await import("lowdb/node");
     Low = lowdb.Low;
@@ -26,6 +29,7 @@ async function initDB() {
   return db;
 }
 
+// Helpers
 async function readDB() {
   await db.read();
   return db.data;
@@ -35,71 +39,64 @@ async function writeDB() {
   await db.write();
 }
 
-// CRUD helpers
-async function getIndividuals() {
+// Individuals
+export async function getIndividuals() {
   const data = await readDB();
   return data.individuals;
 }
 
-async function addIndividual(ind) {
+export async function addIndividual(ind: any) {
   const data = await readDB();
-  if (data.individuals.length >= 500) throw new Error("Maximum 500 individuals");
+  if (data.individuals.length >= 500) {
+    throw new Error("Maximum 500 individuals reached");
+  }
   data.individuals.push(ind);
   await writeDB();
   return ind;
 }
 
-async function updateIndividual(id, updates) {
+export async function updateIndividual(id: string, updates: any) {
   const data = await readDB();
-  const ind = data.individuals.find((i) => i.id === id);
+  const ind = data.individuals.find((i: any) => i.id === id);
   if (!ind) throw new Error("Individual not found");
   Object.assign(ind, updates);
   await writeDB();
   return ind;
 }
 
-async function deleteIndividual(id) {
+export async function deleteIndividual(id: string) {
   const data = await readDB();
-  data.individuals = data.individuals.filter((i) => i.id !== id);
-  data.relationships = data.relationships.filter((r) => !r.personIds.includes(id));
+  data.individuals = data.individuals.filter((i: any) => i.id !== id);
+  data.relationships = data.relationships.filter(
+    (r: any) => !r.personIds.includes(id)
+  );
   await writeDB();
 }
 
-async function getRelationships() {
+// Relationships
+export async function getRelationships() {
   const data = await readDB();
   return data.relationships;
 }
 
-async function addRelationship(rel) {
+export async function addRelationship(rel: any) {
   const data = await readDB();
   data.relationships.push(rel);
   await writeDB();
   return rel;
 }
 
-async function updateRelationship(id, updates) {
+export async function updateRelationship(id: string, updates: any) {
   const data = await readDB();
-  const rel = data.relationships.find((r) => r.id === id);
+  const rel = data.relationships.find((r: any) => r.id === id);
   if (!rel) throw new Error("Relationship not found");
   Object.assign(rel, updates);
   await writeDB();
   return rel;
 }
 
-async function deleteRelationship(id) {
+export async function deleteRelationship(id: string) {
   const data = await readDB();
-  data.relationships = data.relationships.filter((r) => r.id !== id);
+  data.relationships = data.relationships.filter((r: any) => r.id !== id);
   await writeDB();
 }
-
-module.exports = {
-  initDB,
-  getIndividuals,
-  addIndividual,
-  updateIndividual,
-  deleteIndividual,
-  getRelationships,
-  addRelationship,
-  updateRelationship,
-  deleteRelationship,
-};
