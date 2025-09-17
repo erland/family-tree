@@ -64,9 +64,9 @@ export default function AppLayout() {
       <Drawer
         variant="permanent"
         sx={{
-          width: drawerWidth,
+          width: 240,
           flexShrink: 0,
-          "& .MuiDrawer-paper": { width: drawerWidth, boxSizing: "border-box" },
+          "& .MuiDrawer-paper": { width: 240, boxSizing: "border-box" },
         }}
       >
         <Toolbar />
@@ -93,8 +93,7 @@ export default function AppLayout() {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
-          ml: `${drawerWidth}px`,
+          p: 3
         }}
       >
         <Toolbar />
