@@ -6,18 +6,14 @@
   "scripts": {
     "react:start": "vite",
     "build:react": "vite build",
-  
     "build:electron:main": "tsc -p tsconfig.electron.json",
     "build:electron:preload": "tsc -p tsconfig.preload.json",
     "build:electron": "npm run build:electron:main && npm run build:electron:preload",
-  
     "watch:electron": "tsc -w -p tsconfig.electron.json",
-  
     "electron:start": "npm run build:electron && electronmon dist-electron/electron/main.js",
-  
     "start": "concurrently \"npm run react:start\" \"npm run electron:start\"",
     "build": "npm run build:react && npm run build:electron"
-    },
+  },
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
@@ -26,6 +22,7 @@
     "@reduxjs/toolkit": "^2.2.3",
     "concurrently": "^9.0.0",
     "dagre": "^0.8.5",
+    "fuse.js": "^7.1.0",
     "i18next": "^23.12.2",
     "lowdb": "^7.0.1",
     "react": "^18.2.0",

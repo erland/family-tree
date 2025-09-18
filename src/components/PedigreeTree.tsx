@@ -28,6 +28,7 @@ import { buildGraph, getDescendants, getAncestors } from "../utils/relationshipU
 import { Individual } from "../types/individual";
 import FamilyNode from "./FamilyNode";
 import MarriageNode from "./MarriageNode";
+import SearchBar from "../components/SearchBar";
 
 const fitViewOptions: FitViewOptions = { padding: 0.2, includeHiddenNodes: true };
 
@@ -140,15 +141,11 @@ export default function PedigreeTree() {
           alignItems: "center",
         }}
       >
-        <Autocomplete
-          options={individuals}
-          getOptionLabel={(o) => o.name}
-          value={root}
-          onChange={(_e, val) => setRoot(val)}
-          renderInput={(params) => (
-            <TextField {...params} label="Välj rotperson" size="small" />
-          )}
-          sx={{ width: 300 }}
+        <SearchBar
+          onSelect={(id) => {
+            // When user clicks a result, focus that person as root in the tree
+            setRoot(individuals.find((i) => i.id === id) || null);
+          }}
         />
         <ToggleButtonGroup
           value={mode}
