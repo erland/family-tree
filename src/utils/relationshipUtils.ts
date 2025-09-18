@@ -265,6 +265,54 @@ export function buildGraph(
   }
   dagre.layout(g);
 
+  // After dagre.layout(g) and before final positions
+  for (const m of marriageNodes) {
+    const posA = g.node(m.a);
+    const posB = g.node(m.b);
+    const mNode = nodes.find((n) => n.id === m.id);
+
+    if (posA && posB && mNode) {
+      // Determine left and right spouse
+      const leftSpouse = posA.x < posB.x ? m.a : m.b;
+      const rightSpouse = posA.x < posB.x ? m.b : m.a;
+
+      // Recenter marriage node
+      const width = (mNode.style?.width as number) || 0;
+      const height = (mNode.style?.height as number) || 0;
+      mNode.position = {
+        x: (posA.x + posB.x) / 2 - width / 2,
+        y: (posA.y + posB.y) / 2 - height / 2,
+      };
+
+      // Remove old spouse edges
+      const spouseEdges = edges.filter(
+        (e) => e.target === m.id && (e.source === m.a || e.source === m.b)
+      );
+      spouseEdges.forEach((e) => {
+        const idx = edges.indexOf(e);
+        if (idx !== -1) edges.splice(idx, 1);
+      });
+
+      // Add corrected edges
+      edges.push({
+        id: `${leftSpouse}->${m.id}`,
+        source: leftSpouse,
+        target: m.id,
+        sourceHandle: "right",
+        targetHandle: "left",
+        style: { stroke: "#aaa" },
+      });
+      edges.push({
+        id: `${rightSpouse}->${m.id}`,
+        source: rightSpouse,
+        target: m.id,
+        sourceHandle: "left",
+        targetHandle: "right",
+        style: { stroke: "#aaa" },
+      });
+    }
+  }
+
   // Apply dagre positions
   for (const n of nodes) {
     const gp = g.node(n.id);
