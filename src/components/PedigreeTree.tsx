@@ -31,17 +31,10 @@ import MarriageNode from "./MarriageNode";
 
 const fitViewOptions: FitViewOptions = { padding: 0.2, includeHiddenNodes: true };
 
-const nodeTypes = {
-  family: FamilyNode,
-  marriage: MarriageNode,
-};
-
 function PedigreeInner({
-  direction,
   rootId,
   mode,
 }: {
-  direction: "TB" | "LR";
   rootId?: string;
   mode: "descendants" | "ancestors";
 }) {
@@ -81,11 +74,9 @@ function PedigreeInner({
       : relationships;
 
     return buildGraph(filteredIndividuals, filteredRelationships, {
-      direction,
-      includeSpouseEdges: true,
       rootId,
     });
-  }, [individuals, relationships, rootId, mode, direction]);
+  }, [individuals, relationships, rootId, mode]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
@@ -113,7 +104,10 @@ function PedigreeInner({
       panOnScroll
       selectionOnDrag
       selectionMode={SelectionMode.Full}
-      nodeTypes={nodeTypes}
+      nodeTypes={{
+        family: FamilyNode,
+        marriage: MarriageNode,
+      }}
     >
       <Background />
       <MiniMap pannable zoomable />
@@ -122,7 +116,7 @@ function PedigreeInner({
   );
 }
 
-export default function PedigreeTree({ direction = "TB" }: { direction?: "TB" | "LR" }) {
+export default function PedigreeTree() {
   const individuals = useAppSelector((s) => s.individuals.items);
   const [root, setRoot] = useState<Individual | null>(null);
   const [mode, setMode] = useState<"descendants" | "ancestors">("descendants");
@@ -175,11 +169,7 @@ export default function PedigreeTree({ direction = "TB" }: { direction?: "TB" | 
       {/* Graph */}
       <Box sx={{ flexGrow: 1 }}>
         <ReactFlowProvider>
-          <PedigreeInner
-            direction={direction}
-            rootId={root?.id ?? undefined}
-            mode={mode}
-          />
+          <PedigreeInner rootId={root?.id ?? undefined} mode={mode} />
         </ReactFlowProvider>
       </Box>
     </Box>

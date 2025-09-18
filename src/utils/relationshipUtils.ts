@@ -138,12 +138,12 @@ export function buildGraph(
   relationships: Relationship[],
   opts?: { direction?: "TB" | "LR"; rootId?: string }
 ): { nodes: Node[]; edges: Edge[] } {
-  const direction: "TB" | "LR" = opts?.direction ?? "TB";
+  const direction: "TB" = "TB";
   const rootId = opts?.rootId;
 
   const g = new dagre.graphlib.Graph();
   g.setGraph({
-    rankdir: direction,
+    rankdir: "TB",
     nodesep: 40,
     ranksep: 80,
     marginx: 20,
