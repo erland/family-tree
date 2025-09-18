@@ -31,6 +31,11 @@ import MarriageNode from "./MarriageNode";
 
 const fitViewOptions: FitViewOptions = { padding: 0.2, includeHiddenNodes: true };
 
+const nodeTypes = {
+  family: FamilyNode,
+  marriage: MarriageNode,
+};
+
 function PedigreeInner({
   direction,
   rootId,
@@ -108,9 +113,7 @@ function PedigreeInner({
       panOnScroll
       selectionOnDrag
       selectionMode={SelectionMode.Full}
-      nodeTypes={{ family: FamilyNode,
-        marriage: MarriageNode,
-       }} // 👈 custom node with side handles
+      nodeTypes={nodeTypes}
     >
       <Background />
       <MiniMap pannable zoomable />

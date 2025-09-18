@@ -136,10 +136,9 @@ type Direction = "TB" | "LR";
 export function buildGraph(
   individuals: Individual[],
   relationships: Relationship[],
-  opts?: { direction?: Direction; includeSpouseEdges?: boolean; rootId?: string }
+  opts?: { direction?: "TB" | "LR"; rootId?: string }
 ): { nodes: Node[]; edges: Edge[] } {
-  const direction: Direction = opts?.direction ?? "TB";
-  const includeSpouseEdges = opts?.includeSpouseEdges ?? true;
+  const direction: "TB" | "LR" = opts?.direction ?? "TB";
   const rootId = opts?.rootId;
 
   const g = new dagre.graphlib.Graph();
@@ -154,68 +153,110 @@ export function buildGraph(
 
   const byId = new Map(individuals.map((i) => [i.id, i]));
 
-  // Nodes
   const nodes: Node[] = individuals.map((i) => ({
     id: i.id,
-    type: "family", // 👈 use custom FamilyNode
+    type: "family",
     data: { label: i.name, isRoot: i.id === rootId },
     position: { x: 0, y: 0 },
     sourcePosition: direction === "LR" ? Position.Right : Position.Bottom,
     targetPosition: direction === "LR" ? Position.Left : Position.Top,
-    style: {
-      padding: 8,
-      borderRadius: 8,
-      border: i.id === rootId ? "2px solid #f44336" : "1px solid #90caf9",
-      background: i.id === rootId ? "#ffebee" : "#e3f2fd",
-      fontSize: 12,
-      width: 180,
-      textAlign: "center",
-    },
+    // 👇 keep only the size, remove visual styles
+    style: { width: 180, height: 42 },
   }));
 
-  // Edges
   const edges: Edge[] = [];
+  const marriageNodes: { id: string; a: string; b: string }[] = [];
 
+  // Spouse relations
   for (const rel of relationships) {
-    // Parent → Child
-    if (rel.type === "parent-child") {
-      for (const pid of rel.parentIds) {
-        if (byId.has(pid) && byId.has(rel.childId)) {
-          edges.push({
-            id: `pc-${pid}-${rel.childId}`,
-            source: pid,
-            target: rel.childId,
-            // 👇 explicitly connect from bottom of parent → top of child
-            sourceHandle: "bottom",
-            targetHandle: "top",
-            style: { stroke: "#1976d2" },
-          });
-        }
-      }
-    }
-    // Spouse ↔ Spouse (side handles)
-    else if (rel.type === "spouse" && includeSpouseEdges) {
+    if (rel.type === "spouse") {
       const a = (rel as any).person1Id;
       const b = (rel as any).person2Id;
-    
+      if (!byId.has(a) || !byId.has(b)) continue;
+
       const marriageId = `m-${a}-${b}`;
-    
-      // Create a hidden "marriage" node
+
+      // Visible marriage node (small dot)
       nodes.push({
         id: marriageId,
         type: "marriage",
         data: { spouses: [a, b] },
         position: { x: 0, y: 0 },
-        style: { width: 1, height: 1, opacity: 0 },
+        style: {
+          width: 16,
+          height: 16,
+          borderRadius: "50%",
+          background: "#ff9800",
+          border: "2px solid #e65100",
+        },
       });
-    
-      // Link spouses to marriage node
-      edges.push({ id: `${a}->${marriageId}`, source: a, target: marriageId });
-      edges.push({ id: `${b}->${marriageId}`, source: b, target: marriageId });
+
+      // Add constraint node to dagre (zero size but keeps spouses aligned)
+      g.setNode(a, { width: 180, height: 42 });
+      g.setNode(b, { width: 180, height: 42 });
+      g.setNode(marriageId, { width: 0, height: 0 });
+
+      g.setEdge(a, marriageId, { weight: 5, minlen: 1 });
+      g.setEdge(b, marriageId, { weight: 5, minlen: 1 });
+
+      edges.push({
+        id: `${a}->${marriageId}`,
+        source: a,
+        target: marriageId,
+        sourceHandle: "right",
+        targetHandle: "left",
+        style: { stroke: "#aaa" },
+      });
+      edges.push({
+        id: `${b}->${marriageId}`,
+        source: b,
+        target: marriageId,
+        sourceHandle: "left",
+        targetHandle: "right",
+        style: { stroke: "#aaa" },
+      });
+
+      marriageNodes.push({ id: marriageId, a, b });
     }
   }
 
-  // Layout with dagre
+  // Parent-child relations
+  for (const rel of relationships) {
+    if (rel.type === "parent-child") {
+      const childId = rel.childId;
+      const parents = rel.parentIds;
+
+      if (parents.length === 2) {
+        const [a, b] = parents;
+        const marriageId = `m-${a}-${b}`;
+        if (nodes.some((n) => n.id === marriageId)) {
+          edges.push({
+            id: `mc-${marriageId}-${childId}`,
+            source: marriageId,
+            target: childId,
+            sourceHandle: "bottom",
+            targetHandle: "top",
+            style: { stroke: "#1976d2" },
+          });
+          continue;
+        }
+      }
+
+      // Fallback single-parent
+      for (const pid of parents) {
+        edges.push({
+          id: `pc-${pid}-${childId}`,
+          source: pid,
+          target: childId,
+          sourceHandle: "bottom",
+          targetHandle: "top",
+          style: { stroke: "#1976d2" },
+        });
+      }
+    }
+  }
+
+  // Add all nodes/edges to dagre
   for (const n of nodes) {
     g.setNode(n.id, { width: 180, height: 42 });
   }
@@ -224,6 +265,7 @@ export function buildGraph(
   }
   dagre.layout(g);
 
+  // Apply dagre positions
   for (const n of nodes) {
     const gp = g.node(n.id);
     if (gp) {
@@ -231,5 +273,21 @@ export function buildGraph(
     }
   }
 
+  // Re-center marriage nodes visually
+  for (const m of marriageNodes) {
+    const posA = g.node(m.a);
+    const posB = g.node(m.b);
+    const mNode = nodes.find((n) => n.id === m.id);
+    if (posA && posB && mNode) {
+      const width = (mNode.style?.width as number) || 0;
+      const height = (mNode.style?.height as number) || 0;
+
+      mNode.position = {
+        x: (posA.x + posB.x) / 2 - width / 2,
+        y: (posA.y + posB.y) / 2 - height / 2,
+      };
+    }
+  }
+  
   return { nodes, edges };
 }
