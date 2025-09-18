@@ -14,9 +14,8 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  InputAdornment,
 } from "@mui/material";
-import { Add, Edit, Delete, Search } from "@mui/icons-material";
+import { Add, Edit, Delete } from "@mui/icons-material";
 import { useAppDispatch, useAppSelector } from "../store";
 import {
   fetchIndividuals,
@@ -25,20 +24,26 @@ import {
   deleteIndividual,
 } from "../features/individualsSlice";
 import { Individual, IndividualSchema } from "../types/individual";
+import SearchBar from "../components/SearchBar";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 
 export default function IndividualsPage() {
   const dispatch = useAppDispatch();
   const individuals = useAppSelector((s) => s.individuals.items);
+  const [filteredIds, setFilteredIds] = useState<string[]>([]);
 
-  const [filter, setFilter] = useState("");
+  const visibleIndividuals = filteredIds.length
+    ? individuals.filter((i) => filteredIds.includes(i.id))
+    : individuals;
+
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Individual | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [form, setForm] = useState<Partial<Individual>>({});
 
   useEffect(() => {
+    dispatch(fetchIndividuals());
   }, [dispatch]);
 
   const handleOpen = (ind?: Individual) => {
@@ -50,9 +55,10 @@ export default function IndividualsPage() {
 
   const handleClose = () => setOpen(false);
 
-  const handleChange = (field: keyof Individual) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [field]: e.target.value });
-  };
+  const handleChange =
+    (field: keyof Individual) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setForm({ ...form, [field]: e.target.value });
+    };
 
   const handleSave = () => {
     const candidate = { ...form, id: editing?.id || uuidv4() };
@@ -78,31 +84,21 @@ export default function IndividualsPage() {
     dispatch(deleteIndividual(id));
   };
 
-  const filtered = individuals.filter((i) =>
-    i.name.toLowerCase().includes(filter.toLowerCase())
-  );
-
   return (
     <Box p={2}>
       <Typography variant="h4" gutterBottom>
         Personer
       </Typography>
 
-      <Box display="flex" mb={2}>
-        <TextField
-          placeholder="Sök..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search />
-              </InputAdornment>
-            ),
-          }}
-          sx={{ mr: 2 }}
-        />
-        <Button variant="contained" startIcon={<Add />} onClick={() => handleOpen()}>
+      <Box display="flex" mb={2} gap={2}>
+        {/* 🔎 Shared fuzzy search bar */}
+        <SearchBar onResults={setFilteredIds} showDropdown={false} />
+
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={() => handleOpen()}
+        >
           Ny person
         </Button>
       </Box>
@@ -117,7 +113,7 @@ export default function IndividualsPage() {
           </TableRow>
         </TableHead>
         <TableBody>
-          {filtered.map((ind) => (
+          {visibleIndividuals.map((ind) => (
             <TableRow key={ind.id}>
               <TableCell>{ind.name}</TableCell>
               <TableCell>{ind.dateOfBirth || ""}</TableCell>

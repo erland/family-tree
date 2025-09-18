@@ -10,8 +10,12 @@ type SearchResult = {
 
 export default function SearchBar({
   onSelect,
+  onResults,
+  showDropdown = true,
 }: {
-  onSelect: (id: string) => void;
+  onSelect?: (id: string) => void;
+  onResults?: (ids: string[]) => void;
+  showDropdown?: boolean;
 }) {
   const individuals = useAppSelector((s) => s.individuals.items);
   const [query, setQuery] = useState("");
@@ -43,14 +47,16 @@ export default function SearchBar({
   useEffect(() => {
     if (!query) {
       setResults([]);
+      onResults?.([]);   // notify parent of empty results
       return;
     }
     const t = setTimeout(() => {
       const res = fuse.search(query).slice(0, 10);
       setResults(res as SearchResult[]);
-    }, 200); // debounce 200ms
+      onResults?.(res.map((r) => r.item.id));   // 👈 send ids to parent
+    }, 200);
     return () => clearTimeout(t);
-  }, [query, fuse]);
+  }, [query, fuse, onResults]);
 
   return (
     <div style={{ position: "relative", width: 300 }}>
@@ -61,7 +67,7 @@ export default function SearchBar({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      {results.length > 0 && (
+      {showDropdown && results.length > 0 && (
         <Paper
           style={{
             position: "absolute",
