@@ -11,6 +11,9 @@ const api: GenealogyAPI = {
   addRelationship: (relationship) => ipcRenderer.invoke("relationships:add", relationship),
   updateRelationship: (id, updates) => ipcRenderer.invoke("relationships:update", id, updates),
   deleteRelationship: (id) => ipcRenderer.invoke("relationships:delete", id),
+
+  exportIndividualsExcel: () => ipcRenderer.invoke("individuals:exportExcel"),
+  exportRelationshipsExcel: () => ipcRenderer.invoke("relationships:exportExcel"), 
 };
 
 contextBridge.exposeInMainWorld("genealogyAPI", api);

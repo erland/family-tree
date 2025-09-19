@@ -41,6 +41,17 @@ export default function RelationshipsPage() {
       <Button startIcon={<Add />} variant="contained" onClick={() => handleNew()}>
         Ny relation
       </Button>
+      <Button
+        variant="outlined"
+        onClick={async () => {
+          const result = await window.genealogyAPI.exportRelationshipsExcel();
+          if (result.success) {
+            alert(`Excel-fil exporterad till ${result.path}`);
+          }
+        }}
+      >
+        Exportera Excel
+      </Button>
 
       <Table sx={{ mt: 2 }}>
         <TableHead>

@@ -101,6 +101,17 @@ export default function IndividualsPage() {
         >
           Ny person
         </Button>
+        <Button
+          variant="outlined"
+          onClick={async () => {
+            const result = await window.genealogyAPI.exportIndividualsExcel();
+            if (result.success) {
+              alert(`Excel-fil exporterad till ${result.path}`);
+            }
+          }}
+        >
+          Exportera Excel
+        </Button>
       </Box>
 
       <Table>

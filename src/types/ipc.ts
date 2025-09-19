@@ -18,4 +18,8 @@ export interface GenealogyAPI {
     updates: Partial<Relationship>
   ) => Promise<Relationship>;
   deleteRelationship: (id: string) => Promise<{ success: boolean }>;
+
+  // 📦 New Excel export
+  exportIndividualsExcel: () => Promise<{ success: boolean; path?: string }>;
+  exportRelationshipsExcel: () => Promise<{ success: boolean; path?: string }>; // 👈 new
 }
