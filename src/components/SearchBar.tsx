@@ -3,9 +3,28 @@ import { TextField, Paper, List, ListItemButton, ListItemText } from "@mui/mater
 import Fuse from "fuse.js";
 import { useAppSelector } from "../store";
 import { Individual } from "../types/individual";
+import { Relationship } from "../types/relationship";
 
-type SearchResult = {
-  item: Individual;
+type SearchEntry = {
+  id: string;             // always the individual id to return
+  name: string;           // display
+  story?: string;
+  dateOfBirth?: string;
+  birthRegion?: string;
+  birthCongregation?: string;
+  birthCity?: string;
+  dateOfDeath?: string;
+  deathRegion?: string;
+  deathCongregation?: string;
+  deathCity?: string;
+
+  // spouse-specific fields (mapped back to an individual)
+  groomRegion?: string;
+  groomCongregation?: string;
+  groomCity?: string;
+  brideRegion?: string;
+  brideCongregation?: string;
+  brideCity?: string;
 };
 
 export default function SearchBar({
@@ -18,12 +37,45 @@ export default function SearchBar({
   showDropdown?: boolean;
 }) {
   const individuals = useAppSelector((s) => s.individuals.items);
+  const relationships = useAppSelector((s) => s.relationships.items);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
+  const [results, setResults] = useState<Fuse.FuseResult<SearchEntry>[]>([]);
+
+  // Build combined search index
+  const entries: SearchEntry[] = useMemo(() => {
+    const base = individuals.map((i) => ({ ...i }));
+
+    const spouseExtras: SearchEntry[] = relationships
+      .filter((r): r is Relationship & { type: "spouse" } => r.type === "spouse")
+      .flatMap((r) => {
+        const person1 = individuals.find((i) => i.id === r.person1Id);
+        const person2 = individuals.find((i) => i.id === r.person2Id);
+        const res: SearchEntry[] = [];
+        if (person1) {
+          res.push({
+            ...person1,
+            groomRegion: r.groomRegion,
+            groomCongregation: r.groomCongregation,
+            groomCity: r.groomCity,
+          });
+        }
+        if (person2) {
+          res.push({
+            ...person2,
+            brideRegion: r.brideRegion,
+            brideCongregation: r.brideCongregation,
+            brideCity: r.brideCity,
+          });
+        }
+        return res;
+      });
+
+    return [...base, ...spouseExtras];
+  }, [individuals, relationships]);
 
   const fuse = useMemo(
     () =>
-      new Fuse(individuals, {
+      new Fuse(entries, {
         keys: [
           "name",
           "story",
@@ -35,25 +87,31 @@ export default function SearchBar({
           "deathRegion",
           "deathCongregation",
           "deathCity",
+          "groomRegion",
+          "groomCongregation",
+          "groomCity",
+          "brideRegion",
+          "brideCongregation",
+          "brideCity",
         ],
         threshold: 0.3,
         ignoreLocation: true,
         minMatchCharLength: 1,
         includeScore: true,
       }),
-    [individuals]
+    [entries]
   );
 
   useEffect(() => {
     if (!query) {
       setResults([]);
-      onResults?.([]);   // notify parent of empty results
+      onResults?.([]);
       return;
     }
     const t = setTimeout(() => {
       const res = fuse.search(query).slice(0, 10);
-      setResults(res as SearchResult[]);
-      onResults?.(res.map((r) => r.item.id));   // 👈 send ids to parent
+      setResults(res);
+      onResults?.(res.map((r) => r.item.id));
     }, 200);
     return () => clearTimeout(t);
   }, [query, fuse, onResults]);
@@ -81,13 +139,8 @@ export default function SearchBar({
         >
           <List dense>
             {results.map((r) => {
-              const { dateOfBirth, birthCity, birthRegion } =
-                r.item;
-              const secondary = [
-                dateOfBirth,
-                birthCity,
-                birthRegion,
-              ]
+              const { dateOfBirth, birthCity, birthRegion } = r.item;
+              const secondary = [dateOfBirth, birthCity, birthRegion]
                 .filter(Boolean)
                 .join(" • ");
 
@@ -95,7 +148,7 @@ export default function SearchBar({
                 <ListItemButton
                   key={r.item.id}
                   onClick={() => {
-                    onSelect(r.item.id);
+                    onSelect?.(r.item.id);
                     setQuery("");
                     setResults([]);
                   }}
