@@ -1,5 +1,4 @@
-import React from "react";
-import { Box, Typography, Divider, Button } from "@mui/material";
+import { Box, Button, Divider, Typography } from "@mui/material";
 import { Individual } from "../types/individual";
 
 export default function IndividualDetails({
@@ -9,91 +8,76 @@ export default function IndividualDetails({
   individual: Individual;
   onClose?: () => void;
 }) {
-  if (!individual) return null;
+  const hasBirth =
+    individual.dateOfBirth ||
+    individual.birthRegion ||
+    individual.birthCity ||
+    individual.birthCongregation;
+
+  const hasDeath =
+    individual.dateOfDeath ||
+    individual.deathRegion ||
+    individual.deathCity ||
+    individual.deathCongregation;
 
   return (
-    <Box
-      sx={{
-        width: 320,
-        borderLeft: "1px solid #ddd",
-        p: 2,
-        bgcolor: "#fafafa",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <Box
-        sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}
-      >
-        <Typography variant="h6">{individual.name}</Typography>
+    // ⬇️ no border here; parent draws it
+    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
+      {/* Header: name + close aligned; name truncates so button never clips */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Typography
+          variant="h6"
+          noWrap
+          sx={{ flexGrow: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}
+        >
+          {individual.name}
+        </Typography>
         {onClose && (
           <Button size="small" variant="outlined" onClick={onClose}>
-            Stäng
+            STÄNG
           </Button>
         )}
       </Box>
 
-      <Divider sx={{ mb: 2 }} />
+      <Divider />
 
-      {/* Birth section */}
-      {(individual.dateOfBirth ||
-        individual.birthRegion ||
-        individual.birthCity ||
-        individual.birthCongregation) && (
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="body2">
-            <strong>Född:</strong> {individual.dateOfBirth || ""}
+      {hasBirth && (
+        <Box>
+          <Typography variant="body2" fontWeight={700}>
+            Född: {individual.dateOfBirth ?? "-"}
           </Typography>
-          {individual.birthRegion && (
-            <Typography variant="body2" sx={{ pl: 2 }}>
-              Region: {individual.birthRegion}
-            </Typography>
-          )}
-          {individual.birthCity && (
-            <Typography variant="body2" sx={{ pl: 2 }}>
-              Stad: {individual.birthCity}
-            </Typography>
-          )}
-          {individual.birthCongregation && (
-            <Typography variant="body2" sx={{ pl: 2 }}>
-              Församling: {individual.birthCongregation}
-            </Typography>
-          )}
+          <Box sx={{ pl: 2 }}>
+            {individual.birthRegion && <Typography variant="body2">Region: {individual.birthRegion}</Typography>}
+            {individual.birthCity && <Typography variant="body2">Stad: {individual.birthCity}</Typography>}
+            {individual.birthCongregation && (
+              <Typography variant="body2">Församling: {individual.birthCongregation}</Typography>
+            )}
+          </Box>
         </Box>
       )}
 
-      {/* Death section */}
-      {(individual.dateOfDeath ||
-        individual.deathRegion ||
-        individual.deathCity ||
-        individual.deathCongregation) && (
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="body2">
-            <strong>Död:</strong> {individual.dateOfDeath || ""}
+      {hasDeath && (
+        <Box sx={{ mt: 1 }}>
+          <Typography variant="body2" fontWeight={700}>
+            Död: {individual.dateOfDeath ?? "-"}
           </Typography>
-          {individual.deathRegion && (
-            <Typography variant="body2" sx={{ pl: 2 }}>
-              Region: {individual.deathRegion}
-            </Typography>
-          )}
-          {individual.deathCity && (
-            <Typography variant="body2" sx={{ pl: 2 }}>
-              Stad: {individual.deathCity}
-            </Typography>
-          )}
-          {individual.deathCongregation && (
-            <Typography variant="body2" sx={{ pl: 2 }}>
-              Församling: {individual.deathCongregation}
-            </Typography>
-          )}
+          <Box sx={{ pl: 2 }}>
+            {individual.deathRegion && <Typography variant="body2">Region: {individual.deathRegion}</Typography>}
+            {individual.deathCity && <Typography variant="body2">Stad: {individual.deathCity}</Typography>}
+            {individual.deathCongregation && (
+              <Typography variant="body2">Församling: {individual.deathCongregation}</Typography>
+            )}
+          </Box>
         </Box>
       )}
 
-      {/* Story */}
       {individual.story && (
-        <Typography variant="body2" sx={{ mt: 2, whiteSpace: "pre-line" }}>
-          <strong>Berättelse:</strong> {individual.story}
-        </Typography>
+        <Box sx={{ mt: 1 }}>
+          <Typography variant="body2" fontWeight={700}>
+            Berättelse:
+          </Typography>
+          <Typography variant="body2">{individual.story}</Typography>
+        </Box>
       )}
     </Box>
   );

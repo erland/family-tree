@@ -182,7 +182,20 @@ export default function PedigreeTree() {
 
       {/* Right side: details panel */}
       {selected && (
-          <IndividualDetails individual={selected} onClose={() => setSelected(null)} />
+        <Box
+          sx={{
+            width: 300,
+            borderLeft: "1px solid #ddd",
+            p: 2,
+            bgcolor: "#fafafa",
+            overflowY: "auto",
+          }}
+        >
+          <IndividualDetails
+            individual={selected}
+            onClose={() => setSelected(null)}
+          />
+        </Box>
       )}
     </Box>
   );
