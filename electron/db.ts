@@ -66,11 +66,38 @@ export async function updateIndividual(id: string, updates: any) {
 
 export async function deleteIndividual(id: string) {
   const data = await readDB();
+
+  // Remove the individual
   data.individuals = data.individuals.filter((i: any) => i.id !== id);
-  data.relationships = data.relationships.filter(
-    (r: any) => !r.personIds.includes(id)
-  );
-  await writeDB();
+
+  // Clean up relationships
+  data.relationships = data.relationships
+    .map((r: any) => {
+      if (r.type === "parent-child") {
+        // Case: child matches -> remove whole relation
+        if (r.childId === id) return null;
+
+        // Case: parent matches -> filter it out
+        const newParents = r.parentIds.filter((pid: string) => pid !== id);
+        if (newParents.length === 0) return null; // orphaned relation
+        if (newParents.length !== r.parentIds.length) {
+          return { ...r, parentIds: newParents };
+        }
+        return r;
+      }
+
+      if (r.type === "spouse") {
+        if (r.person1Id === id || r.person2Id === id) {
+          return null; // remove spouse relation
+        }
+        return r;
+      }
+
+      return r; // keep other relation types
+    })
+    .filter(Boolean); // remove nulls
+
+  await writeDB(); // ✅ no arguments
 }
 
 // Relationships
