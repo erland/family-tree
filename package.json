@@ -20,7 +20,7 @@
     "build": "npm run build:react && npm run build:electron",
     "dist:mac": "npm run build && electron-builder --mac --arm64",
     "dist:win": "npm run build && electron-builder --win --x64",
-    "dist:all": "npm run build && electron-builder -m arm64 -w x64"
+    "dist:all": "npm run build && electron-builder -m --arm64 -w --x64"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
