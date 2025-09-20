@@ -1,14 +1,24 @@
-import { Box, Button, Divider, Typography } from "@mui/material";
-import { Individual } from "../types/individual";
+import { Box, IconButton, Typography, Divider } from "@mui/material";
+import { Edit, Close } from "@mui/icons-material";
 import { useAppSelector } from "../store";
+import { Individual } from "../types/individual";
 
 export default function IndividualDetails({
-  individual,
+  individualId,
   onClose,
+  onEdit,
 }: {
-  individual: Individual;
+  individualId: string;
   onClose?: () => void;
+  onEdit?: (ind: Individual) => void;
 }) {
+  // Always grab the freshest version from the store
+  const individual = useAppSelector((s) =>
+    s.individuals.items.find((i) => i.id === individualId)
+  );
+
+  if (!individual) return null; // safety
+
   const individuals = useAppSelector((s) => s.individuals.items);
   const relationships = useAppSelector((s) => s.relationships.items);
 
@@ -37,7 +47,10 @@ export default function IndividualDetails({
       ((r as any).person1Id === individual.id || (r as any).person2Id === individual.id)
   );
   const spouses = spouseRels.map((r) => {
-    const otherId = (r as any).person1Id === individual.id ? (r as any).person2Id : (r as any).person1Id;
+    const otherId =
+      (r as any).person1Id === individual.id
+        ? (r as any).person2Id
+        : (r as any).person1Id;
     return {
       partner: individuals.find((i) => i.id === otherId),
       weddingDate: (r as any).weddingDate ?? null,
@@ -72,19 +85,43 @@ export default function IndividualDetails({
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
       {/* Header */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 1,
+        }}
+      >
         <Typography
           variant="h6"
           noWrap
-          sx={{ flexGrow: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}
+          sx={{
+            flexGrow: 1,
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
         >
           {individual.name}
         </Typography>
-        {onClose && (
-          <Button size="small" variant="outlined" onClick={onClose}>
-            STÄNG
-          </Button>
-        )}
+
+        <Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
+          {onEdit && (
+            <IconButton
+              size="small"
+              onClick={() => onEdit(individual)}
+              aria-label="Redigera"
+            >
+              <Edit fontSize="small" />
+            </IconButton>
+          )}
+          {onClose && (
+            <IconButton size="small" onClick={onClose} aria-label="Stäng">
+              <Close fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
       </Box>
 
       <Divider />
@@ -95,10 +132,18 @@ export default function IndividualDetails({
             Född: {individual.dateOfBirth ?? "-"}
           </Typography>
           <Box sx={{ pl: 2 }}>
-            {individual.birthRegion && <Typography variant="body2">Region: {individual.birthRegion}</Typography>}
-            {individual.birthCity && <Typography variant="body2">Stad: {individual.birthCity}</Typography>}
+            {individual.birthRegion && (
+              <Typography variant="body2">
+                Region: {individual.birthRegion}
+              </Typography>
+            )}
+            {individual.birthCity && (
+              <Typography variant="body2">Stad: {individual.birthCity}</Typography>
+            )}
             {individual.birthCongregation && (
-              <Typography variant="body2">Församling: {individual.birthCongregation}</Typography>
+              <Typography variant="body2">
+                Församling: {individual.birthCongregation}
+              </Typography>
             )}
           </Box>
         </Box>
@@ -110,10 +155,18 @@ export default function IndividualDetails({
             Död: {individual.dateOfDeath ?? "-"}
           </Typography>
           <Box sx={{ pl: 2 }}>
-            {individual.deathRegion && <Typography variant="body2">Region: {individual.deathRegion}</Typography>}
-            {individual.deathCity && <Typography variant="body2">Stad: {individual.deathCity}</Typography>}
+            {individual.deathRegion && (
+              <Typography variant="body2">
+                Region: {individual.deathRegion}
+              </Typography>
+            )}
+            {individual.deathCity && (
+              <Typography variant="body2">Stad: {individual.deathCity}</Typography>
+            )}
             {individual.deathCongregation && (
-              <Typography variant="body2">Församling: {individual.deathCongregation}</Typography>
+              <Typography variant="body2">
+                Församling: {individual.deathCongregation}
+              </Typography>
             )}
           </Box>
         </Box>
@@ -127,7 +180,8 @@ export default function IndividualDetails({
           <Box sx={{ pl: 2 }}>
             {parents.map((parent) => (
               <Typography key={parent.id} variant="body2">
-                {parent.name} {parent.dateOfBirth ? `(${parent.dateOfBirth})` : ""}
+                {parent.name}{" "}
+                {parent.dateOfBirth ? `(${parent.dateOfBirth})` : ""}
               </Typography>
             ))}
           </Box>
@@ -142,14 +196,16 @@ export default function IndividualDetails({
           <Box sx={{ pl: 2 }}>
             {spouses.map(({ partner, weddingDate }, idx) => (
               <Typography key={idx} variant="body2">
-                {partner ? partner.name : "Okänd"} {weddingDate ? `(${weddingDate})` : ""}
+                {partner ? partner.name : "Okänd"}{" "}
+                {weddingDate ? `(${weddingDate})` : ""}
               </Typography>
             ))}
           </Box>
         </Box>
       )}
 
-      {(Object.keys(groupedByPartner).length > 0 || soloChildren.length > 0) && (
+      {(Object.keys(groupedByPartner).length > 0 ||
+        soloChildren.length > 0) && (
         <Box sx={{ mt: 1 }}>
           <Typography variant="body2" fontWeight={700}>
             Barn:
@@ -165,7 +221,8 @@ export default function IndividualDetails({
                   <Box sx={{ pl: 2 }}>
                     {children.map((child) => (
                       <Typography key={child.id} variant="body2">
-                        {child.name} {child.dateOfBirth ? `(${child.dateOfBirth})` : ""}
+                        {child.name}{" "}
+                        {child.dateOfBirth ? `(${child.dateOfBirth})` : ""}
                       </Typography>
                     ))}
                   </Box>
@@ -181,7 +238,8 @@ export default function IndividualDetails({
                 <Box sx={{ pl: 2 }}>
                   {soloChildren.map((child) => (
                     <Typography key={child.id} variant="body2">
-                      {child.name} {child.dateOfBirth ? `(${child.dateOfBirth})` : ""}
+                      {child.name}{" "}
+                      {child.dateOfBirth ? `(${child.dateOfBirth})` : ""}
                     </Typography>
                   ))}
                 </Box>

@@ -30,6 +30,7 @@ import FamilyNode from "./FamilyNode";
 import MarriageNode from "./MarriageNode";
 import SearchBar from "../components/SearchBar";
 import IndividualDetails from "../components/IndividualDetails";
+import IndividualFormDialog from "../components/IndividualFormDialog";
 
 const fitViewOptions: FitViewOptions = { padding: 0.2, includeHiddenNodes: true };
 const nodeTypes = {
@@ -133,6 +134,9 @@ export default function PedigreeTree() {
   const [mode, setMode] = useState<"descendants" | "ancestors">("descendants");
   const [selected, setSelected] = useState<Individual | null>(null);
 
+  // State for edit dialog
+  const [editing, setEditing] = useState<Individual | null>(null);
+
   return (
     <Box sx={{ width: "100%", height: "calc(100vh - 120px)", display: "flex" }}>
       {/* Left side: toolbar + tree */}
@@ -192,11 +196,18 @@ export default function PedigreeTree() {
           }}
         >
           <IndividualDetails
-            individual={selected}
+            individualId={selected.id}
             onClose={() => setSelected(null)}
+            onEdit={(ind) => setEditing(ind)}
           />
         </Box>
       )}
+      {/* Edit dialog */}
+      <IndividualFormDialog
+        open={!!editing}
+        individual={editing}
+        onClose={() => setEditing(null)}
+      />
     </Box>
   );
 }
