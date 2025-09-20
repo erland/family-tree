@@ -49,6 +49,9 @@ export async function getIndividuals() {
         ind.givenName = parts.shift() || "";
         ind.familyName = parts.join(" ");
       }
+      if (!ind.gender) {
+        ind.gender = "unknown";
+      }
       return ind;
     });
 }

@@ -14,6 +14,7 @@ export interface Location {
 
 export interface Individual {
   id: string;
+  gender?: "male" | "female" | "other" | "unknown";
   givenName: string;
   familyName: string;
   birthDate?: string; // ISO date

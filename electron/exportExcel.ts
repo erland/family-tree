@@ -14,6 +14,7 @@ export async function exportIndividualsExcel() {
   // Define headers
   sheet.columns = [
     { header: "ID", key: "id", width: 36 },
+    { header: "Kön", key: "gender", width: 10 },
     { header: "Förnamn", key: "givenName", width: 10 },
     { header: "Efternamn", key: "familyName", width: 15 },
     { header: "Födelsedatum", key: "dateOfBirth", width: 15 },
@@ -31,6 +32,7 @@ export async function exportIndividualsExcel() {
   individuals.forEach((i: any) => {
     sheet.addRow({
       id: i.id ?? "",
+      gender: i.gender ?? "",
       givenName: i.givenName ?? "",
       familyName: i.familyName ?? "",
       dateOfBirth: i.dateOfBirth ?? "",

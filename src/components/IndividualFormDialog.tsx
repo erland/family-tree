@@ -5,6 +5,10 @@ import {
   DialogContent,
   DialogActions,
   Button,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl,
   TextField,
 } from "@mui/material";
 import { Individual, IndividualSchema } from "../types/individual";
@@ -60,6 +64,18 @@ export default function IndividualFormDialog({
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>{individual ? "Redigera person" : "Ny person"}</DialogTitle>
       <DialogContent>
+        <FormControl fullWidth margin="normal">
+          <InputLabel>Kön</InputLabel>
+          <Select
+            value={form.gender || "unknown"}
+            onChange={(e) => handleChange("gender")(e as any)}
+            label="Kön"
+          >
+            <MenuItem value="male">Man</MenuItem>
+            <MenuItem value="female">Kvinna</MenuItem>
+            <MenuItem value="unknown">Okänt</MenuItem>
+          </Select>
+        </FormControl>
         <TextField
           label="Förnamn"
           fullWidth

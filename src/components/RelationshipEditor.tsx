@@ -167,7 +167,7 @@ export default function RelationshipEditor({ open, onClose, relationship }: Prop
             />
             <Autocomplete
               options={individuals}
-              getOptionLabel={(o) => o.name}
+              getOptionLabel={(o) => fullName(o)}
               value={individuals.find((i) => i.id === bride) ?? null}
               onChange={(_, v) => setBride(v?.id ?? "")}
               renderInput={(p) => <TextField {...p} label="Kvinna" />}
