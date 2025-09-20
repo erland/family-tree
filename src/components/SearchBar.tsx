@@ -7,7 +7,8 @@ import { Relationship } from "../types/relationship";
 
 type SearchEntry = {
   id: string;             // always the individual id to return
-  name: string;           // display
+  givenName: string;           // display
+  familyName?: string;           // display
   story?: string;
   dateOfBirth?: string;
   birthRegion?: string;
@@ -77,7 +78,8 @@ export default function SearchBar({
     () =>
       new Fuse(entries, {
         keys: [
-          "name",
+          "givenName",
+          "familyName",
           "story",
           "dateOfBirth",
           "birthRegion",
@@ -153,7 +155,7 @@ export default function SearchBar({
                     setResults([]);
                   }}
                 >
-                  <ListItemText primary={r.item.name} secondary={secondary} />
+                  <ListItemText primary={`${r.item.givenName ?? ""} ${r.item.familyName ?? ""}`.trim()} secondary={secondary} />
                 </ListItemButton>
               );
             })}

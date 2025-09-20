@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from "../store";
 import { fetchRelationships, addRelationship, deleteRelationship } from "../features/relationshipsSlice";
 import RelationshipEditor from "../components/RelationshipEditor";
 import { Relationship } from "../types/relationship";
+import { fullName } from "../utils/nameUtils";
 
 export default function RelationshipsPage() {
   const dispatch = useAppDispatch();
@@ -19,7 +20,7 @@ export default function RelationshipsPage() {
     dispatch(fetchRelationships());
   }, [dispatch]);
 
-  const resolveName = (id: string) => individuals.find((i) => i.id === id)?.name || id;
+  const resolveName = (id: string) => fullName(individuals.find((i) => i.id === id));
 
   const handleNew = () => {
     setEditingRel(undefined);

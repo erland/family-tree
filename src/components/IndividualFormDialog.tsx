@@ -61,13 +61,22 @@ export default function IndividualFormDialog({
       <DialogTitle>{individual ? "Redigera person" : "Ny person"}</DialogTitle>
       <DialogContent>
         <TextField
-          label="Namn"
+          label="Förnamn"
           fullWidth
           margin="normal"
-          value={form.name || ""}
-          onChange={handleChange("name")}
-          error={!!errors.name}
-          helperText={errors.name}
+          value={form.givenName || ""}
+          onChange={handleChange("givenName")}
+          error={!!errors.givenName}
+          helperText={errors.givenName}
+        />
+        <TextField
+          label="Efternamn"
+          fullWidth
+          margin="normal"
+          value={form.familyName || ""}
+          onChange={handleChange("familyName")}
+          error={!!errors.familyName}
+          helperText={errors.familyName}
         />
         <TextField
           label="Födelsedatum"

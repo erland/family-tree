@@ -13,6 +13,7 @@ import {
 import { useAppSelector } from "../store";
 import { Individual } from "../types/individual";
 import SearchBar from "../components/SearchBar";
+import { fullName } from "../utils/nameUtils";
 
 export default function Timeline() {
   const individuals = useAppSelector((s) => s.individuals.items);
@@ -72,7 +73,7 @@ export default function Timeline() {
             sx={{ cursor: "pointer", p: 0 }}
             onClick={() => setSelected(person)}
           >
-            {person.name}
+            {fullName(person)}
           </Link>
         </>
       );
@@ -504,7 +505,7 @@ export default function Timeline() {
       {selected && (
         <Box>
           <Typography variant="h6" gutterBottom>
-            {selected.name}
+            {fullName(selected)}
           </Typography>
           <Divider sx={{ mb: 2 }} />
 

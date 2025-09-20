@@ -1,7 +1,8 @@
 import React from "react";
 import { Autocomplete, TextField } from "@mui/material";
 import { useAppSelector } from "../store";
-import { Individual } from "../types/individual";
+import { Individual } from "../types/individual"
+import { fullName } from "../utils/nameUtils";
 
 interface Props {
   label: string;
@@ -23,7 +24,7 @@ export default function IndividualPicker({ label, value, onChange, multiple }: P
       <Autocomplete
         multiple
         options={individuals}
-        getOptionLabel={(option: Individual) => option.name}
+        getOptionLabel={(option: Individual) => fullName(option)}
         value={selected}
         onChange={(_e, newVals) => onChange(newVals.map((v) => v.id))}
         renderInput={(params) => <TextField {...params} label={label} />}
@@ -37,7 +38,7 @@ export default function IndividualPicker({ label, value, onChange, multiple }: P
   return (
     <Autocomplete
       options={individuals}
-      getOptionLabel={(option: Individual) => option.name}
+      getOptionLabel={(option: Individual) => fullName(option)}
       value={selected}
       onChange={(_e, newVal) => onChange(newVal ? newVal.id : null)}
       renderInput={(params) => <TextField {...params} label={label} />}

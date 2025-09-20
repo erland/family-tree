@@ -1,5 +1,6 @@
 import React from "react";
 import { Handle, Position } from "reactflow";
+import { fullName } from "../utils/nameUtils";
 
 export default function FamilyNode({ data }: any) {
   return (
@@ -18,7 +19,7 @@ export default function FamilyNode({ data }: any) {
         boxSizing: "border-box",
       }}
     >
-      {data.label}
+      {fullName(data.individual)}
 
       {/* Parent-child handles */}
       <Handle type="target" position={Position.Top} id="top" />

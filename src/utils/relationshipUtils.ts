@@ -2,6 +2,7 @@ import { Individual } from "../types/individual";
 import { Relationship } from "../types/relationship";
 import { Node, Edge, Position } from "reactflow";
 import dagre from "dagre";
+import { fullName } from "../utils/nameUtils"; // at top
 
 /* ------------------------------------------------------------------
    Graph utilities
@@ -156,7 +157,7 @@ export function buildGraph(
   const nodes: Node[] = individuals.map((i) => ({
     id: i.id,
     type: "family",
-    data: { label: i.name, isRoot: i.id === rootId },
+    data: { individual: i, isRoot: i.id === rootId },
     position: { x: 0, y: 0 },
     sourcePosition: direction === "LR" ? Position.Right : Position.Bottom,
     targetPosition: direction === "LR" ? Position.Left : Position.Top,

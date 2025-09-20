@@ -42,7 +42,15 @@ async function writeDB() {
 // Individuals
 export async function getIndividuals() {
   const data = await readDB();
-  return data.individuals;
+  return data.individuals.map((ind: any) => {
+      // Migration: split old "name" into given/family
+      if (ind.name && (!ind.givenName || !ind.familyName)) {
+        const parts = ind.name.trim().split(/\s+/);
+        ind.givenName = parts.shift() || "";
+        ind.familyName = parts.join(" ");
+      }
+      return ind;
+    });
 }
 
 export async function addIndividual(ind: any) {

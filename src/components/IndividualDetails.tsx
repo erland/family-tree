@@ -2,6 +2,7 @@ import { Box, IconButton, Typography, Divider } from "@mui/material";
 import { Edit, Close } from "@mui/icons-material";
 import { useAppSelector } from "../store";
 import { Individual } from "../types/individual";
+import { fullName } from "../utils/nameUtils";
 
 export default function IndividualDetails({
   individualId,
@@ -103,7 +104,7 @@ export default function IndividualDetails({
             textOverflow: "ellipsis",
           }}
         >
-          {individual.name}
+          {fullName(individual)}
         </Typography>
 
         <Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
@@ -180,7 +181,7 @@ export default function IndividualDetails({
           <Box sx={{ pl: 2 }}>
             {parents.map((parent) => (
               <Typography key={parent.id} variant="body2">
-                {parent.name}{" "}
+                {fullName(parent)}{" "}
                 {parent.dateOfBirth ? `(${parent.dateOfBirth})` : ""}
               </Typography>
             ))}
@@ -196,7 +197,7 @@ export default function IndividualDetails({
           <Box sx={{ pl: 2 }}>
             {spouses.map(({ partner, weddingDate }, idx) => (
               <Typography key={idx} variant="body2">
-                {partner ? partner.name : "Okänd"}{" "}
+                {partner ? fullName(partner) : "Okänd"}{" "}
                 {weddingDate ? `(${weddingDate})` : ""}
               </Typography>
             ))}
@@ -216,12 +217,12 @@ export default function IndividualDetails({
               return (
                 <Box key={partnerId} sx={{ mt: 0.5 }}>
                   <Typography variant="body2" fontWeight={600}>
-                    Med {partner ? partner.name : "okänd partner"}:
+                    Med {partner ? fullName(partner) : "okänd partner"}:
                   </Typography>
                   <Box sx={{ pl: 2 }}>
                     {children.map((child) => (
                       <Typography key={child.id} variant="body2">
-                        {child.name}{" "}
+                        {fullName(child)}{" "}
                         {child.dateOfBirth ? `(${child.dateOfBirth})` : ""}
                       </Typography>
                     ))}
@@ -238,7 +239,7 @@ export default function IndividualDetails({
                 <Box sx={{ pl: 2 }}>
                   {soloChildren.map((child) => (
                     <Typography key={child.id} variant="body2">
-                      {child.name}{" "}
+                      {fullName(child)}{" "}
                       {child.dateOfBirth ? `(${child.dateOfBirth})` : ""}
                     </Typography>
                   ))}

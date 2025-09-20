@@ -20,6 +20,7 @@ import { Individual } from "../types/individual";
 import SearchBar from "../components/SearchBar";
 import IndividualDetails from "../components/IndividualDetails";
 import IndividualFormDialog from "../components/IndividualFormDialog";
+import { fullName } from "../utils/nameUtils"; // at top
 
 export default function IndividualsPage() {
   const dispatch = useAppDispatch();
@@ -105,7 +106,7 @@ export default function IndividualsPage() {
                   onClick={() => setSelected(ind)}
                   style={{ cursor: "pointer" }}
                 >
-                  <TableCell>{ind.name}</TableCell>
+                  <TableCell>{fullName(ind)}</TableCell>
                   <TableCell>{ind.dateOfBirth || ""}</TableCell>
                   <TableCell>{ind.dateOfDeath || ""}</TableCell>
                   <TableCell>

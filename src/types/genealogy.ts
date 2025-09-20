@@ -14,7 +14,8 @@ export interface Location {
 
 export interface Individual {
   id: string;
-  name: string;
+  givenName: string;
+  familyName: string;
   birthDate?: string; // ISO date
   birthLocation?: Location;
   deathDate?: string; // ISO date

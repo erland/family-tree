@@ -14,7 +14,8 @@ export async function exportIndividualsExcel() {
   // Define headers
   sheet.columns = [
     { header: "ID", key: "id", width: 36 },
-    { header: "Namn", key: "name", width: 25 },
+    { header: "Förnamn", key: "givenName", width: 10 },
+    { header: "Efternamn", key: "familyName", width: 15 },
     { header: "Födelsedatum", key: "dateOfBirth", width: 15 },
     { header: "Region (födelse)", key: "birthRegion", width: 20 },
     { header: "Församling (födelse)", key: "birthCongregation", width: 20 },
@@ -30,7 +31,8 @@ export async function exportIndividualsExcel() {
   individuals.forEach((i: any) => {
     sheet.addRow({
       id: i.id ?? "",
-      name: i.name ?? "",
+      givenName: i.givenName ?? "",
+      familyName: i.familyName ?? "",
       dateOfBirth: i.dateOfBirth ?? "",
       birthRegion: i.birthRegion ?? "",
       birthCongregation: i.birthCongregation ?? "",
@@ -102,13 +104,13 @@ export async function exportRelationshipsExcel() {
 
   // Add rows
   relationships.forEach((r: any) => {
-    const person1Name = r.person1Id ? byId[r.person1Id]?.name ?? "" : "";
-    const person2Name = r.person2Id ? byId[r.person2Id]?.name ?? "" : "";
-    const childName = r.childId ? byId[r.childId]?.name ?? "" : "";
+    const person1Name = r.person1Id ? byId[r.person1Id]?.givenName ?? "" : "";
+    const person2Name = r.person2Id ? byId[r.person2Id]?.givenName ?? "" : "";
+    const childName = r.childId ? byId[r.childId]?.givenName ?? "" : "";
 
     const parentIds = Array.isArray(r.parentIds) ? r.parentIds : [];
     const parentNames = parentIds
-      .map((pid: string) => byId[pid]?.name ?? "")
+      .map((pid: string) => byId[pid]?.givenName ?? "")
       .filter(Boolean)
       .join(", ");
 

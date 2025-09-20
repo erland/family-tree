@@ -2,7 +2,8 @@ import { z } from "zod";
 
 export const IndividualSchema = z.object({
   id: z.string(),
-  name: z.string().min(1, "Namn krävs"),
+  givenName: z.string().min(1, "Namn krävs"),
+  familyName: z.string().optional(),
   dateOfBirth: z.string().optional(),
   birthRegion: z.string().optional(),
   birthCongregation: z.string().optional(),
