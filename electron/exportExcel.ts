@@ -17,6 +17,7 @@ export async function exportIndividualsExcel() {
     { header: "Kön", key: "gender", width: 10 },
     { header: "Förnamn", key: "givenName", width: 10 },
     { header: "Efternamn", key: "familyName", width: 15 },
+    { header: "Efternamn (vid födsel)", key: "birthFamilyName", width: 15 },
     { header: "Födelsedatum", key: "dateOfBirth", width: 15 },
     { header: "Region (födelse)", key: "birthRegion", width: 20 },
     { header: "Församling (födelse)", key: "birthCongregation", width: 20 },

@@ -52,6 +52,9 @@ export async function getIndividuals() {
       if (!ind.gender) {
         ind.gender = "unknown";
       }
+      if (!ind.birthFamilyName) {
+        ind.birthFamilyName = "";
+      }
       return ind;
     });
 }

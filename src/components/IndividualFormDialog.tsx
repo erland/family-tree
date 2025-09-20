@@ -95,6 +95,15 @@ export default function IndividualFormDialog({
           helperText={errors.familyName}
         />
         <TextField
+          label="Efternamn (vid födsel)"
+          fullWidth
+          margin="normal"
+          value={form.birthFamilyName || ""}
+          onChange={handleChange("birthFamilyName")}
+          error={!!errors.birthFamilyName}
+          helperText={errors.birthFamilyName}
+        />
+        <TextField
           label="Födelsedatum"
           fullWidth
           margin="normal"

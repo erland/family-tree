@@ -5,6 +5,7 @@ export const IndividualSchema = z.object({
   gender: z.string().optional(),
   givenName: z.string().min(1, "Namn krävs"),
   familyName: z.string().optional(),
+  birthFamilyName: z.string().optional(),
   dateOfBirth: z.string().optional(),
   birthRegion: z.string().optional(),
   birthCongregation: z.string().optional(),

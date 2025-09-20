@@ -17,6 +17,7 @@ export interface Individual {
   gender?: "male" | "female" | "other" | "unknown";
   givenName: string;
   familyName: string;
+  birthFamilyName?: string;
   birthDate?: string; // ISO date
   birthLocation?: Location;
   deathDate?: string; // ISO date
