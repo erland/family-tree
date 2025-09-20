@@ -16,6 +16,7 @@ import { useAppDispatch, useAppSelector } from "../store";
 import { addRelationship, updateRelationship } from "../features/relationshipsSlice";
 import { Relationship } from "../types/relationship";
 import { wouldCreateCycle } from "../utils/relationshipUtils";
+import { fullName } from "../utils/nameUtils";
 
 type Props = {
   open: boolean;
@@ -158,7 +159,7 @@ export default function RelationshipEditor({ open, onClose, relationship }: Prop
           <>
             <Autocomplete
               options={individuals}
-              getOptionLabel={(o) => o.name}
+              getOptionLabel={(o) => fullName(o)}
               value={individuals.find((i) => i.id === groom) ?? null}
               onChange={(_, v) => setGroom(v?.id ?? "")}
               renderInput={(p) => <TextField {...p} label="Man" />}

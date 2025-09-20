@@ -104,9 +104,8 @@ function PedigreeInner({
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeClick={(_, node) => {
-        if (node.type === "family") {
-          const ind = individuals.find((i) => i.id === node.id);
-          if (ind) onSelectIndividual?.(ind);
+        if (node.type === "family" && node.data?.individual) {
+          onSelectIndividual?.(node.data.individual);
         }
       }}
       fitView
