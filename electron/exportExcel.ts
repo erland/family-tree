@@ -36,6 +36,7 @@ export async function exportIndividualsExcel() {
       gender: i.gender ?? "",
       givenName: i.givenName ?? "",
       familyName: i.familyName ?? "",
+      birthFamilyName: i.birthFamilyName ?? "",
       dateOfBirth: i.dateOfBirth ?? "",
       birthRegion: i.birthRegion ?? "",
       birthCongregation: i.birthCongregation ?? "",
