@@ -24,17 +24,37 @@ export default function IndividualDetails({
     individual.deathCity ||
     individual.deathCongregation;
 
-  // 🔎 Children: all where this person is a parent
-  const childIds = relationships
-    .filter((r) => r.type === "parent-child" && r.parentIds.includes(individual.id))
-    .map((r) => r.childId);
-  const children = individuals.filter((i) => childIds.includes(i.id));
-
-  // 🔎 Parents: all where this person is the child
+  // 🔎 Parents of this individual
   const parentIds = relationships
     .filter((r) => r.type === "parent-child" && r.childId === individual.id)
     .flatMap((r) => r.parentIds);
   const parents = individuals.filter((i) => parentIds.includes(i.id));
+
+  // 🔎 Children of this individual
+  const childRels = relationships.filter(
+    (r) => r.type === "parent-child" && r.parentIds.includes(individual.id)
+  );
+
+  // Group children by the *other parent* in the parent-child relation
+  const groupedByPartner: Record<string, Individual[]> = {};
+  const soloChildren: Individual[] = [];
+
+  childRels.forEach((rel) => {
+    const otherParents = rel.parentIds.filter((pid) => pid !== individual.id);
+    const child = individuals.find((i) => i.id === rel.childId);
+    if (!child) return;
+
+    if (otherParents.length > 0) {
+      const otherParentId = otherParents[0]; // support multiple if needed
+      if (!groupedByPartner[otherParentId]) {
+        groupedByPartner[otherParentId] = [];
+      }
+      groupedByPartner[otherParentId].push(child);
+    } else {
+      // child with only this parent
+      soloChildren.push(child);
+    }
+  });
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
@@ -101,21 +121,48 @@ export default function IndividualDetails({
         </Box>
       )}
 
-      {children.length > 0 && (
+      {(Object.keys(groupedByPartner).length > 0 || soloChildren.length > 0) && (
         <Box sx={{ mt: 1 }}>
           <Typography variant="body2" fontWeight={700}>
             Barn:
           </Typography>
           <Box sx={{ pl: 2 }}>
-            {children.map((child) => (
-              <Typography key={child.id} variant="body2">
-                {child.name} {child.dateOfBirth ? `(${child.dateOfBirth})` : ""}
-              </Typography>
-            ))}
+            {Object.entries(groupedByPartner).map(([partnerId, children]) => {
+              const partner = individuals.find((i) => i.id === partnerId);
+              return (
+                <Box key={partnerId} sx={{ mt: 0.5 }}>
+                  <Typography variant="body2" fontWeight={600}>
+                    Med {partner ? partner.name : "okänd partner"}:
+                  </Typography>
+                  <Box sx={{ pl: 2 }}>
+                    {children.map((child) => (
+                      <Typography key={child.id} variant="body2">
+                        {child.name} {child.dateOfBirth ? `(${child.dateOfBirth})` : ""}
+                      </Typography>
+                    ))}
+                  </Box>
+                </Box>
+              );
+            })}
+
+            {soloChildren.length > 0 && (
+              <Box sx={{ mt: 0.5 }}>
+                <Typography variant="body2" fontWeight={600}>
+                  Utan känd partner:
+                </Typography>
+                <Box sx={{ pl: 2 }}>
+                  {soloChildren.map((child) => (
+                    <Typography key={child.id} variant="body2">
+                      {child.name} {child.dateOfBirth ? `(${child.dateOfBirth})` : ""}
+                    </Typography>
+                  ))}
+                </Box>
+              </Box>
+            )}
           </Box>
         </Box>
       )}
-      
+
       {individual.story && (
         <Box sx={{ mt: 1 }}>
           <Typography variant="body2" fontWeight={700}>
@@ -124,7 +171,6 @@ export default function IndividualDetails({
           <Typography variant="body2">{individual.story}</Typography>
         </Box>
       )}
-
     </Box>
   );
 }
