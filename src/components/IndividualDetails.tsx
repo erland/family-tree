@@ -30,6 +30,20 @@ export default function IndividualDetails({
     .flatMap((r) => r.parentIds);
   const parents = individuals.filter((i) => parentIds.includes(i.id));
 
+  // 🔎 Spouses of this individual
+  const spouseRels = relationships.filter(
+    (r) =>
+      r.type === "spouse" &&
+      ((r as any).person1Id === individual.id || (r as any).person2Id === individual.id)
+  );
+  const spouses = spouseRels.map((r) => {
+    const otherId = (r as any).person1Id === individual.id ? (r as any).person2Id : (r as any).person1Id;
+    return {
+      partner: individuals.find((i) => i.id === otherId),
+      weddingDate: (r as any).weddingDate ?? null,
+    };
+  });
+
   // 🔎 Children of this individual
   const childRels = relationships.filter(
     (r) => r.type === "parent-child" && r.parentIds.includes(individual.id)
@@ -45,13 +59,12 @@ export default function IndividualDetails({
     if (!child) return;
 
     if (otherParents.length > 0) {
-      const otherParentId = otherParents[0]; // support multiple if needed
+      const otherParentId = otherParents[0];
       if (!groupedByPartner[otherParentId]) {
         groupedByPartner[otherParentId] = [];
       }
       groupedByPartner[otherParentId].push(child);
     } else {
-      // child with only this parent
       soloChildren.push(child);
     }
   });
@@ -115,6 +128,21 @@ export default function IndividualDetails({
             {parents.map((parent) => (
               <Typography key={parent.id} variant="body2">
                 {parent.name} {parent.dateOfBirth ? `(${parent.dateOfBirth})` : ""}
+              </Typography>
+            ))}
+          </Box>
+        </Box>
+      )}
+
+      {spouses.length > 0 && (
+        <Box sx={{ mt: 1 }}>
+          <Typography variant="body2" fontWeight={700}>
+            Gift med:
+          </Typography>
+          <Box sx={{ pl: 2 }}>
+            {spouses.map(({ partner, weddingDate }, idx) => (
+              <Typography key={idx} variant="body2">
+                {partner ? partner.name : "Okänd"} {weddingDate ? `(${weddingDate})` : ""}
               </Typography>
             ))}
           </Box>
