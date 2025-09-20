@@ -8,6 +8,7 @@ import {
   TableCell,
   TableBody,
   Divider,
+  Link,
 } from "@mui/material";
 import { useAppSelector } from "../store";
 import { Individual } from "../types/individual";
@@ -39,16 +40,48 @@ export default function Timeline() {
       const event = parseDate(eventDate);
       if (!birth || !event) return "-";
       if (event < birth) return "-";
+    
+      // Total months difference
+      const months =
+        (event.getFullYear() - birth.getFullYear()) * 12 +
+        (event.getMonth() - birth.getMonth()) -
+        (event.getDate() < birth.getDate() ? 1 : 0);
+    
+      if (months < 24) {
+        return `${months} mån`;
+      }
+    
+      // Fall back to years
       let age = event.getFullYear() - birth.getFullYear();
       const beforeBirthday =
         event.getMonth() < birth.getMonth() ||
         (event.getMonth() === birth.getMonth() && event.getDate() < birth.getDate());
       if (beforeBirthday) age--;
+    
       return `${age} år`;
     };
 
-    const datedEvents: { date: string; text: string; age: string }[] = [];
-    const undatedEvents: { text: string }[] = [];
+    const clickableName = (person: Individual | undefined, prefix?: string) => {
+      if (!person) return prefix ? `${prefix} okänd` : "Okänd";
+      return (
+        <>
+          {prefix ? `${prefix} ` : ""}
+          <Link
+            component="button"
+            underline="hover"
+            sx={{ cursor: "pointer", p: 0 }}
+            onClick={() => setSelected(person)}
+          >
+            {person.name}
+          </Link>
+        </>
+      );
+    };
+
+    const datedEvents: { date: string; text: React.ReactNode; age: string }[] = [];
+    const undatedEvents: { text: React.ReactNode }[] = [];
+
+    const birthDate = parseDate(selected.dateOfBirth);
 
     // --- Birth
     if (selected.dateOfBirth) {
@@ -79,7 +112,6 @@ export default function Timeline() {
     );
 
     const spouses: Individual[] = [];
-
     spouseRels.forEach((rel) => {
       const otherId =
         (rel as any).person1Id === selected.id ? (rel as any).person2Id : (rel as any).person1Id;
@@ -89,11 +121,11 @@ export default function Timeline() {
       if (rel.weddingDate && spouse) {
         datedEvents.push({
           date: rel.weddingDate,
-          text: `Gift med ${spouse.name}`,
+          text: <>Gift med {clickableName(spouse)}</>,
           age: calcAge(rel.weddingDate),
         });
       } else if (spouse) {
-        undatedEvents.push({ text: `Gift med ${spouse.name}` });
+        undatedEvents.push({ text: <>Gift med {clickableName(spouse)}</> });
       }
     });
 
@@ -101,7 +133,6 @@ export default function Timeline() {
     const childRels = relationships.filter(
       (r) => r.type === "parent-child" && r.parentIds.includes(selected.id)
     );
-
     const children: Individual[] = [];
 
     childRels.forEach((rel) => {
@@ -112,9 +143,13 @@ export default function Timeline() {
       const otherParentId = rel.parentIds.find((pid) => pid !== selected.id);
       const spouse = individuals.find((i) => i.id === otherParentId);
 
-      const birthText = `Nytt barn ${child.name}${
-        spouse ? ` med ${spouse.name}` : ""
-      }${formatLocation(child.birthRegion, child.birthCity, child.birthCongregation)}`;
+      const birthText = (
+        <>
+          Nytt barn {clickableName(child)}
+          {spouse ? <> med {clickableName(spouse)}</> : ""}
+          {formatLocation(child.birthRegion, child.birthCity, child.birthCongregation)}
+        </>
+      );
 
       if (child.dateOfBirth) {
         datedEvents.push({
@@ -126,12 +161,12 @@ export default function Timeline() {
         undatedEvents.push({ text: birthText });
       }
 
-      // death of child
-      const deathText = `Avlidet barn ${child.name}${formatLocation(
-        child.deathRegion,
-        child.deathCity,
-        child.deathCongregation
-      )}`;
+      const deathText = (
+        <>
+          Avlidet barn {clickableName(child)}
+          {formatLocation(child.deathRegion, child.deathCity, child.deathCongregation)}
+        </>
+      );
       if (child.dateOfDeath) {
         datedEvents.push({
           date: child.dateOfDeath,
@@ -155,11 +190,12 @@ export default function Timeline() {
         if (!grandChild) return;
         grandchildren.push(grandChild);
 
-        const birthText = `Nytt barnbarn ${grandChild.name} från ${child.name}${formatLocation(
-          grandChild.birthRegion,
-          grandChild.birthCity,
-          grandChild.birthCongregation
-        )}`;
+        const birthText = (
+          <>
+            Nytt barnbarn {clickableName(grandChild)} från {clickableName(child)}
+            {formatLocation(grandChild.birthRegion, grandChild.birthCity, grandChild.birthCongregation)}
+          </>
+        );
 
         if (grandChild.dateOfBirth) {
           datedEvents.push({
@@ -171,23 +207,19 @@ export default function Timeline() {
           undatedEvents.push({ text: birthText });
         }
 
-        // death of grandchild
-        const deathText = `Avlidet barnbarn ${grandChild.name} från ${child.name}${formatLocation(
-          grandChild.deathRegion,
-          grandChild.deathCity,
-          grandChild.deathCongregation
-        )}`;
+        const deathText = (
+          <>
+            Avlidet barnbarn {clickableName(grandChild)} från {clickableName(child)}
+            {formatLocation(grandChild.deathRegion, grandChild.deathCity, grandChild.deathCongregation)}
+          </>
+        );
         if (grandChild.dateOfDeath) {
           datedEvents.push({
             date: grandChild.dateOfDeath,
             text: deathText,
             age: calcAge(grandChild.dateOfDeath),
           });
-        } else if (
-          grandChild.deathRegion ||
-          grandChild.deathCity ||
-          grandChild.deathCongregation
-        ) {
+        } else if (grandChild.deathRegion || grandChild.deathCity || grandChild.deathCongregation) {
           undatedEvents.push({ text: deathText });
         }
       });
@@ -203,11 +235,16 @@ export default function Timeline() {
         const greatGrandChild = individuals.find((i) => i.id === rel.childId);
         if (!greatGrandChild) return;
 
-        const birthText = `Nytt barnbarnsbarn ${greatGrandChild.name} från ${grandChild.name}${formatLocation(
-          greatGrandChild.birthRegion,
-          greatGrandChild.birthCity,
-          greatGrandChild.birthCongregation
-        )}`;
+        const birthText = (
+          <>
+            Nytt barnbarnsbarn {clickableName(greatGrandChild)} från {clickableName(grandChild)}
+            {formatLocation(
+              greatGrandChild.birthRegion,
+              greatGrandChild.birthCity,
+              greatGrandChild.birthCongregation
+            )}
+          </>
+        );
 
         if (greatGrandChild.dateOfBirth) {
           datedEvents.push({
@@ -219,12 +256,16 @@ export default function Timeline() {
           undatedEvents.push({ text: birthText });
         }
 
-        // death of great-grandchild
-        const deathText = `Avlidet barnbarnsbarn ${greatGrandChild.name} från ${grandChild.name}${formatLocation(
-          greatGrandChild.deathRegion,
-          greatGrandChild.deathCity,
-          greatGrandChild.deathCongregation
-        )}`;
+        const deathText = (
+          <>
+            Avlidet barnbarnsbarn {clickableName(greatGrandChild)} från {clickableName(grandChild)}
+            {formatLocation(
+              greatGrandChild.deathRegion,
+              greatGrandChild.deathCity,
+              greatGrandChild.deathCongregation
+            )}
+          </>
+        );
         if (greatGrandChild.dateOfDeath) {
           datedEvents.push({
             date: greatGrandChild.dateOfDeath,
@@ -241,15 +282,111 @@ export default function Timeline() {
       });
     });
 
-    // --- Siblings
+    // --- Parents
     const parentRels = relationships.filter(
       (r) => r.type === "parent-child" && r.childId === selected.id
     );
-    const parentIds = parentRels.flatMap((r) => r.parentIds);
+    const parents = parentRels.flatMap((r) =>
+      r.parentIds.map((pid) => individuals.find((i) => i.id === pid)).filter(Boolean)
+    ) as Individual[];
+
+    // Parent death events
+    parents.forEach((p) => {
+      const deathText = (
+        <>
+          Avliden förälder {clickableName(p)}
+          {formatLocation(p.deathRegion, p.deathCity, p.deathCongregation)}
+        </>
+      );
+      if (p.dateOfDeath) {
+        const d = parseDate(p.dateOfDeath);
+        if (!birthDate || (d && d > birthDate)) {
+          datedEvents.push({
+            date: p.dateOfDeath,
+            text: deathText,
+            age: calcAge(p.dateOfDeath),
+          });
+        }
+      } else if (p.deathRegion || p.deathCity || p.deathCongregation) {
+        undatedEvents.push({ text: deathText });
+      }
+    });
+
+    // --- Grandparents
+    const grandparents: Individual[] = [];
+    parents.forEach((p) => {
+      const gpRels = relationships.filter(
+        (r) => r.type === "parent-child" && r.childId === p.id
+      );
+      gpRels.forEach((rel) => {
+        rel.parentIds.forEach((pid) => {
+          const gp = individuals.find((i) => i.id === pid);
+          if (gp) grandparents.push(gp);
+        });
+      });
+    });
+
+    grandparents.forEach((gp) => {
+      const deathText = (
+        <>
+          Avliden mor/farförälder {clickableName(gp)}
+          {formatLocation(gp.deathRegion, gp.deathCity, gp.deathCongregation)}
+        </>
+      );
+      if (gp.dateOfDeath) {
+        const d = parseDate(gp.dateOfDeath);
+        if (!birthDate || (d && d > birthDate)) {
+          datedEvents.push({
+            date: gp.dateOfDeath,
+            text: deathText,
+            age: calcAge(gp.dateOfDeath),
+          });
+        }
+      } else if (gp.deathRegion || gp.deathCity || gp.deathCongregation) {
+        undatedEvents.push({ text: deathText });
+      }
+    });
+
+    // --- Great-grandparents
+    const greatGrandparents: Individual[] = [];
+    grandparents.forEach((gp) => {
+      const ggpRels = relationships.filter(
+        (r) => r.type === "parent-child" && r.childId === gp.id
+      );
+      ggpRels.forEach((rel) => {
+        rel.parentIds.forEach((pid) => {
+          const ggp = individuals.find((i) => i.id === pid);
+          if (ggp) greatGrandparents.push(ggp);
+        });
+      });
+    });
+
+    greatGrandparents.forEach((ggp) => {
+      const deathText = (
+        <>
+          Avliden gammelmor/farförälder {clickableName(ggp)}
+          {formatLocation(ggp.deathRegion, ggp.deathCity, ggp.deathCongregation)}
+        </>
+      );
+      if (ggp.dateOfDeath) {
+        const d = parseDate(ggp.dateOfDeath);
+        if (!birthDate || (d && d > birthDate)) {
+          datedEvents.push({
+            date: ggp.dateOfDeath,
+            text: deathText,
+            age: calcAge(ggp.dateOfDeath),
+          });
+        }
+      } else if (ggp.deathRegion || ggp.deathCity || ggp.deathCongregation) {
+        undatedEvents.push({ text: deathText });
+      }
+    });
+
+    // --- Siblings
     const siblingRels = relationships.filter(
       (r) =>
         r.type === "parent-child" &&
-        r.parentIds.some((pid) => parentIds.includes(pid)) &&
+        r.parentIds.some((pid) => parents.map((p) => p.id).includes(pid)) &&
         r.childId !== selected.id
     );
 
@@ -257,11 +394,12 @@ export default function Timeline() {
       const sibling = individuals.find((i) => i.id === rel.childId);
       if (!sibling) return;
 
-      const birthText = `Nytt syskon ${sibling.name}${formatLocation(
-        sibling.birthRegion,
-        sibling.birthCity,
-        sibling.birthCongregation
-      )}`;
+      const birthText = (
+        <>
+          Nytt syskon {clickableName(sibling)}
+          {formatLocation(sibling.birthRegion, sibling.birthCity, sibling.birthCongregation)}
+        </>
+      );
       if (sibling.dateOfBirth) {
         datedEvents.push({
           date: sibling.dateOfBirth,
@@ -272,11 +410,12 @@ export default function Timeline() {
         undatedEvents.push({ text: birthText });
       }
 
-      const deathText = `Avlidet syskon ${sibling.name}${formatLocation(
-        sibling.deathRegion,
-        sibling.deathCity,
-        sibling.deathCongregation
-      )}`;
+      const deathText = (
+        <>
+          Avlidet syskon {clickableName(sibling)}
+          {formatLocation(sibling.deathRegion, sibling.deathCity, sibling.deathCongregation)}
+        </>
+      );
       if (sibling.dateOfDeath) {
         datedEvents.push({
           date: sibling.dateOfDeath,
@@ -290,11 +429,12 @@ export default function Timeline() {
 
     // --- Death of spouses
     spouses.forEach((spouse) => {
-      const deathText = `Avliden make/maka ${spouse.name}${formatLocation(
-        spouse.deathRegion,
-        spouse.deathCity,
-        spouse.deathCongregation
-      )}`;
+      const deathText = (
+        <>
+          Avliden make/maka {clickableName(spouse)}
+          {formatLocation(spouse.deathRegion, spouse.deathCity, spouse.deathCongregation)}
+        </>
+      );
       if (spouse.dateOfDeath) {
         datedEvents.push({
           date: spouse.dateOfDeath,
