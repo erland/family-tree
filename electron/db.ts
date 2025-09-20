@@ -47,8 +47,8 @@ export async function getIndividuals() {
 
 export async function addIndividual(ind: any) {
   const data = await readDB();
-  if (data.individuals.length >= 500) {
-    throw new Error("Maximum 500 individuals reached");
+  if (data.individuals.length >= 1000) {
+    throw new Error("Maximum 1000 individuals reached");
   }
   data.individuals.push(ind);
   await writeDB();
