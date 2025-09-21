@@ -63,23 +63,52 @@ export default function IndividualDetails({
     (r) => r.type === "parent-child" && r.parentIds.includes(individual.id)
   );
 
-  // Group children by the *other parent* in the parent-child relation
+  // Group children by the *other parent* using ONLY parent-child relations.
+  // Works whether your data stores one relation with both parents in parentIds,
+  // or two separate relations (one per parent).
   const groupedByPartner: Record<string, Individual[]> = {};
+  const seenByPartner: Record<string, Set<string>> = {};
   const soloChildren: Individual[] = [];
+  const soloSeen = new Set<string>();
 
   childRels.forEach((rel) => {
-    const otherParents = rel.parentIds.filter((pid) => pid !== individual.id);
     const child = individuals.find((i) => i.id === rel.childId);
     if (!child) return;
 
-    if (otherParents.length > 0) {
-      const otherParentId = otherParents[0];
-      if (!groupedByPartner[otherParentId]) {
-        groupedByPartner[otherParentId] = [];
-      }
-      groupedByPartner[otherParentId].push(child);
+    // 1) Try to get other parent(s) from this relation
+    let otherParentIds = rel.parentIds.filter((pid) => pid !== individual.id);
+
+    // 2) If none, look for any other parent-child relations for the same child
+    //    and collect those parents (minus the current individual).
+    if (otherParentIds.length === 0) {
+      const allParentIdsForChild = relationships
+        .filter(
+          (r) => r.type === "parent-child" && (r as any).childId === rel.childId
+        )
+        .flatMap((r) => (r as any).parentIds as string[]);
+      otherParentIds = Array.from(
+        new Set(allParentIdsForChild.filter((pid) => pid !== individual.id))
+      );
+    }
+
+    // 3) Group the child under each discovered "other parent",
+    //    or under "solo" if none was found.
+    if (otherParentIds.length > 0) {
+      otherParentIds.forEach((partnerId) => {
+        if (!groupedByPartner[partnerId]) {
+          groupedByPartner[partnerId] = [];
+          seenByPartner[partnerId] = new Set();
+        }
+        if (!seenByPartner[partnerId].has(child.id)) {
+          groupedByPartner[partnerId].push(child);
+          seenByPartner[partnerId].add(child.id);
+        }
+      });
     } else {
-      soloChildren.push(child);
+      if (!soloSeen.has(child.id)) {
+        soloChildren.push(child);
+        soloSeen.add(child.id);
+      }
     }
   });
 
