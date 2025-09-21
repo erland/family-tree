@@ -21,13 +21,11 @@ import {
   Button,
   Select,
   MenuItem,
-  Typography,
-  Divider,
 } from "@mui/material";
 
 import { useAppSelector } from "../store";
-import { buildGraph, getDescendants, getAncestors } from "../utils/relationshipUtils";
 import { Individual } from "../types/individual";
+import { buildGraph } from "../utils/treeLayout";
 import FamilyNode from "./FamilyNode";
 import MarriageNode from "./MarriageNode";
 import SearchBar from "../components/SearchBar";
@@ -55,39 +53,12 @@ function PedigreeInner({
   const relationships = useAppSelector((s) => s.relationships.items);
   const { fitView } = useReactFlow();
 
+  // 🔎 Build graph directly via buildGraph (no manual filtering)
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
-    let ids: string[] | null = null;
-    if (rootId) {
-      const related =
-        mode === "descendants"
-          ? getDescendants(relationships, rootId, maxGenerations)
-          : getAncestors(relationships, rootId, maxGenerations);
-      ids = [rootId, ...related];
-    }
-
-    const filteredIndividuals = ids
-      ? individuals.filter((i) => ids.includes(i.id))
-      : individuals;
-
-    const filteredRelationships = ids
-      ? relationships.filter((r) => {
-          if (r.type === "parent-child") {
-            return (
-              r.parentIds.some((p) => ids!.includes(p)) && ids!.includes(r.childId)
-            );
-          }
-          if (r.type === "spouse") {
-            return (
-              ids!.includes((r as any).person1Id) &&
-              ids!.includes((r as any).person2Id)
-            );
-          }
-          return false;
-        })
-      : relationships;
-
-    return buildGraph(filteredIndividuals, filteredRelationships, {
+    return buildGraph(individuals, relationships, {
       rootId,
+      mode,
+      maxGenerations,
     });
   }, [individuals, relationships, rootId, mode, maxGenerations]);
 
@@ -170,15 +141,19 @@ export default function PedigreeTree() {
             <ToggleButton value="descendants">Efterkommande</ToggleButton>
             <ToggleButton value="ancestors">Förfäder</ToggleButton>
           </ToggleButtonGroup>
+
           <Select
             size="small"
             value={maxGenerations}
             onChange={(e) => setMaxGenerations(Number(e.target.value))}
           >
-            {[2,3,4,5,6,7,8,9,10].map((g) => (
-              <MenuItem key={g} value={g}>{g} gen</MenuItem>
+            {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
+              <MenuItem key={g} value={g}>
+                {g} gen
+              </MenuItem>
             ))}
           </Select>
+
           {root && (
             <Button variant="outlined" size="small" onClick={() => setRoot(null)}>
               Rensa
