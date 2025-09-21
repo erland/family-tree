@@ -73,26 +73,38 @@ export async function importExcel(filePath: string): Promise<ImportResult> {
     }
   });
 
-  // Build relationships
+  // Build relationships (one per child, with multiple parentIds if available)
+  const childToParents: Record<string, string[]> = {};
+
   for (const [code, parentId] of Object.entries(slaktskapMap)) {
     if (code.length === 0) continue;
-  
-    // Walk back through code until no parent left
+
+    // Walk back step by step until we find a shorter code that exists
     let childCode = code.slice(0, -1);
     while (childCode.length > 0) {
       const childId = slaktskapMap[childCode];
       if (childId) {
-        relationships.push({
-          id: uuidv4(),
-          type: "parent-child",
-          parentIds: [parentId],
-          childId,
-        });
-        break; // found the immediate child, stop
+        if (!childToParents[childId]) {
+          childToParents[childId] = [];
+        }
+        if (!childToParents[childId].includes(parentId)) {
+          childToParents[childId].push(parentId);
+        }
+        break; // found nearest child, stop
       }
-      childCode = childCode.slice(0, -1); // try one step shorter
+      childCode = childCode.slice(0, -1);
     }
   }
+
+  // Now create one relation per child
+  for (const [childId, parentIds] of Object.entries(childToParents)) {
+    relationships.push({
+      id: uuidv4(),
+      type: "parent-child",
+      parentIds,
+      childId,
+    });
+  }  
   
   return { individuals, relationships };
 }
