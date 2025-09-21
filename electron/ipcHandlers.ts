@@ -1,4 +1,5 @@
 import { ipcMain } from "electron";
+import { dialog, BrowserWindow } from "electron";
 import {
   getIndividuals,
   addIndividual,
@@ -10,6 +11,7 @@ import {
   deleteRelationship,
 } from "./db.js";
 import { exportIndividualsExcel, exportRelationshipsExcel } from "./exportExcel.js";
+import { importExcel } from "./importExcel.js";
 
 
 export function registerIpcHandlers() {
@@ -37,6 +39,26 @@ export function registerIpcHandlers() {
   });
   ipcMain.handle("relationships:exportExcel", async () => {
     return exportRelationshipsExcel(); // 👈 new
+  });
+  ipcMain.handle("importExcel", async (_event, filePath: string) => {
+    const { individuals, relationships } = await importExcel(filePath);
+  
+    // Save imported data to DB
+    for (const ind of individuals) {
+      await addIndividual(ind);
+    }
+    for (const rel of relationships) {
+      // assuming you have addRelationship like addIndividual
+      await addRelationship(rel);
+    }
+  
+    return { count: individuals.length, relCount: relationships.length };
+  });
+  ipcMain.handle("showOpenDialog", async (event, options) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return null;
+    const result = await dialog.showOpenDialog(win, options);
+    return result.filePaths;
   });
 
   /*

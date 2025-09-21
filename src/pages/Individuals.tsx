@@ -21,6 +21,7 @@ import SearchBar from "../components/SearchBar";
 import IndividualDetails from "../components/IndividualDetails";
 import IndividualFormDialog from "../components/IndividualFormDialog";
 import { fullName } from "../utils/nameUtils"; // at top
+import { dialog } from "@tauri-apps/api/dialog";
 
 export default function IndividualsPage() {
   const dispatch = useAppDispatch();
@@ -82,6 +83,22 @@ export default function IndividualsPage() {
           }}
         >
           Exportera Excel
+        </Button>
+        <Button
+          variant="contained"
+          onClick={async () => {
+            // open file picker
+            const filePath = await window.electronAPI.showOpenDialog({
+              filters: [{ name: "Excel", extensions: ["xls", "xlsx", "xlsm"] }],
+              properties: ["openFile"],
+            });
+            if (filePath) {
+              const result = await window.genealogyAPI.importExcel(filePath[0]);
+              alert(`Imported ${result.count} individuals and ${result.relCount} relationships`);
+            }
+          }}
+        >
+          Import Excel
         </Button>
       </Box>
 
