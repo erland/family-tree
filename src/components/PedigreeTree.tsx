@@ -65,12 +65,40 @@ function PedigreeInner({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
 
+  // 1) Apply latest graph to state whenever it changes
   useEffect(() => {
     setNodes(initialNodes);
     setEdges(initialEdges);
-    const t = setTimeout(() => fitView(fitViewOptions), 0);
-    return () => clearTimeout(t);
-  }, [initialNodes, initialEdges, setNodes, setEdges, fitView]);
+    // We do NOT call fit here; we wait until nodes/edges are committed (next effect)
+  }, [initialNodes, initialEdges, setNodes, setEdges]);
+
+  // 2) After nodes/edges state have updated, auto-fit.
+  // Using a double rAF makes sure React Flow has measured node bounds.
+  useEffect(() => {
+    if (!nodes.length) return;
+    let cancelled = false;
+    const raf1 = requestAnimationFrame(() => {
+      const raf2 = requestAnimationFrame(() => {
+        if (!cancelled) {
+          try {
+            fitView(fitViewOptions);
+          } catch {
+            // no-op: fitView can throw if the instance isn't ready, but with double rAF it shouldn't.
+          }
+        }
+      });
+      // store second id on window for cleanup if needed
+      (window as any).__rfFitRaf2 = raf2;
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      if ((window as any).__rfFitRaf2) {
+        cancelAnimationFrame((window as any).__rfFitRaf2);
+      }
+    };
+    // We re-fit on any structural change: nodes/edges arrays, rootId, mode, depth.
+  }, [nodes, edges, rootId, mode, maxGenerations, fitView]);
 
   return (
     <ReactFlow
@@ -141,7 +169,6 @@ export default function PedigreeTree() {
             <ToggleButton value="descendants">Efterkommande</ToggleButton>
             <ToggleButton value="ancestors">Förfäder</ToggleButton>
           </ToggleButtonGroup>
-
           <Select
             size="small"
             value={maxGenerations}
@@ -153,7 +180,6 @@ export default function PedigreeTree() {
               </MenuItem>
             ))}
           </Select>
-
           {root && (
             <Button variant="outlined" size="small" onClick={() => setRoot(null)}>
               Rensa
