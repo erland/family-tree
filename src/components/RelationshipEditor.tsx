@@ -215,7 +215,7 @@ export default function RelationshipEditor({ open, onClose, relationship }: Prop
             <Autocomplete
               multiple
               options={individuals}
-              getOptionLabel={(o) => o.name}
+              getOptionLabel={(o) => fullName(o)}
               value={individuals.filter((i) => parentIds.includes(i.id))}
               onChange={(_, vals) => setParentIds(vals.map((v) => v.id))}
               renderInput={(p) => <TextField {...p} label="Förälder/Föräldrar" />}
@@ -223,7 +223,7 @@ export default function RelationshipEditor({ open, onClose, relationship }: Prop
             />
             <Autocomplete
               options={individuals}
-              getOptionLabel={(o) => o.name}
+              getOptionLabel={(o) => fullName(o)}
               value={individuals.find((i) => i.id === childId) ?? null}
               onChange={(_, v) => setChildId(v?.id ?? "")}
               renderInput={(p) => <TextField {...p} label="Barn" />}
