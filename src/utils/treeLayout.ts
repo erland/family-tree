@@ -6,42 +6,6 @@ import { Edge, Node, Position } from "reactflow";
 type Direction = "TB" | "LR"; // Top-to-Bottom (pedigree) or Left-to-Right
 
 
-/** Collect all descendants (recursive) of a person */
-export function getDescendants(relationships: Relationship[], rootId: string): string[] {
-  const result = new Set<string>();
-  function dfs(id: string) {
-    for (const rel of relationships) {
-      if (rel.type === "parent-child" && rel.parentIds.includes(id)) {
-        if (!result.has(rel.childId)) {
-          result.add(rel.childId);
-          dfs(rel.childId);
-        }
-      }
-    }
-  }
-  dfs(rootId);
-  return Array.from(result);
-}
-
-/** Collect all ancestors (recursive) of a person */
-export function getAncestors(relationships: Relationship[], rootId: string): string[] {
-  const result = new Set<string>();
-  function dfs(id: string) {
-    for (const rel of relationships) {
-      if (rel.type === "parent-child" && rel.childId === id) {
-        for (const pid of rel.parentIds) {
-          if (!result.has(pid)) {
-            result.add(pid);
-            dfs(pid);
-          }
-        }
-      }
-    }
-  }
-  dfs(rootId);
-  return Array.from(result);
-}
-
 export function buildGraph(
   individuals: Individual[],
   relationships: Relationship[],

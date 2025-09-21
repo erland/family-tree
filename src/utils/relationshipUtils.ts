@@ -52,39 +52,49 @@ export function wouldCreateCycle(
   return dfs(graph, childId, parentId);
 }
 
-/** Collect ancestors of a person */
-export function getAncestors(relationships: Relationship[], personId: string): string[] {
+/** Collect ancestors of a person, with optional generation limit */
+export function getAncestors(
+  relationships: Relationship[],
+  personId: string,
+  maxGenerations: number = Infinity
+): string[] {
   const result = new Set<string>();
-  function dfsUp(id: string) {
+  function dfsUp(id: string, depth: number) {
+    if (depth >= maxGenerations) return;
     for (const rel of relationships) {
       if (rel.type === "parent-child" && rel.childId === id) {
         for (const pid of rel.parentIds) {
           if (!result.has(pid)) {
             result.add(pid);
-            dfsUp(pid);
+            dfsUp(pid, depth + 1);
           }
         }
       }
     }
   }
-  dfsUp(personId);
+  dfsUp(personId, 0);
   return Array.from(result);
 }
 
-/** Collect descendants of a person */
-export function getDescendants(relationships: Relationship[], personId: string): string[] {
+/** Collect descendants of a person, with optional generation limit */
+export function getDescendants(
+  relationships: Relationship[],
+  personId: string,
+  maxGenerations: number = Infinity
+): string[] {
   const result = new Set<string>();
-  function dfsDown(id: string) {
+  function dfsDown(id: string, depth: number) {
+    if (depth >= maxGenerations) return;
     for (const rel of relationships) {
       if (rel.type === "parent-child" && rel.parentIds.includes(id)) {
         if (!result.has(rel.childId)) {
           result.add(rel.childId);
-          dfsDown(rel.childId);
+          dfsDown(rel.childId, depth + 1);
         }
       }
     }
   }
-  dfsDown(personId);
+  dfsDown(personId, 0);
   return Array.from(result);
 }
 
