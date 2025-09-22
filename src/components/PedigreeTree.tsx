@@ -23,9 +23,8 @@ import {
   MenuItem,
 } from "@mui/material";
 
-import { toSvg, toPng } from "html-to-image";
-import jsPDF from "jspdf";
-import { createRoot } from "react-dom/client";
+import { exportFullTreeSVG } from "../utils/exportTreeSvg";
+import { exportFullTreePDF } from "../utils/exportTreePdf";
 import { useAppSelector } from "../store";
 import { Individual } from "../types/individual";
 import { buildGraph } from "../utils/treeLayout";
@@ -135,175 +134,6 @@ export default function PedigreeTree() {
   const [maxGenerations, setMaxGenerations] = useState(4);
 
   const [editing, setEditing] = useState<Individual | null>(null);
-  
-  async function exportFullTreeSVG() {
-    if (!root) return;
-  
-    const { nodes, edges } = buildGraph(individuals, relationships, {
-      rootId: root.id,
-      mode,
-      maxGenerations,
-    });
-  
-    // Compute bounding box of nodes
-    const xs = nodes.map((n) => n.position.x);
-    const ys = nodes.map((n) => n.position.y);
-    const ws = nodes.map((n) => (n.style?.width as number) || 180);
-    const hs = nodes.map((n) => (n.style?.height as number) || 42);
-  
-    const minX = Math.min(...xs);
-    const minY = Math.min(...ys);
-    const maxX = Math.max(...xs.map((x, i) => x + ws[i]));
-    const maxY = Math.max(...ys.map((y, i) => y + hs[i]));
-  
-    const width = maxX - minX + 100;  // add padding
-    const height = maxY - minY + 100;
-  
-    // Offscreen container
-    const container = document.createElement("div");
-    container.style.position = "fixed";
-    container.style.left = "-99999px";
-    container.style.top = "0";
-    container.style.width = `${width}px`;
-    container.style.height = `${height}px`;
-    document.body.appendChild(container);
-  
-    const rootEl = createRoot(container);
-    rootEl.render(
-      <ReactFlowProvider>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.05, includeHiddenNodes: true }}
-          style={{ width: "100%", height: "100%" }}
-        >
-          <Background />
-        </ReactFlow>
-      </ReactFlowProvider>
-    );
-  
-    // Wait until ReactFlow actually paints
-    await new Promise((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(resolve);
-      });
-    });
-  
-    // Export as SVG string (data URL)
-    const renderer = container.querySelector(".react-flow__viewport") as HTMLElement;
-    if (!renderer) {
-      console.error("No renderer found");
-      return;
-    }
-  
-    const svgDataUrl = await toSvg(renderer, { cacheBust: true });
-  
-    rootEl.unmount();
-    document.body.removeChild(container);
-  
-    // Download
-    const a = document.createElement("a");
-    a.href = svgDataUrl;
-    a.download = "tree.svg";
-    a.click();
-  }
-
-  /** PDF export: rasterize the offscreen tree to PNG and place it in a landscape A4 */
-  async function exportFullTreePDF() {
-    if (!root) return;
-
-    // Build the graph using the SAME options as your on-screen tree
-    const { nodes, edges } = buildGraph(individuals, relationships, {
-      rootId: root.id,
-      mode,
-      maxGenerations,
-    });
-
-    // ---- compute tight bounding box (same approach you used for SVG) ----
-    const xs = nodes.map((n) => n.position.x);
-    const ys = nodes.map((n) => n.position.y);
-    const ws = nodes.map((n) => (n.style?.width as number) || 180);
-    const hs = nodes.map((n) => (n.style?.height as number) || 42);
-
-    const minX = Math.min(...xs);
-    const minY = Math.min(...ys);
-    const maxX = Math.max(...xs.map((x, i) => x + ws[i]));
-    const maxY = Math.max(...ys.map((y, i) => y + hs[i]));
-
-    const width = Math.max(1, maxX - minX + 100);   // padding
-    const height = Math.max(1, maxY - minY + 100);
-
-    // ---- offscreen container sized to the content bbox ----
-    const container = document.createElement("div");
-    container.style.position = "fixed";
-    container.style.left = "-99999px";
-    container.style.top = "0";
-    container.style.width = `${width}px`;
-    container.style.height = `${height}px`;
-    document.body.appendChild(container);
-
-    // Render the flow (fitView ensures everything is in-frame)
-    const offscreenRoot = createRoot(container);
-    offscreenRoot.render(
-      <ReactFlowProvider>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.05, includeHiddenNodes: true }}
-          style={{ width: "100%", height: "100%" }}
-        >
-          <Background />
-        </ReactFlow>
-      </ReactFlowProvider>
-    );
-
-    // Wait for paint (double rAF)
-    await new Promise((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(resolve))
-    );
-
-    // Grab the viewport DOM (contains nodes+edges)
-    const viewport = container.querySelector(".react-flow__viewport") as HTMLElement | null;
-    if (!viewport) {
-      console.error("No React Flow viewport found for PDF export.");
-      offscreenRoot.unmount();
-      document.body.removeChild(container);
-      return;
-    }
-
-    // ---- rasterize to PNG ----
-    const pngDataUrl = await toPng(viewport, { cacheBust: true });
-
-    // Cleanup offscreen render
-    offscreenRoot.unmount();
-    document.body.removeChild(container);
-
-    // ---- create PDF and place the PNG to fit landscape A4 ----
-    const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-
-    // load image to know intrinsic size
-    const img = new Image();
-    await new Promise((res, rej) => {
-      img.onload = () => res(null);
-      img.onerror = rej;
-      img.src = pngDataUrl;
-    });
-
-    const scale = Math.min(pageWidth / img.width, pageHeight / img.height);
-    const drawW = img.width * scale;
-    const drawH = img.height * scale;
-    const offsetX = (pageWidth - drawW) / 2;
-    const offsetY = (pageHeight - drawH) / 2;
-
-    pdf.addImage(pngDataUrl, "PNG", offsetX, offsetY, drawW, drawH);
-    pdf.save("tree.pdf");
-  }
 
   return (
     <Box sx={{ width: "100%", height: "calc(100vh - 120px)", display: "flex" }}>
@@ -353,14 +183,32 @@ export default function PedigreeTree() {
           <Button
             variant="outlined"
             size="small"
-            onClick={exportFullTreeSVG}
+            onClick={() =>
+              root &&
+              exportFullTreeSVG(
+                individuals,          // <-- this should be the array
+                relationships,        // <-- this too
+                root.id,
+                mode,
+                maxGenerations
+              )
+            }
           >
             SVG
           </Button>
           <Button
             variant="outlined"
             size="small"
-            onClick={exportFullTreePDF}
+            onClick={() =>
+              root &&
+              exportFullTreePDF(
+                individuals,
+                relationships,
+                root.id,
+                mode,
+                maxGenerations
+              )
+            }
           >
             PDF
           </Button>
