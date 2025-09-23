@@ -7,9 +7,7 @@ import { createHashRouter, RouterProvider } from "react-router-dom";
 import AppLayout from "./AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Tree from "./pages/Tree";
-import Profile from "./pages/Profile";
 import Timeline from "./pages/Timeline";
-import Reports from "./pages/Reports";
 import IndividualsPage from "./pages/Individuals";
 import RelationshipsPage from "./pages/Relationships";
 
@@ -33,9 +31,7 @@ const router = createHashRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: "tree", element: <Tree /> },
-      { path: "profile", element: <Profile /> },
       { path: "timeline", element: <Timeline /> },
-      { path: "reports", element: <Reports /> },
       { path: "individuals", element: <IndividualsPage /> },
       { path: "relationships", element: <RelationshipsPage /> },
     ],

@@ -42,9 +42,7 @@ export default function AppLayout() {
   const navItems = [
     { to: "/", labelKey: "dashboard", icon: <DashboardIcon /> },
     { to: "/tree", labelKey: "tree", icon: <AccountTreeIcon /> },
-    { to: "/profile", labelKey: "profile", icon: <PersonIcon /> },
     { to: "/timeline", labelKey: "timeline", icon: <TimelineIcon /> },
-    { to: "/reports", labelKey: "reports", icon: <DescriptionIcon /> },
     { to: "/individuals", labelKey: "individuals", icon: <PersonAddIcon /> },
     { to: "/relationships", labelKey: "relationships", icon: <FavoriteIcon /> },
   ];
