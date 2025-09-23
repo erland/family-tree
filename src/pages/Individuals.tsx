@@ -82,7 +82,7 @@ export default function IndividualsPage() {
             }
           }}
         >
-          Exportera Excel
+          Export Excel
         </Button>
         <Button
           variant="contained"
@@ -99,6 +99,13 @@ export default function IndividualsPage() {
           }}
         >
           Import Excel
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={() => window.genealogyAPI.exportGedcom()}
+        >
+          Export GEDCOM
         </Button>
       </Box>
 

@@ -16,6 +16,8 @@ const api: GenealogyAPI = {
   exportRelationshipsExcel: () => ipcRenderer.invoke("relationships:exportExcel"), 
 
   importExcel: (filePath: string) => ipcRenderer.invoke("importExcel", filePath),
+
+  exportGedcom: () => ipcRenderer.invoke("individuals:exportGedcom"),
 };
 contextBridge.exposeInMainWorld("electronAPI", {
   showOpenDialog: (options: Electron.OpenDialogOptions) =>

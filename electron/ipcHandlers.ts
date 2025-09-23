@@ -12,6 +12,8 @@ import {
 } from "./db.js";
 import { exportExcel } from "./exportExcel.js";   // 👈 use the new unified export
 import { importExcel } from "./importExcel.js";
+import { generateGedcom } from "../src/utils/exportGedcom.js";
+import fs from "fs";
 
 export function registerIpcHandlers() {
   // Individuals
@@ -71,5 +73,23 @@ export function registerIpcHandlers() {
     if (!win) return null;
     const result = await dialog.showOpenDialog(win, options);
     return result.filePaths;
+  });
+  
+  ipcMain.handle("individuals:exportGedcom", async () => {
+    const individuals = await getIndividuals();
+    const relationships = await getRelationships();
+  
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      title: "Exportera till GEDCOM",
+      defaultPath: "slakten.ged",
+      filters: [{ name: "GEDCOM", extensions: ["ged"] }],
+    });
+  
+    if (!canceled && filePath) {
+      const ged = generateGedcom(individuals, relationships);
+      fs.writeFileSync(filePath, ged, "utf-8");
+      return { success: true, path: filePath };
+    }
+    return { success: false };
   });
 }
