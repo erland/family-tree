@@ -45,11 +45,13 @@ function PedigreeInner({
   mode,
   maxGenerations,
   onSelectIndividual,
+  setMaxGenerations, // pass setter down
 }: {
   rootId?: string;
   mode: "descendants" | "ancestors";
   maxGenerations: number;
   onSelectIndividual?: (ind: Individual) => void;
+  setMaxGenerations: (g: number) => void;
 }) {
   const individuals = useAppSelector((s) => s.individuals.items);
   const relationships = useAppSelector((s) => s.relationships.items);
@@ -79,9 +81,7 @@ function PedigreeInner({
         if (!cancelled) {
           try {
             fitView(fitViewOptions);
-          } catch {
-            /* ignore */
-          }
+          } catch {/* ignore */}
         }
       });
       (window as any).__rfFitRaf2 = raf2;
@@ -120,7 +120,23 @@ function PedigreeInner({
     >
       <Background />
       <MiniMap pannable zoomable />
-      <Controls showInteractive />
+      <Controls showInteractive>
+        {/* 👇 Custom max depth select, sits with zoom/fit buttons */}
+        <Select
+          size="small"
+          value={maxGenerations}
+          onChange={(e) => setMaxGenerations(Number(e.target.value))}
+          sx={{
+            ml: 1,
+            background: "white",
+            ".MuiSelect-select": { py: 0.5, px: 1, fontSize: "0.75rem" },
+          }}
+        >
+          {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
+            <MenuItem key={g} value={g}>{g}</MenuItem>
+          ))}
+        </Select>
+      </Controls>
     </ReactFlow>
   );
 }
@@ -131,7 +147,7 @@ export default function PedigreeTree() {
   const [root, setRoot] = useState<Individual | null>(null);
   const [mode, setMode] = useState<"descendants" | "ancestors">("descendants");
   const [selected, setSelected] = useState<Individual | null>(null);
-  const [maxGenerations, setMaxGenerations] = useState(4);
+  const [maxGenerations, setMaxGenerations] = useState(3);
 
   const [editing, setEditing] = useState<Individual | null>(null);
 
@@ -164,17 +180,6 @@ export default function PedigreeTree() {
             <ToggleButton value="descendants">Efterkommande</ToggleButton>
             <ToggleButton value="ancestors">Förfäder</ToggleButton>
           </ToggleButtonGroup>
-          <Select
-            size="small"
-            value={maxGenerations}
-            onChange={(e) => setMaxGenerations(Number(e.target.value))}
-          >
-            {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
-              <MenuItem key={g} value={g}>
-                {g} gen
-              </MenuItem>
-            ))}
-          </Select>
           {root && (
             <Button variant="outlined" size="small" onClick={() => setRoot(null)}>
               Rensa
@@ -221,6 +226,7 @@ export default function PedigreeTree() {
               mode={mode}
               maxGenerations={maxGenerations}
               onSelectIndividual={setSelected}
+              setMaxGenerations={setMaxGenerations}
             />
           </ReactFlowProvider>
         </Box>
