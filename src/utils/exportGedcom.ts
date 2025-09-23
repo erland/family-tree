@@ -114,8 +114,9 @@ export function generateGedcom(
   // Export individuals
   for (const ind of individuals) {
     const tag = indiMap[ind.id];
+    const familyName = ind.familyName || ind.birthFamilyName || ""
     lines.push(`0 ${tag} INDI`);
-    lines.push(`1 NAME ${ind.givenName || ""} /${ind.familyName || ""}/`);
+    lines.push(`1 NAME ${ind.givenName || ""} /${familyName}/`);
     if (ind.gender === "male") lines.push("1 SEX M");
     else if (ind.gender === "female") lines.push("1 SEX F");
     else lines.push("1 SEX U");
