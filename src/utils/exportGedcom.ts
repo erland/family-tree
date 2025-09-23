@@ -26,15 +26,96 @@ export function generateGedcom(
 
   // Map IDs to GEDCOM IDs
   const indiMap: Record<string, string> = {};
-  const famMap: Record<string, string> = {};
   individuals.forEach((ind, idx) => (indiMap[ind.id] = `@I${idx + 1}@`));
+
+  // Family structures
+  let famCount = 0;
+  const families: Record<
+    string,
+    { husband?: string; wife?: string; children: string[] }
+  > = {};
+
+  // Spouse relations first
+  for (const rel of relationships) {
+    if (rel.type === "spouse") {
+      famCount++;
+      const famId = `@F${famCount}@`;
+      families[famId] = {
+        husband: rel.person1Id ? indiMap[rel.person1Id] : undefined,
+        wife: rel.person2Id ? indiMap[rel.person2Id] : undefined,
+        children: [],
+      };
+    }
+  }
+
+  // Parent-child relations
+  for (const rel of relationships) {
+    if (rel.type !== "parent-child") continue;
+    const child = indiMap[rel.childId];
+    if (!child) continue;
+
+    // Try to find existing family with same parents
+    let famId = Object.entries(families).find(([_, fam]) => {
+      const famParents = [fam.husband, fam.wife].filter(
+        (p): p is string => !!p
+      );
+      const relParents = rel.parentIds
+        .map((pid) => indiMap[pid])
+        .filter((p): p is string => !!p);
+      return (
+        famParents.length === relParents.length &&
+        famParents.every((p) => relParents.includes(p))
+      );
+    })?.[0];
+
+    if (!famId) {
+      famCount++;
+      famId = `@F${famCount}@`;
+
+      let husband: string | undefined;
+      let wife: string | undefined;
+      for (const pid of rel.parentIds) {
+        const tag = indiMap[pid];
+        const parent = individuals.find((i) => i.id === pid);
+        if (!tag || !parent) continue;
+        if (parent.gender === "male") husband = tag;
+        else if (parent.gender === "female") wife = tag;
+        else {
+          if (!husband) husband = tag;
+          else if (!wife) wife = tag;
+        }
+      }
+
+      families[famId] = { husband, wife, children: [] };
+    }
+
+    families[famId].children.push(child);
+  }
+
+  // Map of family memberships for reverse links
+  const childFamilies: Record<string, string[]> = {};
+  const spouseFamilies: Record<string, string[]> = {};
+
+  for (const [famId, fam] of Object.entries(families)) {
+    if (fam.husband) {
+      spouseFamilies[fam.husband] ||= [];
+      spouseFamilies[fam.husband].push(famId);
+    }
+    if (fam.wife) {
+      spouseFamilies[fam.wife] ||= [];
+      spouseFamilies[fam.wife].push(famId);
+    }
+    for (const child of fam.children) {
+      childFamilies[child] ||= [];
+      childFamilies[child].push(famId);
+    }
+  }
 
   // Export individuals
   for (const ind of individuals) {
     const tag = indiMap[ind.id];
-    const familyName = ind.familyName || ind.birthFamilyName || "";
     lines.push(`0 ${tag} INDI`);
-    lines.push(`1 NAME ${ind.givenName || ""} /${familyName}/`);
+    lines.push(`1 NAME ${ind.givenName || ""} /${ind.familyName || ""}/`);
     if (ind.gender === "male") lines.push("1 SEX M");
     else if (ind.gender === "female") lines.push("1 SEX F");
     else lines.push("1 SEX U");
@@ -58,75 +139,18 @@ export function generateGedcom(
         lines.push(`2 PLAC ${place}`);
       }
     }
-  }
 
-  // Build families
-  let famCount = 0;
-  const families: Record<
-    string,
-    { husband?: string; wife?: string; children: string[] }
-  > = {};
-
-  // Step 1: spouse relations → seed families
-  for (const rel of relationships) {
-    if (rel.type === "spouse") {
-      famCount++;
-      const famId = `@F${famCount}@`;
-      families[famId] = {
-        husband: rel.person1Id ? indiMap[rel.person1Id] : undefined,
-        wife: rel.person2Id ? indiMap[rel.person2Id] : undefined,
-        children: [],
-      };
-    }
-  }
-
-  // Step 2: parent–child relations → ensure a family exists
-  for (const rel of relationships) {
-    if (rel.type !== "parent-child") continue;
-
-    const child = indiMap[rel.childId];
-    if (!child) continue;
-
-    // Try to find an existing family with exactly these parents
-    let famId = Object.entries(families).find(([_, fam]) => {
-      const famParents = [fam.husband, fam.wife].filter(
-        (p): p is string => !!p
-      );
-      const relParents = rel.parentIds
-        .map((pid) => indiMap[pid])
-        .filter((p): p is string => !!p);
-
-      return (
-        famParents.length === relParents.length &&
-        famParents.every((p) => relParents.includes(p))
-      );
-    })?.[0];
-
-    // If none found → create a new one
-    if (!famId) {
-      famCount++;
-      famId = `@F${famCount}@`;
-
-      let husband: string | undefined;
-      let wife: string | undefined;
-      for (const pid of rel.parentIds) {
-        const tag = indiMap[pid];
-        const parent = individuals.find((i) => i.id === pid);
-        if (!tag || !parent) continue;
-        if (parent.gender === "male") husband = tag;
-        else if (parent.gender === "female") wife = tag;
-        else {
-          // unknown gender: just pick husband if free, else wife
-          if (!husband) husband = tag;
-          else if (!wife) wife = tag;
-        }
+    // 🔹 Reverse family links
+    if (spouseFamilies[tag]) {
+      for (const famId of spouseFamilies[tag]) {
+        lines.push(`1 FAMS ${famId}`);
       }
-
-      families[famId] = { husband, wife, children: [] };
     }
-
-    // Add child
-    families[famId].children.push(child);
+    if (childFamilies[tag]) {
+      for (const famId of childFamilies[tag]) {
+        lines.push(`1 FAMC ${famId}`);
+      }
+    }
   }
 
   // Export families
