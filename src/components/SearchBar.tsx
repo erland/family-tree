@@ -4,6 +4,7 @@ import Fuse from "fuse.js";
 import { useAppSelector } from "../store";
 import { Individual } from "../types/individual";
 import { Relationship } from "../types/relationship";
+import { fullName } from "../utils/nameUtils";
 
 type SearchEntry = {
   id: string;             // always the individual id to return
@@ -155,7 +156,7 @@ export default function SearchBar({
                     setResults([]);
                   }}
                 >
-                  <ListItemText primary={`${r.item.givenName ?? ""} ${r.item.familyName ?? ""}`.trim()} secondary={secondary} />
+                  <ListItemText primary={fullName(r.item as Individual)} secondary={secondary} />
                 </ListItemButton>
               );
             })}
