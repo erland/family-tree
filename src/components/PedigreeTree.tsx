@@ -81,7 +81,9 @@ function PedigreeInner({
         if (!cancelled) {
           try {
             fitView(fitViewOptions);
-          } catch {/* ignore */}
+          } catch {
+            /* ignore */
+          }
         }
       });
       (window as any).__rfFitRaf2 = raf2;
@@ -133,7 +135,9 @@ function PedigreeInner({
           }}
         >
           {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
-            <MenuItem key={g} value={g}>{g}</MenuItem>
+            <MenuItem key={g} value={g}>
+              {g}
+            </MenuItem>
           ))}
         </Select>
       </Controls>
@@ -143,7 +147,7 @@ function PedigreeInner({
 
 export default function PedigreeTree() {
   const individuals = useAppSelector((s) => s.individuals.items);
-  const relationships = useAppSelector((s) => s.relationships.items); 
+  const relationships = useAppSelector((s) => s.relationships.items);
   const [root, setRoot] = useState<Individual | null>(null);
   const [mode, setMode] = useState<"descendants" | "ancestors">("descendants");
   const [selected, setSelected] = useState<Individual | null>(null);
@@ -155,6 +159,7 @@ export default function PedigreeTree() {
     <Box sx={{ width: "100%", height: "calc(100vh - 120px)", display: "flex" }}>
       {/* Left side: toolbar + tree */}
       <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        {/* Toolbar - row 1 */}
         <Box
           sx={{
             p: 1,
@@ -180,45 +185,58 @@ export default function PedigreeTree() {
             <ToggleButton value="descendants">Efterkommande</ToggleButton>
             <ToggleButton value="ancestors">Förfäder</ToggleButton>
           </ToggleButtonGroup>
-          {root && (
+        </Box>
+
+        {/* Toolbar - row 2 (only visible if root selected) */}
+        {root && (
+          <Box
+            sx={{
+              p: 1,
+              background: "#f5f5f5",
+              display: "flex",
+              gap: 2,
+              alignItems: "center",
+            }}
+          >
             <Button variant="outlined" size="small" onClick={() => setRoot(null)}>
               Rensa
             </Button>
-          )}
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() =>
-              root &&
-              exportFullTreeSVG(
-                individuals,          // <-- this should be the array
-                relationships,        // <-- this too
-                root.id,
-                mode,
-                maxGenerations
-              )
-            }
-          >
-            SVG
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() =>
-              root &&
-              exportFullTreePDF(
-                individuals,
-                relationships,
-                root.id,
-                mode,
-                maxGenerations
-              )
-            }
-          >
-            PDF
-          </Button>
-        </Box>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() =>
+                root &&
+                exportFullTreeSVG(
+                  individuals,
+                  relationships,
+                  root.id,
+                  mode,
+                  maxGenerations
+                )
+              }
+            >
+              SVG
+            </Button>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() =>
+                root &&
+                exportFullTreePDF(
+                  individuals,
+                  relationships,
+                  root.id,
+                  mode,
+                  maxGenerations
+                )
+              }
+            >
+              PDF
+            </Button>
+          </Box>
+        )}
 
+        {/* Tree */}
         <Box sx={{ flexGrow: 1 }}>
           <ReactFlowProvider>
             <PedigreeInner
