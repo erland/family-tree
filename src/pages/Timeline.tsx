@@ -21,8 +21,8 @@ export default function Timeline() {
 
   const [selected, setSelected] = useState<Individual | null>(null);
 
-  const { lifeEvents, afterDeath, undated } = useMemo(() => {
-    if (!selected) return { lifeEvents: [], afterDeath: [], undated: [] };
+  const { beforeBirth, lifeEvents, afterDeath, undated } = useMemo(() => {
+    if (!selected) return { beforeBirth: [], lifeEvents: [], afterDeath: [], undated: [] };
 
     const formatLocation = (region?: string, city?: string, congregation?: string) => {
       const parts = [region, city, congregation].filter(Boolean);
@@ -62,6 +62,25 @@ export default function Timeline() {
       return `${age} år`;
     };
 
+    const genderedLabel = (person: Individual | undefined, base: string) => {
+      if (!person) return base;
+    
+      switch (base) {
+        case "barn":
+          return person.gender === "female" ? "dotter" : "son";
+        case "syskon":
+          return person.gender === "female" ? "syster" : "bror";
+        case "make/maka":
+          return person.gender === "female" ? "maka" : "make";
+        case "förälder":
+          return person.gender === "female" ? "mor" : "far";
+        case "mor/farförälder":
+          return person.gender === "female" ? "farmor/mormor" : "farfar/morfar";
+        default:
+          return base;
+      }
+    };
+
     const clickableName = (person: Individual | undefined, prefix?: string) => {
       if (!person) return prefix ? `${prefix} okänd` : "Okänd";
       return (
@@ -83,7 +102,8 @@ export default function Timeline() {
     const undatedEvents: { text: React.ReactNode }[] = [];
 
     const birthDate = parseDate(selected.dateOfBirth);
-
+    const beforeBirth: { date: string; text: React.ReactNode }[] = [];
+    
     // --- Birth
     if (selected.dateOfBirth) {
       datedEvents.push({
@@ -146,7 +166,7 @@ export default function Timeline() {
 
       const birthText = (
         <>
-          Nytt barn {clickableName(child)}
+          Ny {genderedLabel(child, "barn")} {clickableName(child)}
           {spouse ? <> med {clickableName(spouse)}</> : ""}
           {formatLocation(child.birthRegion, child.birthCity, child.birthCongregation)}
         </>
@@ -164,7 +184,7 @@ export default function Timeline() {
 
       const deathText = (
         <>
-          Avlidet barn {clickableName(child)}
+          Avliden {genderedLabel(child, "barn")} {clickableName(child)}
           {formatLocation(child.deathRegion, child.deathCity, child.deathCongregation)}
         </>
       );
@@ -295,7 +315,7 @@ export default function Timeline() {
     parents.forEach((p) => {
       const deathText = (
         <>
-          Avliden förälder {clickableName(p)}
+          Avliden {genderedLabel(p, "förälder")} {clickableName(p)}
           {formatLocation(p.deathRegion, p.deathCity, p.deathCongregation)}
         </>
       );
@@ -330,7 +350,7 @@ export default function Timeline() {
     grandparents.forEach((gp) => {
       const deathText = (
         <>
-          Avliden mor/farförälder {clickableName(gp)}
+          Avliden {genderedLabel(gp, "mor/farförälder")} {clickableName(gp)}
           {formatLocation(gp.deathRegion, gp.deathCity, gp.deathCongregation)}
         </>
       );
@@ -397,7 +417,7 @@ export default function Timeline() {
 
       const birthText = (
         <>
-          Nytt syskon {clickableName(sibling)}
+          Ny {genderedLabel(sibling, "syskon")}syskon {clickableName(sibling)}
           {formatLocation(sibling.birthRegion, sibling.birthCity, sibling.birthCongregation)}
         </>
       );
@@ -413,7 +433,7 @@ export default function Timeline() {
 
       const deathText = (
         <>
-          Avlidet syskon {clickableName(sibling)}
+          Avliden {genderedLabel(sibling, "syskon")} {clickableName(sibling)}
           {formatLocation(sibling.deathRegion, sibling.deathCity, sibling.deathCongregation)}
         </>
       );
@@ -432,7 +452,7 @@ export default function Timeline() {
     spouses.forEach((spouse) => {
       const deathText = (
         <>
-          Avliden make/maka {clickableName(spouse)}
+          Avliden {genderedLabel(spouse, "make/maka")} {clickableName(spouse)}
           {formatLocation(spouse.deathRegion, spouse.deathCity, spouse.deathCongregation)}
         </>
       );
@@ -484,7 +504,109 @@ export default function Timeline() {
       }
     });
 
-    return { lifeEvents, afterDeath, undated: undatedEvents };
+    // --- Collect ancestor events that occur before the selected person's birth
+    if (birthDate) {
+      const visited = new Set<string>();
+
+      // Find earliest parent birth date
+      const parentRels = relationships.filter(
+        (r) => r.type === "parent-child" && r.childId === selected.id
+      );
+      const parents = parentRels.flatMap((r) =>
+        r.parentIds.map((pid) => individuals.find((i) => i.id === pid)).filter(Boolean)
+      ) as Individual[];
+
+      const parentBirths = parents
+        .map((p) => parseDate(p.dateOfBirth))
+        .filter((d): d is Date => !!d);
+      const minParentBirth =
+        parentBirths.length > 0
+          ? new Date(Math.min(...parentBirths.map((d) => d.getTime())))
+          : null;
+
+      const labelForGen = (generation: number) => {
+        return generation === 1 ? "förälder" : "förfader";
+      };
+
+      const addAncestorEvents = (ind: Individual, generation: number) => {
+        if (visited.has(ind.id)) return;
+        visited.add(ind.id);
+
+        // Only include events after parents' birth
+        const afterParentsBorn = (dateStr: string) => {
+          const d = parseDate(dateStr);
+          return d && (!minParentBirth || d >= minParentBirth) && d < birthDate;
+        };
+
+        const label = genderedLabel(ind, labelForGen(generation));
+
+        const location = formatLocation(
+          ind.birthRegion,
+          ind.birthCity,
+          ind.birthCongregation
+        );
+
+        // Birth
+        if (ind.dateOfBirth && afterParentsBorn(ind.dateOfBirth)) {
+          beforeBirth.push({
+            date: ind.dateOfBirth,
+            text: <>Född {label} {clickableName(ind)} {location}</>,
+          });
+        }
+
+        // Death
+        if (ind.dateOfDeath && afterParentsBorn(ind.dateOfDeath)) {
+          beforeBirth.push({
+            date: ind.dateOfDeath,
+            text: <>Avliden {label} {clickableName(ind)} {location}</>,
+          });
+        }
+
+        // Marriages
+        const spouseRels = relationships.filter(
+          (r) =>
+            r.type === "spouse" &&
+            ((r as any).person1Id === ind.id || (r as any).person2Id === ind.id)
+        );
+        spouseRels.forEach((rel) => {
+          if (rel.weddingDate && afterParentsBorn(rel.weddingDate)) {
+            const otherId =
+              (rel as any).person1Id === ind.id
+                ? (rel as any).person2Id
+                : (rel as any).person1Id;
+            const spouse = individuals.find((i) => i.id === otherId);
+            beforeBirth.push({
+              date: rel.weddingDate,
+              text: (
+                <>
+                  {label} {clickableName(ind)} gift med {clickableName(spouse)}
+                </>
+              ),
+            });
+          }
+        });
+
+        // Only recurse if we are at generation 0 (selected person) → this gives just parents
+        if (generation === 0) {
+          const parentRels = relationships.filter(
+            (r) => r.type === "parent-child" && r.childId === ind.id
+          );
+          parentRels.forEach((rel) => {
+            rel.parentIds.forEach((pid) => {
+              const parent = individuals.find((i) => i.id === pid);
+              if (parent) addAncestorEvents(parent, generation + 1);
+            });
+          });
+        }
+      };
+
+      addAncestorEvents(selected, 0);
+    }
+
+    // sort beforeBirth chronologically
+    beforeBirth.sort((a, b) => a.date.localeCompare(b.date));
+
+    return { beforeBirth, lifeEvents, afterDeath, undated: undatedEvents };
   }, [selected, individuals, relationships]);
 
   return (
@@ -508,6 +630,31 @@ export default function Timeline() {
             {fullName(selected)}
           </Typography>
           <Divider sx={{ mb: 2 }} />
+
+          {/* Before birth */}
+          {beforeBirth.length > 0 && (
+            <>
+              <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
+                Händelser före födelse
+              </Typography>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Datum</TableCell>
+                    <TableCell>Händelse</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {beforeBirth.map((ev, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>{ev.date}</TableCell>
+                      <TableCell>{ev.text}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
+          )}
 
           {/* Life events */}
           <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
