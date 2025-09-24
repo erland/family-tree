@@ -62,7 +62,11 @@ export default function Timeline() {
       return `${age} år`;
     };
 
-    const genderedLabel = (person: Individual | undefined, base: string) => {
+    const genderedLabel = (
+      person: Individual | undefined,
+      base: string,
+      relationSide?: "maternal" | "paternal"
+    ) => {
       if (!person) return base;
     
       switch (base) {
@@ -75,7 +79,21 @@ export default function Timeline() {
         case "förälder":
           return person.gender === "female" ? "mor" : "far";
         case "mor/farförälder":
+          if (relationSide === "maternal") {
+            return person.gender === "female" ? "mormor" : "morfar";
+          } else if (relationSide === "paternal") {
+            return person.gender === "female" ? "farmor" : "farfar";
+          }
           return person.gender === "female" ? "farmor/mormor" : "farfar/morfar";
+        case "gammelmor/farförälder":
+          if (relationSide === "maternal") {
+            return person.gender === "female" ? "gammelmormor" : "gammelmorfar";
+          } else if (relationSide === "paternal") {
+            return person.gender === "female" ? "gammelfarmor" : "gammelfarfar";
+          }
+          return person.gender === "female"
+            ? "gammelfarmor/gammelmormor"
+            : "gammelfarfar/gammelmorfar";
         default:
           return base;
       }
@@ -348,12 +366,26 @@ export default function Timeline() {
     });
 
     grandparents.forEach((gp) => {
+      // Determine maternal or paternal side
+      let side: "maternal" | "paternal" | undefined = undefined;
+      parents.forEach((p) => {
+        const gpRel = relationships.find(
+          (r) => r.type === "parent-child" && r.childId === p.id && r.parentIds.includes(gp.id)
+        );
+        if (gpRel) {
+          side = p.gender === "female" ? "maternal" : "paternal";
+        }
+      });
+    
+      const label = genderedLabel(gp, "mor/farförälder", side);
+    
       const deathText = (
         <>
-          Avliden {genderedLabel(gp, "mor/farförälder")} {clickableName(gp)}
+          Avliden {label} {clickableName(gp)}
           {formatLocation(gp.deathRegion, gp.deathCity, gp.deathCongregation)}
         </>
       );
+    
       if (gp.dateOfDeath) {
         const d = parseDate(gp.dateOfDeath);
         if (!birthDate || (d && d > birthDate)) {
@@ -383,12 +415,35 @@ export default function Timeline() {
     });
 
     greatGrandparents.forEach((ggp) => {
+      // Determine maternal or paternal side via grandparents
+      let side: "maternal" | "paternal" | undefined = undefined;
+      grandparents.forEach((gp) => {
+        const ggpRel = relationships.find(
+          (r) => r.type === "parent-child" && r.childId === gp.id && r.parentIds.includes(ggp.id)
+        );
+        if (ggpRel) {
+          // If this grandparent was maternal, inherit that
+          const gpSide = parents.some(
+            (p) =>
+              relationships.some(
+                (r) => r.type === "parent-child" && r.childId === p.id && r.parentIds.includes(gp.id)
+              ) && p.gender === "female"
+          )
+            ? "maternal"
+            : "paternal";
+          side = gpSide;
+        }
+      });
+    
+      const label = genderedLabel(ggp, "gammelmor/farförälder", side);
+    
       const deathText = (
         <>
-          Avliden gammelmor/farförälder {clickableName(ggp)}
+          Avliden {label} {clickableName(ggp)}
           {formatLocation(ggp.deathRegion, ggp.deathCity, ggp.deathCongregation)}
         </>
       );
+    
       if (ggp.dateOfDeath) {
         const d = parseDate(ggp.dateOfDeath);
         if (!birthDate || (d && d > birthDate)) {
