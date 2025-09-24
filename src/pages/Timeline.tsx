@@ -62,6 +62,28 @@ export default function Timeline() {
       return `${age} år`;
     };
 
+    // Helper: figure out if an ancestor is maternal or paternal
+    const getAncestorSide = (ancestorId: string): "maternal" | "paternal" | undefined => {
+      // Check if ancestor is a direct parent
+      const parentRel = relationships.find(
+        (r) => r.type === "parent-child" && r.childId === selected.id && r.parentIds.includes(ancestorId)
+      );
+      if (parentRel) {
+        const parent = individuals.find((i) => i.id === ancestorId);
+        return parent?.gender === "female" ? "maternal" : "paternal";
+      }
+
+      // Otherwise, recurse upwards: find who this ancestor is parent of
+      const childRel = relationships.find(
+        (r) => r.type === "parent-child" && r.parentIds.includes(ancestorId)
+      );
+      if (childRel) {
+        return getAncestorSide(childRel.childId);
+      }
+
+      return undefined;
+    };
+
     const genderedLabel = (
       person: Individual | undefined,
       base: string,
@@ -366,17 +388,7 @@ export default function Timeline() {
     });
 
     grandparents.forEach((gp) => {
-      // Determine maternal or paternal side
-      let side: "maternal" | "paternal" | undefined = undefined;
-      parents.forEach((p) => {
-        const gpRel = relationships.find(
-          (r) => r.type === "parent-child" && r.childId === p.id && r.parentIds.includes(gp.id)
-        );
-        if (gpRel) {
-          side = p.gender === "female" ? "maternal" : "paternal";
-        }
-      });
-    
+      const side = getAncestorSide(gp.id);
       const label = genderedLabel(gp, "mor/farförälder", side);
     
       const deathText = (
@@ -415,26 +427,7 @@ export default function Timeline() {
     });
 
     greatGrandparents.forEach((ggp) => {
-      // Determine maternal or paternal side via grandparents
-      let side: "maternal" | "paternal" | undefined = undefined;
-      grandparents.forEach((gp) => {
-        const ggpRel = relationships.find(
-          (r) => r.type === "parent-child" && r.childId === gp.id && r.parentIds.includes(ggp.id)
-        );
-        if (ggpRel) {
-          // If this grandparent was maternal, inherit that
-          const gpSide = parents.some(
-            (p) =>
-              relationships.some(
-                (r) => r.type === "parent-child" && r.childId === p.id && r.parentIds.includes(gp.id)
-              ) && p.gender === "female"
-          )
-            ? "maternal"
-            : "paternal";
-          side = gpSide;
-        }
-      });
-    
+      const side = getAncestorSide(ggp.id);
       const label = genderedLabel(ggp, "gammelmor/farförälder", side);
     
       const deathText = (
