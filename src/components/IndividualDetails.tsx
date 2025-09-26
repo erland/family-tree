@@ -8,6 +8,7 @@ import { fullName } from "../utils/nameUtils";
 import { addIndividual } from "../features/individualsSlice";
 import { addRelationship, fetchRelationships } from "../features/relationshipsSlice";
 import AddChildDialog from "./AddChildDialog";
+import AddParentDialog from "./AddParentDialog";
 
 export default function IndividualDetails({
   individualId,
@@ -20,6 +21,7 @@ export default function IndividualDetails({
 }) {
   const dispatch = useDispatch();
   const [openAddChild, setOpenAddChild] = useState(false);
+  const [openAddParent, setOpenAddParent] = useState(false);
 
   // Always grab the freshest version from the store
   const individual = useAppSelector((s) =>
@@ -217,6 +219,13 @@ export default function IndividualDetails({
           </Box>
         </Box>
       )}
+      {parents.length < 2 && (
+        <Box sx={{ mt: 1 }}>
+          <Button variant="outlined" onClick={() => setOpenAddParent(true)}>
+            Lägg till förälder
+          </Button>
+        </Box>
+      )}      
 
       {spouses.length > 0 && (
         <Box sx={{ mt: 1 }}>
@@ -338,6 +347,43 @@ export default function IndividualDetails({
           }
         }}
       />
+      <AddParentDialog
+        open={openAddParent}
+        onClose={() => setOpenAddParent(false)}
+        childId={individual.id}
+        onAdd={async (payload) => {
+          try {
+            if (payload.mode === "new") {
+              const newId = crypto.randomUUID();
+              const { data } = payload;
+              const newParent = { id: newId, ...data };
+
+              await dispatch(addIndividual(newParent)).unwrap();
+
+              const rel = {
+                id: crypto.randomUUID(),
+                type: "parent-child" as const,
+                parentIds: [newId],
+                childId: individual.id,
+              };
+              await dispatch(addRelationship(rel)).unwrap();
+            } else {
+              const rel = {
+                id: crypto.randomUUID(),
+                type: "parent-child" as const,
+                parentIds: [payload.parentId],
+                childId: individual.id,
+              };
+              await dispatch(addRelationship(rel)).unwrap();
+            }
+
+            await dispatch(fetchRelationships()).unwrap();
+          } catch (e) {
+            console.error("Failed to add parent/relationship:", e);
+            alert("Kunde inte spara föräldern eller relationen.");
+          }
+        }}
+      />      
     </Box>
   );
 }
