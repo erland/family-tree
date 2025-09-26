@@ -12,9 +12,13 @@ export const fetchRelationships = createAsyncThunk("relationships/fetchAll", asy
   return await window.genealogyAPI.listRelationships();
 });
 
-export const addRelationship = createAsyncThunk("relationships/add", async (rel: Relationship) => {
-  return await window.genealogyAPI.addRelationship(rel);
-});
+export const addRelationship = createAsyncThunk(
+  "relationships/add",
+  async (rel: Omit<Relationship, "id"> & { id?: string }) => {
+    const finalRel: Relationship = { id: rel.id ?? crypto.randomUUID(), ...rel };
+    return await window.genealogyAPI.addRelationship(finalRel);
+  }
+);
 
 export const updateRelationship = createAsyncThunk(
   "relationships/update",

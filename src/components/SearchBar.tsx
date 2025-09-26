@@ -1,5 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { TextField, Paper, List, ListItemButton, ListItemText } from "@mui/material";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  TextField,
+  Paper,
+  List,
+  ListItemButton,
+  ListItemText,
+  Portal,
+} from "@mui/material";
 import Fuse from "fuse.js";
 import { useAppSelector } from "../store";
 import { Individual } from "../types/individual";
@@ -7,9 +14,9 @@ import { Relationship } from "../types/relationship";
 import { fullName } from "../utils/nameUtils";
 
 type SearchEntry = {
-  id: string;             // always the individual id to return
-  givenName: string;           // display
-  familyName?: string;           // display
+  id: string;
+  givenName: string;
+  familyName?: string;
   story?: string;
   dateOfBirth?: string;
   birthRegion?: string;
@@ -19,8 +26,6 @@ type SearchEntry = {
   deathRegion?: string;
   deathCongregation?: string;
   deathCity?: string;
-
-  // spouse-specific fields (mapped back to an individual)
   groomRegion?: string;
   groomCongregation?: string;
   groomCity?: string;
@@ -40,10 +45,11 @@ export default function SearchBar({
 }) {
   const individuals = useAppSelector((s) => s.individuals.items);
   const relationships = useAppSelector((s) => s.relationships.items);
+
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Fuse.FuseResult<SearchEntry>[]>([]);
+  const anchorRef = useRef<HTMLInputElement | null>(null);
 
-  // Build combined search index
   const entries: SearchEntry[] = useMemo(() => {
     const base = individuals.map((i) => ({ ...i }));
 
@@ -119,50 +125,60 @@ export default function SearchBar({
     return () => clearTimeout(t);
   }, [query, fuse, onResults]);
 
+  // Compute dropdown position
+  const anchorEl = anchorRef.current;
+  const rect = anchorEl?.getBoundingClientRect();
+
   return (
-    <div style={{ position: "relative", width: 300 }}>
+    <>
       <TextField
         fullWidth
         size="small"
         label="Sök person eller plats"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        inputRef={anchorRef}
       />
-      {showDropdown && results.length > 0 && (
-        <Paper
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            zIndex: 10,
-            maxHeight: 300,
-            overflowY: "auto",
-          }}
-        >
-          <List dense>
-            {results.map((r) => {
-              const { dateOfBirth, birthCity, birthRegion } = r.item;
-              const secondary = [dateOfBirth, birthCity, birthRegion]
-                .filter(Boolean)
-                .join(" • ");
+      {showDropdown && results.length > 0 && rect && (
+        <Portal>
+          <Paper
+            style={{
+              position: "absolute",
+              top: rect.bottom + window.scrollY,
+              left: rect.left + window.scrollX,
+              width: rect.width,
+              zIndex: 1300, // above MUI dialog
+              maxHeight: 300,
+              overflowY: "auto",
+            }}
+          >
+            <List dense>
+              {results.map((r) => {
+                const { dateOfBirth, birthCity, birthRegion } = r.item;
+                const secondary = [dateOfBirth, birthCity, birthRegion]
+                  .filter(Boolean)
+                  .join(" • ");
 
-              return (
-                <ListItemButton
-                  key={r.item.id}
-                  onClick={() => {
-                    onSelect?.(r.item.id);
-                    setQuery("");
-                    setResults([]);
-                  }}
-                >
-                  <ListItemText primary={fullName(r.item as Individual)} secondary={secondary} />
-                </ListItemButton>
-              );
-            })}
-          </List>
-        </Paper>
+                return (
+                  <ListItemButton
+                    key={r.item.id}
+                    onClick={() => {
+                      onSelect?.(r.item.id);
+                      setQuery("");
+                      setResults([]);
+                    }}
+                  >
+                    <ListItemText
+                      primary={fullName(r.item as Individual)}
+                      secondary={secondary}
+                    />
+                  </ListItemButton>
+                );
+              })}
+            </List>
+          </Paper>
+        </Portal>
       )}
-    </div>
+    </>
   );
 }

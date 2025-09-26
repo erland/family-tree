@@ -16,9 +16,13 @@ export const fetchIndividuals = createAsyncThunk("individuals/fetchAll", async (
   return await window.genealogyAPI.listIndividuals();
 });
 
-export const addIndividual = createAsyncThunk("individuals/add", async (ind: Individual) => {
-  return await window.genealogyAPI.addIndividual(ind);
-});
+export const addIndividual = createAsyncThunk(
+  "individuals/add",
+  async (ind: Omit<Individual, "id"> & { id?: string }) => {
+    const finalInd: Individual = { id: ind.id ?? crypto.randomUUID(), ...ind };
+    return await window.genealogyAPI.addIndividual(finalInd);
+  }
+);
 
 export const updateIndividual = createAsyncThunk(
   "individuals/update",

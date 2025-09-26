@@ -1,8 +1,13 @@
-import { Box, IconButton, Typography, Divider } from "@mui/material";
+import { Box, IconButton, Typography, Divider, Button } from "@mui/material";
 import { Edit, Close } from "@mui/icons-material";
+import { useState } from "react";
+import { useDispatch } from "react-redux";
 import { useAppSelector } from "../store";
 import { Individual } from "../types/individual";
 import { fullName } from "../utils/nameUtils";
+import { addIndividual } from "../features/individualsSlice";
+import { addRelationship, fetchRelationships } from "../features/relationshipsSlice";
+import AddChildDialog from "./AddChildDialog";
 
 export default function IndividualDetails({
   individualId,
@@ -13,6 +18,9 @@ export default function IndividualDetails({
   onClose?: () => void;
   onEdit?: (ind: Individual) => void;
 }) {
+  const dispatch = useDispatch();
+  const [openAddChild, setOpenAddChild] = useState(false);
+
   // Always grab the freshest version from the store
   const individual = useAppSelector((s) =>
     s.individuals.items.find((i) => i.id === individualId)
@@ -63,9 +71,7 @@ export default function IndividualDetails({
     (r) => r.type === "parent-child" && r.parentIds.includes(individual.id)
   );
 
-  // Group children by the *other parent* using ONLY parent-child relations.
-  // Works whether your data stores one relation with both parents in parentIds,
-  // or two separate relations (one per parent).
+  // Group children by the *other parent*
   const groupedByPartner: Record<string, Individual[]> = {};
   const seenByPartner: Record<string, Set<string>> = {};
   const soloChildren: Individual[] = [];
@@ -75,11 +81,7 @@ export default function IndividualDetails({
     const child = individuals.find((i) => i.id === rel.childId);
     if (!child) return;
 
-    // 1) Try to get other parent(s) from this relation
     let otherParentIds = rel.parentIds.filter((pid) => pid !== individual.id);
-
-    // 2) If none, look for any other parent-child relations for the same child
-    //    and collect those parents (minus the current individual).
     if (otherParentIds.length === 0) {
       const allParentIdsForChild = relationships
         .filter(
@@ -91,8 +93,6 @@ export default function IndividualDetails({
       );
     }
 
-    // 3) Group the child under each discovered "other parent",
-    //    or under "solo" if none was found.
     if (otherParentIds.length > 0) {
       otherParentIds.forEach((partnerId) => {
         if (!groupedByPartner[partnerId]) {
@@ -234,8 +234,7 @@ export default function IndividualDetails({
         </Box>
       )}
 
-      {(Object.keys(groupedByPartner).length > 0 ||
-        soloChildren.length > 0) && (
+      {(Object.keys(groupedByPartner).length > 0 || soloChildren.length > 0) && (
         <Box sx={{ mt: 1 }}>
           <Typography variant="body2" fontWeight={700}>
             Barn:
@@ -279,6 +278,13 @@ export default function IndividualDetails({
         </Box>
       )}
 
+      {/* Add child button */}
+      <Box sx={{ mt: 1 }}>
+        <Button variant="outlined" onClick={() => setOpenAddChild(true)}>
+          Lägg till barn
+        </Button>
+      </Box>
+
       {individual.story && (
         <Box sx={{ mt: 1 }}>
           <Typography variant="body2" fontWeight={700}>
@@ -287,6 +293,51 @@ export default function IndividualDetails({
           <Typography variant="body2">{individual.story}</Typography>
         </Box>
       )}
+
+      {/* AddChildDialog */}
+      <AddChildDialog
+        open={openAddChild}
+        onClose={() => setOpenAddChild(false)}
+        parentId={individual.id}
+        onAdd={async (payload) => {
+          try {
+            if (payload.mode === "new") {
+              const newId = crypto.randomUUID();
+              // Only send Individual fields (avoid leaking parentId inside the person record)
+              const { parentId, ...childData } = payload.data;
+              const newChild = { id: newId, ...childData };
+
+              await dispatch(addIndividual(newChild)).unwrap();
+
+              const rel = {
+                id: crypto.randomUUID(),
+                type: "parent-child" as const,
+                parentIds: payload.otherParentId
+                 ? [individual.id, payload.otherParentId]
+                 : [individual.id],
+                childId: newId,
+              };
+              await dispatch(addRelationship(rel)).unwrap();
+            } else {
+              const rel = {
+                id: crypto.randomUUID(),
+                type: "parent-child" as const,
+                parentIds: payload.otherParentId
+                  ? [individual.id, payload.otherParentId]
+                  : [individual.id],
+                childId: payload.childId,
+              };
+              await dispatch(addRelationship(rel)).unwrap();
+            }
+
+            // Optional: refresh relationships list to make the panel update immediately
+            await dispatch(fetchRelationships()).unwrap();
+          } catch (e) {
+            console.error("Failed to add child/relationship:", e);
+            alert("Kunde inte spara barnet eller relationen.");
+          }
+        }}
+      />
     </Box>
   );
 }
