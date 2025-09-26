@@ -1,14 +1,16 @@
-import { Box, IconButton, Typography, Divider, Button } from "@mui/material";
+import { Box, IconButton, Typography, Divider, Button, List, ListItem, ListItemText } from "@mui/material";
 import { Edit, Close } from "@mui/icons-material";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { useAppSelector } from "../store";
 import { Individual } from "../types/individual";
+import { Relationship } from "../types/relationship";
 import { fullName } from "../utils/nameUtils";
 import { addIndividual } from "../features/individualsSlice";
 import { addRelationship, fetchRelationships } from "../features/relationshipsSlice";
 import AddChildDialog from "./AddChildDialog";
 import AddParentDialog from "./AddParentDialog";
+import RelationshipEditor from "./RelationshipEditor";
 
 export default function IndividualDetails({
   individualId,
@@ -22,6 +24,7 @@ export default function IndividualDetails({
   const dispatch = useDispatch();
   const [openAddChild, setOpenAddChild] = useState(false);
   const [openAddParent, setOpenAddParent] = useState(false);
+  const [editingRel, setEditingRel] = useState<Relationship | null>(null);
 
   // Always grab the freshest version from the store
   const individual = useAppSelector((s) =>
@@ -45,13 +48,14 @@ export default function IndividualDetails({
     individual.deathCity ||
     individual.deathCongregation;
 
-  // 🔎 Parents of this individual
-  const parentIds = relationships
-    .filter((r) => r.type === "parent-child" && r.childId === individual.id)
-    .flatMap((r) => r.parentIds);
+  // 🔎 Parents
+  const parentRels = relationships.filter(
+    (r) => r.type === "parent-child" && r.childId === individual.id
+  );
+  const parentIds = parentRels.flatMap((r) => r.parentIds);
   const parents = individuals.filter((i) => parentIds.includes(i.id));
 
-  // 🔎 Spouses of this individual
+  // 🔎 Spouses
   const spouseRels = relationships.filter(
     (r) =>
       r.type === "spouse" &&
@@ -65,19 +69,17 @@ export default function IndividualDetails({
     return {
       partner: individuals.find((i) => i.id === otherId),
       weddingDate: (r as any).weddingDate ?? null,
+      rel: r,
     };
   });
 
-  // 🔎 Children of this individual
+  // 🔎 Children
   const childRels = relationships.filter(
     (r) => r.type === "parent-child" && r.parentIds.includes(individual.id)
   );
 
-  // Group children by the *other parent*
-  const groupedByPartner: Record<string, Individual[]> = {};
-  const seenByPartner: Record<string, Set<string>> = {};
-  const soloChildren: Individual[] = [];
-  const soloSeen = new Set<string>();
+  const groupedByPartner: Record<string, { child: Individual; rel: Relationship }[]> = {};
+  const soloChildren: { child: Individual; rel: Relationship }[] = [];
 
   childRels.forEach((rel) => {
     const child = individuals.find((i) => i.id === rel.childId);
@@ -86,10 +88,8 @@ export default function IndividualDetails({
     let otherParentIds = rel.parentIds.filter((pid) => pid !== individual.id);
     if (otherParentIds.length === 0) {
       const allParentIdsForChild = relationships
-        .filter(
-          (r) => r.type === "parent-child" && (r as any).childId === rel.childId
-        )
-        .flatMap((r) => (r as any).parentIds as string[]);
+        .filter((r) => r.type === "parent-child" && r.childId === rel.childId)
+        .flatMap((r) => r.parentIds as string[]);
       otherParentIds = Array.from(
         new Set(allParentIdsForChild.filter((pid) => pid !== individual.id))
       );
@@ -97,54 +97,29 @@ export default function IndividualDetails({
 
     if (otherParentIds.length > 0) {
       otherParentIds.forEach((partnerId) => {
-        if (!groupedByPartner[partnerId]) {
-          groupedByPartner[partnerId] = [];
-          seenByPartner[partnerId] = new Set();
-        }
-        if (!seenByPartner[partnerId].has(child.id)) {
-          groupedByPartner[partnerId].push(child);
-          seenByPartner[partnerId].add(child.id);
-        }
+        if (!groupedByPartner[partnerId]) groupedByPartner[partnerId] = [];
+        groupedByPartner[partnerId].push({ child, rel });
       });
     } else {
-      if (!soloSeen.has(child.id)) {
-        soloChildren.push(child);
-        soloSeen.add(child.id);
-      }
+      soloChildren.push({ child, rel });
     }
   });
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
       {/* Header */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 1,
-        }}
-      >
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
         <Typography
           variant="h6"
           noWrap
-          sx={{
-            flexGrow: 1,
-            minWidth: 0,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
+          sx={{ flexGrow: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}
         >
           {fullName(individual)}
         </Typography>
 
         <Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
           {onEdit && (
-            <IconButton
-              size="small"
-              onClick={() => onEdit(individual)}
-              aria-label="Redigera"
-            >
+            <IconButton size="small" onClick={() => onEdit(individual)} aria-label="Redigera">
               <Edit fontSize="small" />
             </IconButton>
           )}
@@ -163,21 +138,6 @@ export default function IndividualDetails({
           <Typography variant="body2" fontWeight={700}>
             Född: {individual.dateOfBirth ?? "-"}
           </Typography>
-          <Box sx={{ pl: 2 }}>
-            {individual.birthRegion && (
-              <Typography variant="body2">
-                Region: {individual.birthRegion}
-              </Typography>
-            )}
-            {individual.birthCity && (
-              <Typography variant="body2">Stad: {individual.birthCity}</Typography>
-            )}
-            {individual.birthCongregation && (
-              <Typography variant="body2">
-                Församling: {individual.birthCongregation}
-              </Typography>
-            )}
-          </Box>
         </Box>
       )}
 
@@ -186,104 +146,112 @@ export default function IndividualDetails({
           <Typography variant="body2" fontWeight={700}>
             Död: {individual.dateOfDeath ?? "-"}
           </Typography>
-          <Box sx={{ pl: 2 }}>
-            {individual.deathRegion && (
-              <Typography variant="body2">
-                Region: {individual.deathRegion}
-              </Typography>
-            )}
-            {individual.deathCity && (
-              <Typography variant="body2">Stad: {individual.deathCity}</Typography>
-            )}
-            {individual.deathCongregation && (
-              <Typography variant="body2">
-                Församling: {individual.deathCongregation}
-              </Typography>
-            )}
-          </Box>
         </Box>
       )}
 
       {parents.length > 0 && (
         <Box sx={{ mt: 1 }}>
-          <Typography variant="body2" fontWeight={700}>
-            Föräldrar:
-          </Typography>
-          <Box sx={{ pl: 2 }}>
-            {parents.map((parent) => (
-              <Typography key={parent.id} variant="body2">
-                {fullName(parent)}{" "}
-                {parent.dateOfBirth ? `(${parent.dateOfBirth})` : ""}
-              </Typography>
-            ))}
-          </Box>
+          <Typography variant="body2" fontWeight={700}>Föräldrar:</Typography>
+          <List dense>
+            {parents.map((parent) => {
+              const rel = parentRels.find((r) => r.parentIds.includes(parent.id));
+              return (
+                <ListItem
+                  key={parent.id}
+                  secondaryAction={
+                    rel && (
+                      <IconButton edge="end" onClick={() => setEditingRel(rel)}>
+                        <Edit fontSize="small" />
+                      </IconButton>
+                    )
+                  }
+                >
+                  <ListItemText primary={fullName(parent)} />
+                </ListItem>
+              );
+            })}
+          </List>
         </Box>
       )}
+
       {parents.length < 2 && (
         <Box sx={{ mt: 1 }}>
           <Button variant="outlined" onClick={() => setOpenAddParent(true)}>
             Lägg till förälder
           </Button>
         </Box>
-      )}      
+      )}
 
       {spouses.length > 0 && (
         <Box sx={{ mt: 1 }}>
-          <Typography variant="body2" fontWeight={700}>
-            Gift med:
-          </Typography>
-          <Box sx={{ pl: 2 }}>
-            {spouses.map(({ partner, weddingDate }, idx) => (
-              <Typography key={idx} variant="body2">
-                {partner ? fullName(partner) : "Okänd"}{" "}
-                {weddingDate ? `(${weddingDate})` : ""}
-              </Typography>
+          <Typography variant="body2" fontWeight={700}>Gift med:</Typography>
+          <List dense>
+            {spouses.map(({ partner, weddingDate, rel }, idx) => (
+              <ListItem
+                key={idx}
+                secondaryAction={
+                  <IconButton edge="end" onClick={() => setEditingRel(rel)}>
+                    <Edit fontSize="small" />
+                  </IconButton>
+                }
+              >
+                <ListItemText
+                  primary={partner ? fullName(partner) : "Okänd"}
+                  secondary={weddingDate ? `(${weddingDate})` : ""}
+                />
+              </ListItem>
             ))}
-          </Box>
+          </List>
         </Box>
       )}
 
       {(Object.keys(groupedByPartner).length > 0 || soloChildren.length > 0) && (
         <Box sx={{ mt: 1 }}>
-          <Typography variant="body2" fontWeight={700}>
-            Barn:
-          </Typography>
-          <Box sx={{ pl: 2 }}>
-            {Object.entries(groupedByPartner).map(([partnerId, children]) => {
-              const partner = individuals.find((i) => i.id === partnerId);
-              return (
-                <Box key={partnerId} sx={{ mt: 0.5 }}>
-                  <Typography variant="body2" fontWeight={600}>
-                    Med {partner ? fullName(partner) : "okänd partner"}:
-                  </Typography>
-                  <Box sx={{ pl: 2 }}>
-                    {children.map((child) => (
-                      <Typography key={child.id} variant="body2">
-                        {fullName(child)}{" "}
-                        {child.dateOfBirth ? `(${child.dateOfBirth})` : ""}
-                      </Typography>
-                    ))}
-                  </Box>
-                </Box>
-              );
-            })}
-
-            {soloChildren.length > 0 && (
-              <Box sx={{ mt: 0.5 }}>
+          <Typography variant="body2" fontWeight={700}>Barn:</Typography>
+          {Object.entries(groupedByPartner).map(([partnerId, children]) => {
+            const partner = individuals.find((i) => i.id === partnerId);
+            return (
+              <Box key={partnerId} sx={{ mt: 0.5 }}>
                 <Typography variant="body2" fontWeight={600}>
-                  Utan känd partner:
+                  Med {partner ? fullName(partner) : "okänd partner"}:
                 </Typography>
-                <Box sx={{ pl: 2 }}>
-                  {soloChildren.map((child) => (
-                    <Typography key={child.id} variant="body2">
-                      {fullName(child)}{" "}
-                      {child.dateOfBirth ? `(${child.dateOfBirth})` : ""}
-                    </Typography>
+                <List dense>
+                  {children.map(({ child, rel }) => (
+                    <ListItem
+                      key={child.id}
+                      secondaryAction={
+                        <IconButton edge="end" onClick={() => setEditingRel(rel)}>
+                          <Edit fontSize="small" />
+                        </IconButton>
+                      }
+                    >
+                      <ListItemText primary={fullName(child)} />
+                    </ListItem>
                   ))}
-                </Box>
+                </List>
               </Box>
-            )}
-          </Box>
+            );
+          })}
+
+          {soloChildren.length > 0 && (
+            <Box sx={{ mt: 0.5 }}>
+              <Typography variant="body2" fontWeight={600}>Utan känd partner:</Typography>
+              <List dense>
+                {soloChildren.map(({ child, rel }) => (
+                  <ListItem
+                    key={child.id}
+                    secondaryAction={
+                      <IconButton edge="end" onClick={() => setEditingRel(rel)}>
+                        <Edit fontSize="small" />
+                      </IconButton>
+                    }
+                  >
+                    <ListItemText primary={fullName(child)} />
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )}
         </Box>
       )}
 
@@ -296,14 +264,12 @@ export default function IndividualDetails({
 
       {individual.story && (
         <Box sx={{ mt: 1 }}>
-          <Typography variant="body2" fontWeight={700}>
-            Berättelse:
-          </Typography>
+          <Typography variant="body2" fontWeight={700}>Berättelse:</Typography>
           <Typography variant="body2">{individual.story}</Typography>
         </Box>
       )}
 
-      {/* AddChildDialog */}
+      {/* Add dialogs */}
       <AddChildDialog
         open={openAddChild}
         onClose={() => setOpenAddChild(false)}
@@ -312,18 +278,14 @@ export default function IndividualDetails({
           try {
             if (payload.mode === "new") {
               const newId = crypto.randomUUID();
-              // Only send Individual fields (avoid leaking parentId inside the person record)
               const { parentId, ...childData } = payload.data;
               const newChild = { id: newId, ...childData };
-
               await dispatch(addIndividual(newChild)).unwrap();
 
               const rel = {
                 id: crypto.randomUUID(),
                 type: "parent-child" as const,
-                parentIds: payload.otherParentId
-                 ? [individual.id, payload.otherParentId]
-                 : [individual.id],
+                parentIds: [individual.id].concat(payload.otherParentId ? [payload.otherParentId] : []),
                 childId: newId,
               };
               await dispatch(addRelationship(rel)).unwrap();
@@ -331,15 +293,11 @@ export default function IndividualDetails({
               const rel = {
                 id: crypto.randomUUID(),
                 type: "parent-child" as const,
-                parentIds: payload.otherParentId
-                  ? [individual.id, payload.otherParentId]
-                  : [individual.id],
+                parentIds: [individual.id].concat(payload.otherParentId ? [payload.otherParentId] : []),
                 childId: payload.childId,
               };
               await dispatch(addRelationship(rel)).unwrap();
             }
-
-            // Optional: refresh relationships list to make the panel update immediately
             await dispatch(fetchRelationships()).unwrap();
           } catch (e) {
             console.error("Failed to add child/relationship:", e);
@@ -347,6 +305,7 @@ export default function IndividualDetails({
           }
         }}
       />
+
       <AddParentDialog
         open={openAddParent}
         onClose={() => setOpenAddParent(false)}
@@ -357,7 +316,6 @@ export default function IndividualDetails({
               const newId = crypto.randomUUID();
               const { data } = payload;
               const newParent = { id: newId, ...data };
-
               await dispatch(addIndividual(newParent)).unwrap();
 
               const rel = {
@@ -376,14 +334,19 @@ export default function IndividualDetails({
               };
               await dispatch(addRelationship(rel)).unwrap();
             }
-
             await dispatch(fetchRelationships()).unwrap();
           } catch (e) {
             console.error("Failed to add parent/relationship:", e);
             alert("Kunde inte spara föräldern eller relationen.");
           }
         }}
-      />      
+      />
+
+      <RelationshipEditor
+        open={!!editingRel}
+        relationship={editingRel || undefined}
+        onClose={() => setEditingRel(null)}
+      />
     </Box>
   );
 }
