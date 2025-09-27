@@ -32,7 +32,8 @@ export default function Timeline() {
   const renderEvents = (
     title: string,
     events: TimelineEvent[],
-    showAge: boolean = false
+    showAge: boolean = false,
+    showDate: boolean = true
   ) => {
     if (events.length === 0) return null;
     return (
@@ -43,7 +44,7 @@ export default function Timeline() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Datum</TableCell>
+              {showDate && <TableCell>Datum</TableCell>}
               <TableCell>Händelse</TableCell>
               {showAge && <TableCell>Ålder</TableCell>}
               <TableCell>Relaterade</TableCell>
@@ -52,20 +53,50 @@ export default function Timeline() {
           <TableBody>
             {events.map((ev, idx) => (
               <TableRow key={idx}>
-                <TableCell>{ev.date ?? "-"}</TableCell>
+                {showDate && <TableCell>{ev.date ?? "-"}</TableCell>}
                 <TableCell>{ev.label}</TableCell>
                 {showAge && <TableCell>{ev.ageAtEvent ?? "-"}</TableCell>}
-                <TableCell>
-                  {ev.relatedIndividuals?.map((relInd) => (
-                    <Link
-                      key={relInd.id}
-                      component="button"
-                      onClick={() => setSelected(relInd)}
-                      sx={{ mr: 1 }}
-                    >
-                      {fullName(relInd)}
-                    </Link>
-                  ))}
+
+                <TableCell sx={{ whiteSpace: "pre-line" }}>
+                  {(() => {
+                    const loc = ev.location
+                      ? [ev.location.city, ev.location.congregation, ev.location.region]
+                          .filter(Boolean)
+                          .join(", ")
+                      : null;
+
+                    return (
+                      <>
+                        {/* Location (if exists) */}
+                        {loc && <>{loc}<br /></>}
+
+                        {/* First related individual */}
+                        {ev.relatedIndividuals && ev.relatedIndividuals.length > 0 && (
+                          <Link
+                            key={ev.relatedIndividuals[0].id}
+                            component="button"
+                            onClick={() => setSelected(ev.relatedIndividuals![0])}
+                          >
+                            {fullName(ev.relatedIndividuals[0])}
+                          </Link>
+                        )}
+
+                        {/* Remaining related individuals */}
+                        {ev.relatedIndividuals &&
+                          ev.relatedIndividuals.slice(1).map((relInd) => (
+                            <React.Fragment key={relInd.id}>
+                              <br />
+                              <Link
+                                component="button"
+                                onClick={() => setSelected(relInd)}
+                              >
+                                {fullName(relInd)}
+                              </Link>
+                            </React.Fragment>
+                          ))}
+                      </>
+                    );
+                  })()}
                 </TableCell>
               </TableRow>
             ))}
@@ -91,7 +122,7 @@ export default function Timeline() {
           {renderEvents("Före födsel", beforeBirth)}
           {renderEvents("Under livet", lifeEvents, true)} {/* 👈 only here */}
           {renderEvents("Efter döden", afterDeath)}
-          {renderEvents("Odaterade händelser", undated)}
+          {renderEvents("Odaterade händelser", undated, false, false)}
         </>
       ) : (
         <Typography variant="body1">Välj en individ för att visa tidslinjen.</Typography>

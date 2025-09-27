@@ -25,6 +25,11 @@ export type TimelineEvent = {
   individual: Individual;
   relatedIndividuals?: Individual[];
   ageAtEvent?: string; // e.g. "3 år", "15 mån"
+  location?: {
+    region?: string;
+    city?: string;
+    congregation?: string;
+  };
 };
 
 export type TimelineBuckets = {
@@ -114,10 +119,14 @@ export function buildTimelineEvents(
   events.push({
     type: "birth",
     date: individual.dateOfBirth,
-    label: `Född i ${[individual.birthCity, individual.birthCongregation, individual.birthRegion]
-      .filter(Boolean)
-      .join(", ")}`,
+    label: `Födelse av ${fullName(individual)}`,
     individual,
+    relatedIndividuals: [individual],
+    location: {
+      region: individual.birthRegion,
+      city: individual.birthCity,
+      congregation: individual.birthCongregation,
+    },
   });
 
   // Death
@@ -129,6 +138,12 @@ export function buildTimelineEvents(
         .filter(Boolean)
         .join(", ")}`,
       individual,
+      relatedIndividuals: [individual],
+      location: {
+        region: individual.deathRegion,
+        city: individual.deathCity,
+        congregation: individual.deathCongregation,
+      },
     });
   }
 
@@ -141,6 +156,23 @@ export function buildTimelineEvents(
         const spouseId = person1Id === individual.id ? person2Id : person1Id;
         const spouse = allIndividuals.find((i) => i.id === spouseId);
 
+        let location;
+        if (person1Id === individual.id) {
+          // individual is groom
+          location = {
+            region: rel.groomRegion,
+            city: rel.groomCity,
+            congregation: rel.groomCongregation,
+          };
+        } else {
+          // individual is bride
+          location = {
+            region: rel.brideRegion,
+            city: rel.brideCity,
+            congregation: rel.brideCongregation,
+          };
+        }
+
         // marriage event
         events.push({
           type: "marriage",
@@ -151,6 +183,7 @@ export function buildTimelineEvents(
           individual,
           relatedIndividuals: spouse ? [spouse] : [],
           ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, weddingDate),
+          location: location,
         });
 
         // spouse death event
@@ -174,6 +207,11 @@ export function buildTimelineEvents(
               individual,
               relatedIndividuals: [spouse],
               ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, spouse.dateOfDeath),
+              location: {
+                region: spouse.deathRegion,
+                city: spouse.deathCity,
+                congregation: spouse.deathCongregation,
+              },
             });
           }
         }
@@ -211,6 +249,11 @@ export function buildTimelineEvents(
       individual,
       relatedIndividuals: related,
       ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, child.dateOfBirth),
+      location: {
+        region: child.birthRegion,
+        city: child.birthCity,
+        congregation: child.birthCongregation,
+      },
     });
 
     if (child.dateOfDeath) {
@@ -224,6 +267,11 @@ export function buildTimelineEvents(
         individual,
         relatedIndividuals: related,
         ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, child.dateOfDeath),
+        location: {
+          region: child.deathRegion,
+          city: child.deathCity,
+          congregation: child.deathCongregation,
+        },
       });
     }
   });
@@ -255,6 +303,11 @@ export function buildTimelineEvents(
         individual,
         relatedIndividuals: related,
         ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, grandchild.dateOfBirth),
+        location: {
+          region: grandchild.birthRegion,
+          city: grandchild.birthCity,
+          congregation: grandchild.birthCongregation,
+        },
       });
 
       if (grandchild.dateOfDeath) {
@@ -268,6 +321,11 @@ export function buildTimelineEvents(
           individual,
           relatedIndividuals: related,
           ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, grandchild.dateOfDeath),
+          location: {
+            region: grandchild.deathRegion,
+            city: grandchild.deathCity,
+            congregation: grandchild.deathCongregation,
+          },
         });
       }
     });
@@ -288,6 +346,11 @@ export function buildTimelineEvents(
         label: `Födelse av ${kinship} ${fullName(anc)}`,
         individual,
         relatedIndividuals: [anc],
+        location: {
+          region: anc.birthRegion,
+          city: anc.birthCity,
+          congregation: anc.birthCongregation,
+        },
       });
     }
 
@@ -306,6 +369,11 @@ export function buildTimelineEvents(
           individual,
           relatedIndividuals: [anc],
           ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, anc.dateOfDeath),
+          location: {
+            region: anc.deathRegion,
+            city: anc.deathCity,
+            congregation: anc.deathCongregation,
+          },
         });
       }
     }
@@ -341,6 +409,11 @@ export function buildTimelineEvents(
       individual,
       relatedIndividuals: [sib],
       ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, sib.dateOfBirth),
+      location: {
+        region: sib.birthRegion,
+        city: sib.birthCity,
+        congregation: sib.birthCongregation,
+      },
     });
 
     if (sib.dateOfDeath) {
@@ -354,6 +427,11 @@ export function buildTimelineEvents(
         individual,
         relatedIndividuals: [sib],
         ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, sib.dateOfDeath),
+        location: {
+          region: sib.deathRegion,
+          city: sib.deathCity,
+          congregation: sib.deathCongregation,
+        },
       });
     }
   });
