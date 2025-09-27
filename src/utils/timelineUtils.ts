@@ -134,11 +134,10 @@ export function buildTimelineEvents(
     events.push({
       type: "death",
       date: individual.dateOfDeath,
-      label: `Avliden i ${[individual.deathCity, individual.deathCongregation, individual.deathRegion]
-        .filter(Boolean)
-        .join(", ")}`,
+      label: `Avliden ${fullName(individual)}`,
       individual,
       relatedIndividuals: [individual],
+      ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, individual.dateOfDeath),
       location: {
         region: individual.deathRegion,
         city: individual.deathCity,
