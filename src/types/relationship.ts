@@ -8,12 +8,9 @@ export const SpouseRelationshipSchema = z.object({
   person1Id: z.string(),
   person2Id: z.string(),
   weddingDate: z.string().optional(),
-  groomRegion: z.string().optional(),
-  groomCongregation: z.string().optional(),
-  groomCity: z.string().optional(),
-  brideRegion: z.string().optional(),
-  brideCongregation: z.string().optional(),
-  brideCity: z.string().optional(),
+  weddingRegion: z.string().optional(),
+  weddingCity: z.string().optional(),
+  weddingCongregation: z.string().optional(),
 });
 
 export const ParentChildRelationshipSchema = z.object({

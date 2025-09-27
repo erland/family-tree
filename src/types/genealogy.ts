@@ -32,8 +32,7 @@ export interface Relationship {
   type: RelationshipType;
   personIds: string[]; // [parentId, childId] or [spouse1Id, spouse2Id]
   weddingDate?: string; // only for spouse
-  groomLocation?: Location; // only for spouse
-  brideLocation?: Location; // only for spouse
+  weddingLocation?: Location; // only for spouse
 }
 
 /**
@@ -63,8 +62,7 @@ export const relationshipSchema = z.object({
   type: z.enum(["parentChild", "spouse"]),
   personIds: z.array(z.string().uuid()).min(2).max(2),
   weddingDate: z.string().datetime().optional(),
-  groomLocation: locationSchema.optional(),
-  brideLocation: locationSchema.optional(),
+  weddingLocation: locationSchema.optional(),
 });
 
 /**

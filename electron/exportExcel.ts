@@ -4,6 +4,7 @@ import { app, dialog } from "electron";
 import { getIndividuals, getRelationships } from "./db.js";
 import { Individual } from "../src/types/individual";
 import { Relationship } from "../src/types/relationship";
+import { fullName } from "../src/utils/nameUtils.js";
 
 // Split date into [day, month name, year]
 function splitDate(dateStr?: string): { day: string; month: string; year: string } {
@@ -234,23 +235,20 @@ export async function exportRelationshipsExcel() {
     { header: "Föräldrar (ID)", key: "parentIds", width: 40 },
     { header: "Föräldrar (Namn)", key: "parentNames", width: 40 },
     { header: "Vigseldatum", key: "weddingDate", width: 15 },
-    { header: "Region (man)", key: "groomRegion", width: 20 },
-    { header: "Församling (man)", key: "groomCongregation", width: 20 },
-    { header: "Stad (man)", key: "groomCity", width: 20 },
-    { header: "Region (kvinna)", key: "brideRegion", width: 20 },
-    { header: "Församling (kvinna)", key: "brideCongregation", width: 20 },
-    { header: "Stad (kvinna)", key: "brideCity", width: 20 },
+    { header: "Region", key: "weddingRegion", width: 20 },
+    { header: "Församling", key: "weddingCongregation", width: 20 },
+    { header: "Stad", key: "weddingCity", width: 20 },
   ];
 
   // Add rows
   relationships.forEach((r: any) => {
-    const person1Name = r.person1Id ? byId[r.person1Id]?.givenName ?? "" : "";
-    const person2Name = r.person2Id ? byId[r.person2Id]?.givenName ?? "" : "";
-    const childName = r.childId ? byId[r.childId]?.givenName ?? "" : "";
+    const person1Name = fullName(byId[r.person1Id]);
+    const person2Name = fullName(byId[r.person2Id]);
+    const childName = fullName(byId[r.childId]);
 
     const parentIds = Array.isArray(r.parentIds) ? r.parentIds : [];
     const parentNames = parentIds
-      .map((pid: string) => byId[pid]?.givenName ?? "")
+      .map((pid: string) => fullName(byId[pid]))
       .filter(Boolean)
       .join(", ");
 
@@ -266,12 +264,9 @@ export async function exportRelationshipsExcel() {
       parentIds: parentIds.join(", "),
       parentNames,
       weddingDate: r.weddingDate ?? "",
-      groomRegion: r.groomRegion ?? "",
-      groomCongregation: r.groomCongregation ?? "",
-      groomCity: r.groomCity ?? "",
-      brideRegion: r.brideRegion ?? "",
-      brideCongregation: r.brideCongregation ?? "",
-      brideCity: r.brideCity ?? "",
+      weddingRegion: r.weddingRegion ?? "",
+      weddingCongregation: r.weddingCongregation ?? "",
+      weddingCity: r.weddingCity ?? "",
     });
   });
 

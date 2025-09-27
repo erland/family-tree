@@ -10,7 +10,7 @@ import {
   updateRelationship,
   deleteRelationship,
 } from "./db.js";
-import { exportExcel } from "./exportExcel.js";   // 👈 use the new unified export
+import { exportExcel, exportRelationshipsExcel } from "./exportExcel.js";   // 👈 use the new unified export
 import { importExcel } from "./importExcel.js";
 import { generateGedcom } from "../src/utils/exportGedcom.js";
 import fs from "fs";
@@ -32,6 +32,10 @@ export function registerIpcHandlers() {
   ipcMain.handle("relationships:delete", async (_e, id) => {
     await deleteRelationship(id);
     return id;
+  });
+
+  ipcMain.handle("relationships:exportExcel", async () => {
+    return exportRelationshipsExcel(); // 👈 new
   });
 
   // Excel Export (unified)

@@ -37,12 +37,9 @@ export default function RelationshipEditor({ open, onClose, relationship }: Prop
   const [groom, setGroom] = useState("");
   const [bride, setBride] = useState("");
   const [weddingDate, setWeddingDate] = useState("");
-  const [groomRegion, setGroomRegion] = useState("");
-  const [groomCongregation, setGroomCongregation] = useState("");
-  const [groomCity, setGroomCity] = useState("");
-  const [brideRegion, setBrideRegion] = useState("");
-  const [brideCongregation, setBrideCongregation] = useState("");
-  const [brideCity, setBrideCity] = useState("");
+  const [weddingRegion, setWeddingRegion] = useState("");
+  const [weddingCity, setWeddingCity] = useState("");
+  const [weddingCongregation, setWeddingCongregation] = useState("");
 
   // Parent-child fields
   const [parentIds, setParentIds] = useState<string[]>([]);
@@ -56,12 +53,9 @@ export default function RelationshipEditor({ open, onClose, relationship }: Prop
         setGroom(relationship.person1Id);
         setBride(relationship.person2Id);
         setWeddingDate(relationship.weddingDate ?? "");
-        setGroomRegion(relationship.groomRegion ?? "");
-        setGroomCongregation(relationship.groomCongregation ?? "");
-        setGroomCity(relationship.groomCity ?? "");
-        setBrideRegion(relationship.brideRegion ?? "");
-        setBrideCongregation(relationship.brideCongregation ?? "");
-        setBrideCity(relationship.brideCity ?? "");
+        setWeddingRegion(relationship.weddingRegion ?? "");
+        setWeddingCongregation(relationship.weddingCongregation ?? "");
+        setWeddingCity(relationship.weddingCity ?? "");
         setParentIds([]);
         setChildId("");
       } else {
@@ -71,12 +65,9 @@ export default function RelationshipEditor({ open, onClose, relationship }: Prop
         setGroom("");
         setBride("");
         setWeddingDate("");
-        setGroomRegion("");
-        setGroomCongregation("");
-        setGroomCity("");
-        setBrideRegion("");
-        setBrideCongregation("");
-        setBrideCity("");
+        setWeddingRegion("");
+        setWeddingCongregation("");
+        setWeddingCity("");
       }
     } else if (open && !relationship) {
       // reset for "new"
@@ -84,12 +75,9 @@ export default function RelationshipEditor({ open, onClose, relationship }: Prop
       setGroom("");
       setBride("");
       setWeddingDate("");
-      setGroomRegion("");
-      setGroomCongregation("");
-      setGroomCity("");
-      setBrideRegion("");
-      setBrideCongregation("");
-      setBrideCity("");
+      setWeddingRegion("");
+      setWeddingCongregation("");
+      setWeddingCity("");
       setParentIds([]);
       setChildId("");
     }
@@ -103,12 +91,9 @@ export default function RelationshipEditor({ open, onClose, relationship }: Prop
         person1Id: groom,
         person2Id: bride,
         weddingDate,
-        groomRegion,
-        groomCongregation,
-        groomCity,
-        brideRegion,
-        brideCongregation,
-        brideCity,
+        weddingRegion,
+        weddingCongregation,
+        weddingCity,
       };
       isEdit ? dispatch(updateRelationship(newRel)) : dispatch(addRelationship(newRel));
     } else {
@@ -199,25 +184,13 @@ export default function RelationshipEditor({ open, onClose, relationship }: Prop
 
             <Grid container spacing={1} sx={{ mb: 1 }}>
               <Grid item xs={12} sm={4}>
-                <TextField label="Region (man)" value={groomRegion} onChange={(e) => setGroomRegion(e.target.value)} fullWidth />
+                <TextField label="Region" value={weddingRegion} onChange={(e) => setWeddingRegion(e.target.value)} fullWidth />
               </Grid>
               <Grid item xs={12} sm={4}>
-                <TextField label="Församling (man)" value={groomCongregation} onChange={(e) => setGroomCongregation(e.target.value)} fullWidth />
+                <TextField label="Församling" value={weddingCongregation} onChange={(e) => setWeddingCongregation(e.target.value)} fullWidth />
               </Grid>
               <Grid item xs={12} sm={4}>
-                <TextField label="Stad (man)" value={groomCity} onChange={(e) => setGroomCity(e.target.value)} fullWidth />
-              </Grid>
-            </Grid>
-
-            <Grid container spacing={1}>
-              <Grid item xs={12} sm={4}>
-                <TextField label="Region (kvinna)" value={brideRegion} onChange={(e) => setBrideRegion(e.target.value)} fullWidth />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField label="Församling (kvinna)" value={brideCongregation} onChange={(e) => setBrideCongregation(e.target.value)} fullWidth />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField label="Stad (kvinna)" value={brideCity} onChange={(e) => setBrideCity(e.target.value)} fullWidth />
+                <TextField label="Stad" value={weddingCity} onChange={(e) => setWeddingCity(e.target.value)} fullWidth />
               </Grid>
             </Grid>
           </>

@@ -26,12 +26,9 @@ type SearchEntry = {
   deathRegion?: string;
   deathCongregation?: string;
   deathCity?: string;
-  groomRegion?: string;
-  groomCongregation?: string;
-  groomCity?: string;
-  brideRegion?: string;
-  brideCongregation?: string;
-  brideCity?: string;
+  weddingRegion?: string;
+  weddingCongregation?: string;
+  weddingCity?: string;
 };
 
 export default function SearchBar({
@@ -62,17 +59,17 @@ export default function SearchBar({
         if (person1) {
           res.push({
             ...person1,
-            groomRegion: r.groomRegion,
-            groomCongregation: r.groomCongregation,
-            groomCity: r.groomCity,
+            weddingRegion: r.weddingRegion,
+            weddingCongregation: r.weddingCongregation,
+            weddingCity: r.weddingCity,
           });
         }
         if (person2) {
           res.push({
             ...person2,
-            brideRegion: r.brideRegion,
-            brideCongregation: r.brideCongregation,
-            brideCity: r.brideCity,
+            weddingRegion: r.weddingRegion,
+            weddingCongregation: r.weddingCongregation,
+            weddingCity: r.weddingCity,
           });
         }
         return res;
@@ -96,12 +93,9 @@ export default function SearchBar({
           "deathRegion",
           "deathCongregation",
           "deathCity",
-          "groomRegion",
-          "groomCongregation",
-          "groomCity",
-          "brideRegion",
-          "brideCongregation",
-          "brideCity",
+          "weddingRegion",
+          "weddingCongregation",
+          "weddingCity",
         ],
         threshold: 0.3,
         ignoreLocation: true,

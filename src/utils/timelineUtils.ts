@@ -156,23 +156,6 @@ export function buildTimelineEvents(
         const spouseId = person1Id === individual.id ? person2Id : person1Id;
         const spouse = allIndividuals.find((i) => i.id === spouseId);
 
-        let location;
-        if (person1Id === individual.id) {
-          // individual is groom
-          location = {
-            region: rel.groomRegion,
-            city: rel.groomCity,
-            congregation: rel.groomCongregation,
-          };
-        } else {
-          // individual is bride
-          location = {
-            region: rel.brideRegion,
-            city: rel.brideCity,
-            congregation: rel.brideCongregation,
-          };
-        }
-
         // marriage event
         events.push({
           type: "marriage",
@@ -183,7 +166,11 @@ export function buildTimelineEvents(
           individual,
           relatedIndividuals: spouse ? [spouse] : [],
           ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, weddingDate),
-          location: location,
+          location: {
+            region: rel.weddingRegion,
+            city: rel.weddingCity,
+            congregation: rel.weddingCongregation,
+          },
         });
 
         // spouse death event
