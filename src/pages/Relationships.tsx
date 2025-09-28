@@ -3,6 +3,7 @@ import {
   Box,
   Button,
   IconButton,
+  Tooltip,
   Table,
   TableBody,
   TableCell,
@@ -10,7 +11,7 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { Add, Delete, Edit } from "@mui/icons-material";
+import { Add, Delete, Edit, FileDownload } from "@mui/icons-material";
 import { useAppDispatch, useAppSelector } from "../store";
 import { fetchRelationships, deleteRelationship } from "../features/relationshipsSlice";
 import RelationshipEditor from "../components/RelationshipEditor";
@@ -67,19 +68,20 @@ export default function RelationshipsPage() {
             setEditorOpen(true);
           }}
         >
-          Ny relation
+          Ny
         </Button>
-        <Button
-          variant="outlined"
-          onClick={async () => {
-            const result = await window.genealogyAPI.exportRelationshipsExcel();
-            if (result.success) {
-              alert(`Excel-fil exporterad till ${result.path}`);
-            }
-          }}
-        >
-          Exportera Excel
-        </Button>
+        <Tooltip title="Exportera Excel">
+          <IconButton
+            onClick={async () => {
+              const result = await window.genealogyAPI.exportRelationshipsExcel();
+              if (result.success) {
+                alert(`Excel-fil exporterad till ${result.path}`);
+              }
+            }}
+          >
+            <FileDownload />
+          </IconButton>
+        </Tooltip>
       </Box>
 
       <Box sx={{ flex: 1, overflow: "auto" }}>

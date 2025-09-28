@@ -11,6 +11,12 @@ import {
   IconButton,
 } from "@mui/material";
 import { Add, Edit, Delete } from "@mui/icons-material";
+import {
+  FileDownload,
+  FileUpload,
+  FilePresent,
+} from "@mui/icons-material";
+import { Tooltip } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../store";
 import {
   fetchIndividuals,
@@ -67,55 +73,67 @@ export default function IndividualsPage() {
       }}
     >
       {/* Toolbar */}
-      <Box sx={{ p: 2, display: "flex", gap: 2, alignItems: "center" }}>
+      <Box sx={{ p: 2, display: "flex", gap: 1, alignItems: "center" }}>
         <SearchBar onResults={setFilteredIds} showDropdown={false} />
+
+        {/* Add new person */}
         <Button
           variant="contained"
           startIcon={<Add />}
           onClick={() => handleOpen()}
         >
-          Ny person
+          Ny
         </Button>
-        <Button
-          variant="outlined"
-          onClick={async () => {
-            const result = await window.genealogyAPI.exportIndividualsExcel();
-            if (result.success) {
-              alert(`Excel-fil exporterad till ${result.path}`);
-            }
-          }}
-        >
-          Export Excel
-        </Button>
-        <Button
-          variant="contained"
-          onClick={async () => {
-            // open file picker
-            const filePath = await window.electronAPI.showOpenDialog({
-              filters: [{ name: "Excel", extensions: ["xls", "xlsx", "xlsm"] }],
-              properties: ["openFile"],
-            });
-            if (filePath) {
-              const result = await window.genealogyAPI.importExcel(filePath[0]);
-              alert(`Imported ${result.count} individuals and ${result.relCount} relationships`);
-            }
-          }}
-        >
-          Import Excel
-        </Button>
-        <Button
-          variant="outlined"
-          size="small"
-          onClick={() => window.genealogyAPI.exportGedcom()}
-        >
-          Export GEDCOM
-        </Button>
-        <IconButton
-          onClick={() => exportAllIndividualsPdf(individuals, relationships)}
-          aria-label="PDF"
-        >
-          <PictureAsPdfIcon />
-        </IconButton>
+
+        {/* Export Excel */}
+        <Tooltip title="Exportera Excel">
+          <IconButton
+            onClick={async () => {
+              const result = await window.genealogyAPI.exportIndividualsExcel();
+              if (result.success) {
+                alert(`Excel-fil exporterad till ${result.path}`);
+              }
+            }}
+          >
+            <FileDownload />
+          </IconButton>
+        </Tooltip>
+
+        {/* Import Excel */}
+        <Tooltip title="Importera Excel">
+          <IconButton
+            onClick={async () => {
+              const filePath = await window.electronAPI.showOpenDialog({
+                filters: [{ name: "Excel", extensions: ["xls", "xlsx", "xlsm"] }],
+                properties: ["openFile"],
+              });
+              if (filePath) {
+                const result = await window.genealogyAPI.importExcel(filePath[0]);
+                alert(
+                  `Imported ${result.count} individuals and ${result.relCount} relationships`
+                );
+              }
+            }}
+          >
+            <FileUpload />
+          </IconButton>
+        </Tooltip>
+
+        {/* Export GEDCOM */}
+        <Tooltip title="Exportera GEDCOM">
+          <IconButton onClick={() => window.genealogyAPI.exportGedcom()}>
+            <FilePresent />
+          </IconButton>
+        </Tooltip>
+
+        {/* Export PDF (all individuals) */}
+        <Tooltip title="Exportera alla till PDF">
+          <IconButton
+            onClick={() => exportAllIndividualsPdf(individuals, relationships)}
+          >
+            <PictureAsPdfIcon />
+          </IconButton>
+        </Tooltip>
       </Box>
 
       {/* Content area: table + overlay details */}
