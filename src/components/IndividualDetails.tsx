@@ -11,6 +11,7 @@ import { addRelationship, fetchRelationships } from "../features/relationshipsSl
 import AddChildDialog from "./AddChildDialog";
 import AddParentDialog from "./AddParentDialog";
 import RelationshipEditor from "./RelationshipEditor";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 
 export default function IndividualDetails({
   individualId,
@@ -128,6 +129,17 @@ export default function IndividualDetails({
               <Close fontSize="small" />
             </IconButton>
           )}
+          <IconButton
+            size="small"
+            onClick={() =>
+              import("../utils/exportPersonPdf").then(({ exportPersonPdf }) =>
+                exportPersonPdf(individual, individuals, relationships)
+              )
+            }
+            aria-label="Exportera till PDF"
+          >
+            <PictureAsPdfIcon />
+          </IconButton>
         </Box>
       </Box>
 

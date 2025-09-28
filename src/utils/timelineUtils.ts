@@ -43,7 +43,7 @@ function parseDate(d?: string): Date | null {
   return d ? new Date(d) : null;
 }
 
-function calculateAgeAtEvent(birth?: string, event?: string): string | undefined {
+export function calculateAgeAtEvent(birth?: string, event?: string): string | undefined {
   if (!birth || !event) return;
   const b = parseDate(birth);
   const e = parseDate(event);
