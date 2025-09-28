@@ -6,12 +6,16 @@ import { Relationship } from "../types/relationship";
 import { fullName } from "./nameUtils";
 import { buildTimelineEvents, calculateAgeAtEvent, TimelineEvent } from "./timelineUtils";
 
-export function exportPersonPdf(
+/**
+ * Render one individual onto a jsPDF instance (on the current page).
+ * Returns the Y cursor after writing.
+ */
+export function renderIndividualPage(
+  doc: jsPDF,
   individual: Individual,
   individuals: Individual[],
   relationships: Relationship[]
-) {
-  const doc = new jsPDF();
+): number {
 
   // === Header ===
   doc.setFontSize(18);
@@ -145,7 +149,19 @@ export function exportPersonPdf(
     doc.setFontSize(11);
     doc.text(individual.story, 14, cursorY + 8, { maxWidth: 180 });
   }
+  
+  return cursorY;
+}
 
-  // === Save ===
+/**
+ * Export one person = single PDF with one page.
+ */
+export function exportPersonPdf(
+  individual: Individual,
+  individuals: Individual[],
+  relationships: Relationship[]
+) {
+  const doc = new jsPDF();
+  renderIndividualPage(doc, individual, individuals, relationships);
   doc.save(`${fullName(individual)}.pdf`);
 }
