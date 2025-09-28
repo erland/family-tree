@@ -22,10 +22,13 @@ import IndividualDetails from "../components/IndividualDetails";
 import IndividualFormDialog from "../components/IndividualFormDialog";
 import { fullName } from "../utils/nameUtils"; // at top
 import { dialog } from "@tauri-apps/api/dialog";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import { exportAllIndividualsPdf } from "../utils/exportAllIndividualsPdf";
 
 export default function IndividualsPage() {
   const dispatch = useAppDispatch();
   const individuals = useAppSelector((s) => s.individuals.items);
+  const relationships = useAppSelector((s) => s.relationships.items);
   const [filteredIds, setFilteredIds] = useState<string[]>([]);
 
   const visibleIndividuals = filteredIds.length
@@ -107,6 +110,12 @@ export default function IndividualsPage() {
         >
           Export GEDCOM
         </Button>
+        <IconButton
+          onClick={() => exportAllIndividualsPdf(individuals, relationships)}
+          aria-label="PDF"
+        >
+          <PictureAsPdfIcon />
+        </IconButton>
       </Box>
 
       {/* Content area: table + overlay details */}
