@@ -107,7 +107,7 @@ export function renderIndividualPage(
   if (children.length > 0) {
     autoTable(doc, {
       startY: cursorY,
-      head: [["Barn", "Född", "Död", "Ålder vid död", "Andra föräldern"]],
+      head: [["Barn", "Född", "Död", "Ålder", "Andra föräldern"]],
       body: children.map(({ child, otherParent }) =>
         child
           ? [
