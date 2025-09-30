@@ -1,41 +1,48 @@
-import { Box, IconButton, Typography, Divider, Button, List, ListItem, ListItemText } from "@mui/material";
+// src/components/IndividualDetails.tsx
+import {
+  Box,
+  IconButton,
+  Typography,
+  Divider,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
+} from "@mui/material";
 import { Edit, Close } from "@mui/icons-material";
+import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import { useState } from "react";
-import { useDispatch } from "react-redux";
 import { useAppSelector } from "../store";
 import { Individual } from "../types/individual";
 import { Relationship } from "../types/relationship";
 import { fullName } from "../utils/nameUtils";
-import { addIndividual } from "../features/individualsSlice";
-import { addRelationship, fetchRelationships } from "../features/relationshipsSlice";
+import { exportPersonPdf } from "../utils/exportPersonPdf";
+import {
+  getParentsOf,
+  getSpousesOf,
+  groupChildrenByOtherParent,
+} from "../utils/peopleSelectors";
+
 import AddChildDialog from "./AddChildDialog";
 import AddParentDialog from "./AddParentDialog";
 import RelationshipEditor from "./RelationshipEditor";
-import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 
-export default function IndividualDetails({
-  individualId,
-  onClose,
-  onEdit,
-}: {
+type Props = {
   individualId: string;
   onClose?: () => void;
   onEdit?: (ind: Individual) => void;
-}) {
-  const dispatch = useDispatch();
+};
+
+export default function IndividualDetails({ individualId, onClose, onEdit }: Props) {
   const [openAddChild, setOpenAddChild] = useState(false);
   const [openAddParent, setOpenAddParent] = useState(false);
   const [editingRel, setEditingRel] = useState<Relationship | null>(null);
 
-  // Always grab the freshest version from the store
-  const individual = useAppSelector((s) =>
-    s.individuals.items.find((i) => i.id === individualId)
-  );
-
-  if (!individual) return null; // safety
-
   const individuals = useAppSelector((s) => s.individuals.items);
   const relationships = useAppSelector((s) => s.relationships.items);
+  const individual = individuals.find((i) => i.id === individualId);
+
+  if (!individual) return null;
 
   const hasBirth =
     individual.dateOfBirth ||
@@ -49,62 +56,14 @@ export default function IndividualDetails({
     individual.deathCity ||
     individual.deathCongregation;
 
-  // 🔎 Parents
-  const parentRels = relationships.filter(
-    (r) => r.type === "parent-child" && r.childId === individual.id
+  // Centralized selectors (no ad-hoc filtering here)
+  const parents = getParentsOf(individual.id, relationships, individuals);
+  const spouses = getSpousesOf(individual.id, relationships, individuals);
+  const childrenByOtherParent = groupChildrenByOtherParent(
+    individual.id,
+    relationships,
+    individuals
   );
-  const parentIds = parentRels.flatMap((r) => r.parentIds);
-  const parents = individuals.filter((i) => parentIds.includes(i.id));
-
-  // 🔎 Spouses
-  const spouseRels = relationships.filter(
-    (r) =>
-      r.type === "spouse" &&
-      ((r as any).person1Id === individual.id || (r as any).person2Id === individual.id)
-  );
-  const spouses = spouseRels.map((r) => {
-    const otherId =
-      (r as any).person1Id === individual.id
-        ? (r as any).person2Id
-        : (r as any).person1Id;
-    return {
-      partner: individuals.find((i) => i.id === otherId),
-      weddingDate: (r as any).weddingDate ?? null,
-      rel: r,
-    };
-  });
-
-  // 🔎 Children
-  const childRels = relationships.filter(
-    (r) => r.type === "parent-child" && r.parentIds.includes(individual.id)
-  );
-
-  const groupedByPartner: Record<string, { child: Individual; rel: Relationship }[]> = {};
-  const soloChildren: { child: Individual; rel: Relationship }[] = [];
-
-  childRels.forEach((rel) => {
-    const child = individuals.find((i) => i.id === rel.childId);
-    if (!child) return;
-
-    let otherParentIds = rel.parentIds.filter((pid) => pid !== individual.id);
-    if (otherParentIds.length === 0) {
-      const allParentIdsForChild = relationships
-        .filter((r) => r.type === "parent-child" && r.childId === rel.childId)
-        .flatMap((r) => r.parentIds as string[]);
-      otherParentIds = Array.from(
-        new Set(allParentIdsForChild.filter((pid) => pid !== individual.id))
-      );
-    }
-
-    if (otherParentIds.length > 0) {
-      otherParentIds.forEach((partnerId) => {
-        if (!groupedByPartner[partnerId]) groupedByPartner[partnerId] = [];
-        groupedByPartner[partnerId].push({ child, rel });
-      });
-    } else {
-      soloChildren.push({ child, rel });
-    }
-  });
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
@@ -114,41 +73,46 @@ export default function IndividualDetails({
           variant="h6"
           noWrap
           sx={{ flexGrow: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}
+          title={fullName(individual)}
         >
           {fullName(individual)}
         </Typography>
 
         <Box sx={{ display: "flex", gap: 0.5, flexShrink: 0 }}>
+          <IconButton
+            size="small"
+            onClick={() => exportPersonPdf(individual, individuals, relationships)}
+            aria-label="Exportera till PDF"
+          >
+            <PictureAsPdfIcon fontSize="small" />
+          </IconButton>
+
           {onEdit && (
             <IconButton size="small" onClick={() => onEdit(individual)} aria-label="Redigera">
               <Edit fontSize="small" />
             </IconButton>
           )}
+
           {onClose && (
             <IconButton size="small" onClick={onClose} aria-label="Stäng">
               <Close fontSize="small" />
             </IconButton>
           )}
-          <IconButton
-            size="small"
-            onClick={() =>
-              import("../utils/exportPersonPdf").then(({ exportPersonPdf }) =>
-                exportPersonPdf(individual, individuals, relationships)
-              )
-            }
-            aria-label="Exportera till PDF"
-          >
-            <PictureAsPdfIcon />
-          </IconButton>
         </Box>
       </Box>
 
       <Divider />
 
+      {/* Birth / Death */}
       {hasBirth && (
         <Box>
           <Typography variant="body2" fontWeight={700}>
             Född: {individual.dateOfBirth ?? "-"}
+          </Typography>
+          <Typography variant="body2">
+            {[individual.birthCity, individual.birthCongregation, individual.birthRegion]
+              .filter(Boolean)
+              .join(", ")}
           </Typography>
         </Box>
       )}
@@ -158,206 +122,119 @@ export default function IndividualDetails({
           <Typography variant="body2" fontWeight={700}>
             Död: {individual.dateOfDeath ?? "-"}
           </Typography>
+          <Typography variant="body2">
+            {[individual.deathCity, individual.deathCongregation, individual.deathRegion]
+              .filter(Boolean)
+              .join(", ")}
+          </Typography>
         </Box>
       )}
 
-      {parents.length > 0 && (
-        <Box sx={{ mt: 1 }}>
-          <Typography variant="body2" fontWeight={700}>Föräldrar:</Typography>
+      {/* Parents */}
+      <Box sx={{ mt: 1 }}>
+        <Typography variant="body2" fontWeight={700}>
+          Föräldrar
+        </Typography>
+        {parents.length > 0 ? (
           <List dense>
-            {parents.map((parent) => {
-              const rel = parentRels.find((r) => r.parentIds.includes(parent.id));
-              return (
-                <ListItem
-                  key={parent.id}
-                  secondaryAction={
-                    rel && (
-                      <IconButton edge="end" onClick={() => setEditingRel(rel)}>
-                        <Edit fontSize="small" />
-                      </IconButton>
-                    )
-                  }
-                >
-                  <ListItemText primary={fullName(parent)} />
-                </ListItem>
-              );
-            })}
+            {parents.map((p) => (
+              <ListItem key={p.id}>
+                <ListItemText primary={fullName(p)} />
+              </ListItem>
+            ))}
           </List>
-        </Box>
-      )}
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            Okända föräldrar
+          </Typography>
+        )}
 
-      {parents.length < 2 && (
-        <Box sx={{ mt: 1 }}>
-          <Button variant="outlined" onClick={() => setOpenAddParent(true)}>
-            Lägg till förälder
-          </Button>
-        </Box>
-      )}
+        {parents.length < 2 && (
+          <Box sx={{ mt: 1 }}>
+            <Button variant="outlined" size="small" onClick={() => setOpenAddParent(true)}>
+              Lägg till förälder
+            </Button>
+          </Box>
+        )}
+      </Box>
 
-      {spouses.length > 0 && (
-        <Box sx={{ mt: 1 }}>
-          <Typography variant="body2" fontWeight={700}>Gift med:</Typography>
+      {/* Spouses */}
+      <Box sx={{ mt: 1 }}>
+        <Typography variant="body2" fontWeight={700}>
+          Make/maka
+        </Typography>
+        {spouses.length > 0 ? (
           <List dense>
-            {spouses.map(({ partner, weddingDate, rel }, idx) => (
+            {spouses.map(({ partner, weddingDate, relationship }, idx) => (
               <ListItem
-                key={idx}
+                key={relationship.id ?? idx}
                 secondaryAction={
-                  <IconButton edge="end" onClick={() => setEditingRel(rel)}>
+                  <IconButton edge="end" onClick={() => setEditingRel(relationship)} aria-label="Redigera relation">
                     <Edit fontSize="small" />
                   </IconButton>
                 }
               >
                 <ListItemText
                   primary={partner ? fullName(partner) : "Okänd"}
-                  secondary={weddingDate ? `(${weddingDate})` : ""}
+                  secondary={weddingDate ? `Vigsel: ${weddingDate}` : undefined}
                 />
               </ListItem>
             ))}
           </List>
-        </Box>
-      )}
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            Ingen make/maka registrerad
+          </Typography>
+        )}
+      </Box>
 
-      {(Object.keys(groupedByPartner).length > 0 || soloChildren.length > 0) && (
-        <Box sx={{ mt: 1 }}>
-          <Typography variant="body2" fontWeight={700}>Barn:</Typography>
-          {Object.entries(groupedByPartner).map(([partnerId, children]) => {
-            const partner = individuals.find((i) => i.id === partnerId);
-            return (
-              <Box key={partnerId} sx={{ mt: 0.5 }}>
-                <Typography variant="body2" fontWeight={600}>
-                  Med {partner ? fullName(partner) : "okänd partner"}:
-                </Typography>
-                <List dense>
-                  {children.map(({ child, rel }) => (
-                    <ListItem
-                      key={child.id}
-                      secondaryAction={
-                        <IconButton edge="end" onClick={() => setEditingRel(rel)}>
-                          <Edit fontSize="small" />
-                        </IconButton>
-                      }
-                    >
-                      <ListItemText primary={fullName(child)} />
-                    </ListItem>
-                  ))}
-                </List>
-              </Box>
-            );
-          })}
+      {/* Children */}
+      <Box sx={{ mt: 1, pb: 1 }}>
+        <Typography variant="body2" fontWeight={700}>
+          Barn
+        </Typography>
 
-          {soloChildren.length > 0 && (
-            <Box sx={{ mt: 0.5 }}>
-              <Typography variant="body2" fontWeight={600}>Utan känd partner:</Typography>
+        {childrenByOtherParent.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            Inga barn registrerade
+          </Typography>
+        ) : (
+          childrenByOtherParent.map(({ partner, children }, i) => (
+            <Box key={i} sx={{ mt: i === 0 ? 0 : 1 }}>
+              <Typography variant="body2" sx={{ fontStyle: "italic" }}>
+                Andra förälder: {partner ? fullName(partner) : "Okänd"}
+              </Typography>
               <List dense>
-                {soloChildren.map(({ child, rel }) => (
-                  <ListItem
-                    key={child.id}
-                    secondaryAction={
-                      <IconButton edge="end" onClick={() => setEditingRel(rel)}>
-                        <Edit fontSize="small" />
-                      </IconButton>
-                    }
-                  >
-                    <ListItemText primary={fullName(child)} />
+                {children.map((c) => (
+                  <ListItem key={c.id}>
+                    <ListItemText primary={fullName(c)} />
                   </ListItem>
                 ))}
               </List>
             </Box>
-          )}
-        </Box>
-      )}
+          ))
+        )}
 
-      {/* Add child button */}
-      <Box sx={{ mt: 1 }}>
-        <Button variant="outlined" onClick={() => setOpenAddChild(true)}>
-          Lägg till barn
-        </Button>
+        <Box sx={{ mt: 1 }}>
+          <Button variant="outlined" size="small" onClick={() => setOpenAddChild(true)}>
+            Lägg till barn
+          </Button>
+        </Box>
       </Box>
 
-      {individual.story && (
-        <Box sx={{ mt: 1 }}>
-          <Typography variant="body2" fontWeight={700}>Berättelse:</Typography>
-          <Typography variant="body2">{individual.story}</Typography>
-        </Box>
-      )}
-
-      {/* Add dialogs */}
-      <AddChildDialog
-        open={openAddChild}
-        onClose={() => setOpenAddChild(false)}
-        parentId={individual.id}
-        onAdd={async (payload) => {
-          try {
-            if (payload.mode === "new") {
-              const newId = crypto.randomUUID();
-              const { parentId, ...childData } = payload.data;
-              const newChild = { id: newId, ...childData };
-              await dispatch(addIndividual(newChild)).unwrap();
-
-              const rel = {
-                id: crypto.randomUUID(),
-                type: "parent-child" as const,
-                parentIds: [individual.id].concat(payload.otherParentId ? [payload.otherParentId] : []),
-                childId: newId,
-              };
-              await dispatch(addRelationship(rel)).unwrap();
-            } else {
-              const rel = {
-                id: crypto.randomUUID(),
-                type: "parent-child" as const,
-                parentIds: [individual.id].concat(payload.otherParentId ? [payload.otherParentId] : []),
-                childId: payload.childId,
-              };
-              await dispatch(addRelationship(rel)).unwrap();
-            }
-            await dispatch(fetchRelationships()).unwrap();
-          } catch (e) {
-            console.error("Failed to add child/relationship:", e);
-            alert("Kunde inte spara barnet eller relationen.");
-          }
-        }}
-      />
+      {/* Dialogs */}
+      <AddChildDialog open={openAddChild} onClose={() => setOpenAddChild(false)} parentId={individual.id} />
 
       <AddParentDialog
         open={openAddParent}
         onClose={() => setOpenAddParent(false)}
         childId={individual.id}
-        onAdd={async (payload) => {
-          try {
-            if (payload.mode === "new") {
-              const newId = crypto.randomUUID();
-              const { data } = payload;
-              const newParent = { id: newId, ...data };
-              await dispatch(addIndividual(newParent)).unwrap();
-
-              const rel = {
-                id: crypto.randomUUID(),
-                type: "parent-child" as const,
-                parentIds: [newId],
-                childId: individual.id,
-              };
-              await dispatch(addRelationship(rel)).unwrap();
-            } else {
-              const rel = {
-                id: crypto.randomUUID(),
-                type: "parent-child" as const,
-                parentIds: [payload.parentId],
-                childId: individual.id,
-              };
-              await dispatch(addRelationship(rel)).unwrap();
-            }
-            await dispatch(fetchRelationships()).unwrap();
-          } catch (e) {
-            console.error("Failed to add parent/relationship:", e);
-            alert("Kunde inte spara föräldern eller relationen.");
-          }
-        }}
       />
 
       <RelationshipEditor
         open={!!editingRel}
-        relationship={editingRel || undefined}
         onClose={() => setEditingRel(null)}
+        relationship={editingRel ?? undefined}
       />
     </Box>
   );

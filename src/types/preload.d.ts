@@ -1,11 +1,12 @@
 export {};
-
 declare global {
   interface Window {
-    electron: {
-      invoke: (channel: string, ...args: any[]) => Promise<any>;
-      send: (channel: string, ...args: any[]) => void;
-      on: (channel: string, listener: (...args: any[]) => void) => void;
+    genealogyAPI: {
+      exportIndividualsExcel: () => Promise<{ success: boolean; path?: string }>;
+      exportRelationshipsExcel: () => Promise<{ success: boolean; path?: string }>;
+      exportGedcom: () => Promise<{ success: boolean; path?: string }>;
+      importExcel: (filePath: string) => Promise<{ count: number; relCount: number }>;
+      // Add more as your preload exposes them; keeping this minimal avoids drift.
     };
   }
 }

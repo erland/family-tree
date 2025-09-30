@@ -2,6 +2,7 @@
 import { Individual } from "../types/individual";
 import { Relationship } from "../types/relationship";
 import { fullName } from "./nameUtils";
+import { formatAge as calculateAgeAtEvent, parseISO as parseDate } from "./dateUtils";
 
 export type TimelineEventType =
   | "birth"
@@ -38,23 +39,6 @@ export type TimelineBuckets = {
   afterDeath: TimelineEvent[];
   undated: TimelineEvent[];
 };
-
-function parseDate(d?: string): Date | null {
-  return d ? new Date(d) : null;
-}
-
-export function calculateAgeAtEvent(birth?: string, event?: string): string | undefined {
-  if (!birth || !event) return;
-  const b = parseDate(birth);
-  const e = parseDate(event);
-  if (!b || !e) return;
-  const months = (e.getFullYear() - b.getFullYear()) * 12 + (e.getMonth() - b.getMonth());
-  if (months < 24) {
-    return `${months} mån`;
-  }
-  const years = Math.floor(months / 12);
-  return `${years} år`;
-}
 
 // Translate ancestor path to kinship term in Swedish
 function relationName(path: string): string {

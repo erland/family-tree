@@ -4,7 +4,9 @@ import autoTable from "jspdf-autotable";
 import { Individual } from "../types/individual";
 import { Relationship } from "../types/relationship";
 import { fullName } from "./nameUtils";
-import { buildTimelineEvents, calculateAgeAtEvent, TimelineEvent } from "./timelineUtils";
+import { buildTimelineEvents, TimelineEvent } from "./timelineUtils";
+import { calculateAgeAtEvent } from "./dateUtils";
+import { getParentsOf, getSpousesOf, groupChildrenByOtherParent } from "./peopleSelectors";
 
 /**
  * Render one individual onto a jsPDF instance (on the current page).
@@ -39,12 +41,7 @@ export function renderIndividualPage(
   let cursorY = 55;
 
   // === Parents ===
-  const parentRels = relationships.filter(
-    (r) => r.type === "parent-child" && r.childId === individual.id
-  );
-  const parents = individuals.filter((i) =>
-    parentRels.some((r) => r.parentIds.includes(i.id))
-  );
+  const parents = getParentsOf(individual.id, relationships, individuals);
 
   if (parents.length > 0) {
     autoTable(doc, {
@@ -61,31 +58,19 @@ export function renderIndividualPage(
   }
 
   // === Spouses ===
-  const spouseRels = relationships.filter(
-    (r) =>
-      r.type === "spouse" &&
-      ((r as any).person1Id === individual.id ||
-        (r as any).person2Id === individual.id)
-  );
-  const spouses = spouseRels.map((r) => {
-    const otherId =
-      (r as any).person1Id === individual.id
-        ? (r as any).person2Id
-        : (r as any).person1Id;
-    return individuals.find((i) => i.id === otherId);
-  });
+  const spouses = getSpousesOf(individual.id, relationships, individuals);
 
   if (spouses.length > 0) {
     autoTable(doc, {
       startY: cursorY,
       head: [["Make/maka", "Född", "Död", "Ålder"]],
-      body: spouses.map((s) =>
-        s
+      body: spouses.map((partner) =>
+        partner
           ? [
-              fullName(s),
-              s.dateOfBirth || "",
-              s.dateOfDeath || "",
-              calculateAgeAtEvent(s.dateOfBirth, s.dateOfDeath),
+              fullName(partner),
+              partner.dateOfBirth || "",
+              partner.dateOfDeath || "",
+              calculateAgeAtEvent(partner.dateOfBirth, partner.dateOfDeath),
             ]
           : ["Okänd", "", "", ""]
       ),
@@ -93,22 +78,16 @@ export function renderIndividualPage(
     cursorY = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // === Children ===
-  const childRels = relationships.filter(
-    (r) => r.type === "parent-child" && r.parentIds.includes(individual.id)
+  // === Children (grouped by other parent when available) ===
+  const grouped = groupChildrenByOtherParent(individual.id, relationships, individuals);
+  const flatChildren = grouped.flatMap(({ partner, children }) =>
+    children.map((child) => ({ child, otherParent: partner }))
   );
-  const children = childRels.map((rel) => {
-    const child = individuals.find((i) => i.id === rel.childId);
-    const otherParentId = rel.parentIds.find((pid) => pid !== individual.id);
-    const otherParent = individuals.find((i) => i.id === otherParentId);
-    return { child, otherParent };
-  });
-
-  if (children.length > 0) {
-    autoTable(doc, {
+  if (flatChildren.length > 0) {
+      autoTable(doc, {
       startY: cursorY,
       head: [["Barn", "Född", "Död", "Ålder", "Andra föräldern"]],
-      body: children.map(({ child, otherParent }) =>
+      body: flatChildren.map(({ child, otherParent }) =>
         child
           ? [
               fullName(child),
