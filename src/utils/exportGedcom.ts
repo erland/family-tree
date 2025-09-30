@@ -1,16 +1,7 @@
 import { Individual } from "../types/individual";
 import { Relationship } from "../types/relationship";
 import { dialog } from "@electron/remote"; // or via ipcRenderer if in renderer
-
-function formatDate(dateStr?: string): string | undefined {
-  if (!dateStr) return undefined;
-  const [y, m, d] = dateStr.split("-");
-  if (!y) return undefined;
-  const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-  const day = d ? parseInt(d, 10).toString().padStart(2, "0") : "";
-  const month = m ? months[parseInt(m, 10) - 1] : "";
-  return [day, month, y].filter(Boolean).join(" ");
-}
+import { formatDate } from "./dateUtils.js";
 
 export function generateGedcom(
   individuals: Individual[],

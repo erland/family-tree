@@ -62,3 +62,4 @@ export function formatGedcomDate(dateStr?: string): string | undefined {
 // Back-compat convenience re-exports used elsewhere
 export { parseISO as parseDate };
 export { formatAge as calculateAgeAtEvent };
+export { formatGedcomDate as formatDate };
