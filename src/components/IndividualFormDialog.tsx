@@ -15,6 +15,7 @@ import { Individual, IndividualSchema } from "../types/individual";
 import { v4 as uuidv4 } from "uuid";
 import { useAppDispatch } from "../store";
 import { addIndividual, updateIndividual } from "../features/individualsSlice";
+import IndividualFormFields, { PersonFormValues } from "./IndividualFormFields";
 
 export default function IndividualFormDialog({
   open,
@@ -27,7 +28,20 @@ export default function IndividualFormDialog({
 }) {
   const dispatch = useAppDispatch();
 
-  const [form, setForm] = useState<Partial<Individual>>({});
+  const [form, setForm] = useState<PersonFormValues>(() => ({
+    givenName: individual?.givenName ?? "",
+    familyName: individual?.familyName ?? "",
+    birthFamilyName: individual?.birthFamilyName ?? "",
+    gender: individual?.gender ?? "",
+    dateOfBirth: individual?.dateOfBirth ?? "",
+    birthRegion: individual?.birthRegion ?? "",
+    birthCity: individual?.birthCity ?? "",
+    birthCongregation: individual?.birthCongregation ?? "",
+    dateOfDeath: individual?.dateOfDeath ?? "",
+    deathRegion: individual?.deathRegion ?? "",
+    deathCity: individual?.deathCity ?? "",
+    deathCongregation: individual?.deathCongregation ?? "",
+  }));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -64,110 +78,13 @@ export default function IndividualFormDialog({
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>{individual ? "Redigera person" : "Ny person"}</DialogTitle>
       <DialogContent>
-        <FormControl fullWidth margin="normal">
-          <InputLabel>Kön</InputLabel>
-          <Select
-            value={form.gender || "unknown"}
-            onChange={(e) => handleChange("gender")(e as any)}
-            label="Kön"
-          >
-            <MenuItem value="male">Man</MenuItem>
-            <MenuItem value="female">Kvinna</MenuItem>
-            <MenuItem value="unknown">Okänt</MenuItem>
-          </Select>
-        </FormControl>
-        <TextField
-          label="Förnamn"
-          fullWidth
-          margin="normal"
-          value={form.givenName || ""}
-          onChange={handleChange("givenName")}
-          error={!!errors.givenName}
-          helperText={errors.givenName}
-        />
-        <TextField
-          label="Efternamn"
-          fullWidth
-          margin="normal"
-          value={form.familyName || ""}
-          onChange={handleChange("familyName")}
-          error={!!errors.familyName}
-          helperText={errors.familyName}
-        />
-        <TextField
-          label="Efternamn (vid födsel)"
-          fullWidth
-          margin="normal"
-          value={form.birthFamilyName || ""}
-          onChange={handleChange("birthFamilyName")}
-          error={!!errors.birthFamilyName}
-          helperText={errors.birthFamilyName}
-        />
-        <TextField
-          label="Födelsedatum"
-          fullWidth
-          margin="normal"
-          value={form.dateOfBirth || ""}
-          onChange={handleChange("dateOfBirth")}
-        />
-        <TextField
-          label="Region (födelse)"
-          fullWidth
-          margin="normal"
-          value={form.birthRegion || ""}
-          onChange={handleChange("birthRegion")}
-        />
-        <TextField
-          label="Församling (födelse)"
-          fullWidth
-          margin="normal"
-          value={form.birthCongregation || ""}
-          onChange={handleChange("birthCongregation")}
-        />
-        <TextField
-          label="Stad (födelse)"
-          fullWidth
-          margin="normal"
-          value={form.birthCity || ""}
-          onChange={handleChange("birthCity")}
-        />
-        <TextField
-          label="Dödsdatum"
-          fullWidth
-          margin="normal"
-          value={form.dateOfDeath || ""}
-          onChange={handleChange("dateOfDeath")}
-        />
-        <TextField
-          label="Region (död)"
-          fullWidth
-          margin="normal"
-          value={form.deathRegion || ""}
-          onChange={handleChange("deathRegion")}
-        />
-        <TextField
-          label="Församling (död)"
-          fullWidth
-          margin="normal"
-          value={form.deathCongregation || ""}
-          onChange={handleChange("deathCongregation")}
-        />
-        <TextField
-          label="Stad (död)"
-          fullWidth
-          margin="normal"
-          value={form.deathCity || ""}
-          onChange={handleChange("deathCity")}
-        />
-        <TextField
-          label="Berättelse"
-          fullWidth
-          margin="normal"
-          multiline
-          minRows={3}
-          value={form.story || ""}
-          onChange={handleChange("story")}
-        />
+      <IndividualFormFields
+        value={form}
+        onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+        fields={{ names: true, gender: true, birth: true, death: true }}
+        required={{ givenName: true }}
+        autoFocusFirst
+      />
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Avbryt</Button>
