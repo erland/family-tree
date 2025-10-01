@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-export const RelationshipType = z.enum(["spouse", "parent-child"]);
-
 export const SpouseRelationshipSchema = z.object({
   id: z.string(),
   type: z.literal("spouse"),

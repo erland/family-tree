@@ -25,7 +25,7 @@ export interface Individual {
   story?: string;
 }
 
-export type RelationshipType = "parentChild" | "spouse";
+export type RelationshipType = "parent-child" | "spouse";
 
 export interface Relationship {
   id: string;
@@ -59,7 +59,7 @@ export const individualSchema = z.object({
 
 export const relationshipSchema = z.object({
   id: z.string().uuid(),
-  type: z.enum(["parentChild", "spouse"]),
+  type: z.enum(["parent-child", "spouse"]),
   personIds: z.array(z.string().uuid()).min(2).max(2),
   weddingDate: z.string().datetime().optional(),
   weddingLocation: locationSchema.optional(),
