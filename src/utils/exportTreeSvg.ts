@@ -20,14 +20,11 @@ export async function exportFullTreeSVG(
   const { container, cleanup } = renderOffscreenGraph({ nodes, edges, nodeTypes }, { width, height });
   try {
     const svg = await captureAsSvg(container);
-    const blob = new Blob([svg], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
 
     const a = document.createElement("a");
-    a.href = url;
+    a.href = svg;
     a.download = "slakttrad.svg";
     a.click();
-    URL.revokeObjectURL(url);
   } finally {
     cleanup();
   }

@@ -66,10 +66,19 @@ export function renderOffscreenGraph({ nodes, edges, nodeTypes }: RFGraph, dims:
 export async function captureAsPng(element: HTMLElement): Promise<string> {
   // tiny paint delay
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  return toPng(element);
+  const renderer = element.querySelector(".react-flow__viewport") as HTMLElement | null;
+  if (!renderer) {
+    return "";
+  }
+  return toPng(renderer, { cacheBust: true });
 }
 
 export async function captureAsSvg(element: HTMLElement): Promise<string> {
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  return toSvg(element);
+  const renderer = element.querySelector(".react-flow__viewport") as HTMLElement | null;
+  if (!renderer) {
+    return "";
+  }
+
+  return await toSvg(renderer, { cacheBust: true });
 }
