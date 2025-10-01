@@ -1,7 +1,7 @@
-import { Individual } from "../types/individual";
-import { Relationship } from "../types/relationship";
+import { Individual } from "../src/types/individual";
+import { Relationship } from "../src/types/relationship";
 import { dialog } from "@electron/remote"; // or via ipcRenderer if in renderer
-import { formatDate } from "./dateUtils.js";
+import { formatDate } from "../src/utils/dateUtils.js";
 
 export function generateGedcom(
   individuals: Individual[],

@@ -12,7 +12,7 @@ import {
 } from "./db.js";
 import { exportExcel, exportRelationshipsExcel } from "./exportExcel.js";   // 👈 use the new unified export
 import { importExcel } from "./importExcel.js";
-import { generateGedcom } from "../src/utils/exportGedcom.js";
+import { generateGedcom } from "./exportGedcom.js";
 import fs from "fs";
 
 export function registerIpcHandlers() {
