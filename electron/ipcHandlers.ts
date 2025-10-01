@@ -16,22 +16,43 @@ import { generateGedcom } from "./exportGedcom.js";
 import fs from "fs";
 
 export function registerIpcHandlers() {
+  // ──────────────────────────────────────────────
+  // DRY CRUD registrar
+  // ──────────────────────────────────────────────
+  function registerCRUD<T>(
+    prefix: string,
+    svc: {
+      list: () => Promise<T[]>;
+      add: (x: T) => Promise<T>;
+      update: (id: string, patch: Partial<T>) => Promise<T>;
+      remove: (id: string) => Promise<any>;
+    }
+  ) {
+    ipcMain.handle(`${prefix}:list`, async () => svc.list());
+    ipcMain.handle(`${prefix}:add`, async (_e, item) => svc.add(item));
+    ipcMain.handle(`${prefix}:update`, async (_e, id, updates) =>
+      svc.update(id, updates)
+    );
+    ipcMain.handle(`${prefix}:delete`, async (_e, id) => {
+      await svc.remove(id);
+      return id;
+    });
+  }
+
   // Individuals
-  ipcMain.handle("individuals:list", async () => await getIndividuals());
-  ipcMain.handle("individuals:add", async (_e, individual) => await addIndividual(individual));
-  ipcMain.handle("individuals:update", async (_e, id, updates) => await updateIndividual(id, updates));
-  ipcMain.handle("individuals:delete", async (_e, id) => {
-    await deleteIndividual(id);
-    return id;
+  registerCRUD("individuals", {
+    list: getIndividuals,
+    add: addIndividual,
+    update: updateIndividual,
+    remove: deleteIndividual,
   });
 
   // Relationships
-  ipcMain.handle("relationships:list", async () => await getRelationships());
-  ipcMain.handle("relationships:add", async (_e, rel) => await addRelationship(rel));
-  ipcMain.handle("relationships:update", async (_e, id, updates) => await updateRelationship(id, updates));
-  ipcMain.handle("relationships:delete", async (_e, id) => {
-    await deleteRelationship(id);
-    return id;
+  registerCRUD("relationships", {
+    list: getRelationships,
+    add: addRelationship,
+    update: updateRelationship,
+    remove: deleteRelationship,
   });
 
   ipcMain.handle("relationships:exportExcel", async () => {
