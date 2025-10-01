@@ -1,6 +1,22 @@
 // src/utils/dateUtils.ts
 export type YMD = { y?: number; m?: number; d?: number };
 
+export const MONTHS_SV = ["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"] as const;
+
+export function splitIsoDate(iso?: string) {
+  if (!iso) return { day: "", monthName: "", year: "" };
+  const [y,m,d] = iso.split("-");
+  return { day: d ?? "", monthName: MONTHS_SV[+m - 1] ?? "", year: y ?? "" };
+}
+
+export function buildIsoDate(day?: any, monthName?: any, year?: any) {
+  if (!year) return undefined;
+  const mIdx = monthName ? MONTHS_SV.findIndex(m => String(monthName).toLowerCase().startsWith(m)) + 1 : 1;
+  const dd = day ? String(day).padStart(2,"0") : "01";
+  const mm = String(mIdx).padStart(2,"0");
+  return `${year}-${mm}-${dd}`;
+}
+
 export function parseISO(d?: string): Date | null {
   if (!d) return null;
   // Accepts "YYYY", "YYYY-MM", "YYYY-MM-DD"

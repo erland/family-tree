@@ -2,22 +2,7 @@ import ExcelJS from "exceljs";
 import { Individual } from "../src/types/individual";
 import { Relationship } from "../src/types/relationship";
 import { v4 as uuidv4 } from "uuid";
-
-function buildDate(day: any, month: any, year: any): string | undefined {
-  if (!year) return undefined;
-  const months = [
-    "jan","feb","mar","apr","maj","jun",
-    "jul","aug","sep","okt","nov","dec"
-  ];
-  const mIdx = month
-    ? months.findIndex((m) =>
-        month.toString().toLowerCase().startsWith(m)
-      ) + 1
-    : 1;
-  const d = day ? String(day).padStart(2, "0") : "01";
-  const m = String(mIdx).padStart(2, "0");
-  return `${year}-${m}-${d}`;
-}
+import { buildIsoDate } from "../src/utils/dateUtils.js";
 
 export interface ImportResult {
   individuals: Individual[];
@@ -52,11 +37,11 @@ export async function importExcel(filePath: string): Promise<ImportResult> {
       givenName: get("Förnamn") ?? "",
       birthFamilyName: get("Efternamn 1") ?? "",
       familyName: get("Efternamn 2") ?? "",
-      dateOfBirth: buildDate(get("Fdag"), get("Fmån"), get("Får")),
+      dateOfBirth: buildIsoDate(get("Fdag"), get("Fmån"), get("Får")),
       birthCity: get("Födelseort") ?? "",
       birthCongregation: get("Födelseförsamling") ?? "",
       birthRegion: get("Födelselän") ?? "",
-      dateOfDeath: buildDate(get("Ddag"), get("Dmån"), get("Dår")),
+      dateOfDeath: buildIsoDate(get("Ddag"), get("Dmån"), get("Dår")),
       deathCity: get("Dödsort") ?? "",
       deathCongregation: get("Dödsförsamling") ?? "",
       deathRegion: get("Dödslän") ?? "",

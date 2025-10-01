@@ -5,18 +5,7 @@ import { getIndividuals, getRelationships } from "./db.js";
 import { Individual } from "../src/types/individual";
 import { Relationship } from "../src/types/relationship";
 import { fullName } from "../src/utils/nameUtils.js";
-
-// Split date into [day, month name, year]
-function splitDate(dateStr?: string): { day: string; month: string; year: string } {
-  if (!dateStr) return { day: "", month: "", year: "" };
-  const [y, m, d] = dateStr.split("-");
-  const months = ["jan","feb","mar","apr","maj","jun","jul","aug","sep","okt","nov","dec"];
-  return {
-    day: d || "",
-    month: months[parseInt(m || "1", 10) - 1] || "",
-    year: y || "",
-  };
-}
+import { splitIsoDate } from "../src/utils/dateUtils.js";
 
 // Compute Släktskap + Generation by traversing *upwards* from virtual probands
 function computeCodes(
@@ -165,8 +154,8 @@ export async function exportExcel(
   const indToCodeGen = computeCodes(individuals, relationships);
 
   individuals.forEach((ind, index) => {
-    const b = splitDate(ind.dateOfBirth);
-    const d = splitDate(ind.dateOfDeath);
+    const b = splitIsoDate(ind.dateOfBirth);
+    const d = splitIsoDate(ind.dateOfDeath);
   
     const rawCode = indToCodeGen[ind.id]?.code ?? "";
     const gen = rawCode.length;
@@ -182,11 +171,11 @@ export async function exportExcel(
       ind.givenName ?? "",
       ind.birthFamilyName ?? "",
       ind.familyName ?? "",
-      b.day, b.month, b.year,
+      b.day, b.monthName, b.year,
       ind.birthCity ?? "",
       ind.birthCongregation ?? "",
       ind.birthRegion ?? "",
-      d.day, d.month, d.year,
+      d.day, d.monthName, d.year,
       ind.deathCity ?? "",
       ind.deathCongregation ?? "",
       ind.deathRegion ?? "",
