@@ -2,82 +2,117 @@
 import { Individual } from "../types/individual";
 import { Relationship } from "../types/relationship";
 
+/** Narrowing helpers for the Relationship discriminated union */
+type SpouseRel = Extract<Relationship, { type: "spouse" }>;
+type ParentChildRel = Extract<Relationship, { type: "parent-child" }>;
+
+function isParentChildRel(r: Relationship): r is ParentChildRel {
+  return r.type === "parent-child";
+}
+
+function isSpouseRel(r: Relationship): r is SpouseRel {
+  return r.type === "spouse";
+}
+
+/**
+ * Parents of given child (as Individuals).
+ */
 export function getParentsOf(
   childId: string,
   relationships: Relationship[],
   individuals: Individual[]
 ): Individual[] {
   const parentIds = relationships
-    .filter((r) => r.type === "parent-child" && r.childId === childId)
+    .filter(isParentChildRel)
+    .filter((r) => r.childId === childId)
     .flatMap((r) => r.parentIds);
+
   const set = new Set(parentIds);
   return individuals.filter((i) => set.has(i.id));
 }
 
-export function getSpousesOf(
-  personId: string,
-  relationships: Relationship[],
-  individuals: Individual[]
-): Array<{ partner: Individual | undefined; relationship: Relationship; weddingDate?: string }> {
-  return relationships
-    .filter(
-      (r) =>
-        r.type === "spouse" && ((r as any).person1Id === personId || (r as any).person2Id === personId)
-    )
-    .map((r) => {
-      const otherId =
-        (r as any).person1Id === personId ? (r as any).person2Id : (r as any).person1Id;
-      return { partner: individuals.find((i) => i.id === otherId), relationship: r, weddingDate: (r as any).weddingDate };
-    });
-}
-
+/**
+ * Children of a given parent (as Individuals).
+ */
 export function getChildrenOf(
   parentId: string,
   relationships: Relationship[],
   individuals: Individual[]
 ): Individual[] {
   const childIds = relationships
-    .filter((r) => r.type === "parent-child" && r.parentIds.includes(parentId))
+    .filter(isParentChildRel)
+    .filter((r) => r.parentIds.includes(parentId))
     .map((r) => r.childId);
+
   const set = new Set(childIds);
   return individuals.filter((i) => set.has(i.id));
 }
 
-/** Group a person's children by the *other* parent (if known). */
+/**
+ * Spouses/partners of a given person (as Individuals).
+ * (Find all spouse relationships where person is p1 or p2, return "the other one")
+ */
+export function getSpousesOf(
+  personId: string,
+  relationships: Relationship[],
+  individuals: Individual[]
+): Individual[] {
+  const partnerIds = new Set<string>();
+
+  relationships.filter(isSpouseRel).forEach((r) => {
+    if (r.person1Id === personId) partnerIds.add(r.person2Id);
+    if (r.person2Id === personId) partnerIds.add(r.person1Id);
+  });
+
+  return individuals.filter((i) => partnerIds.has(i.id));
+}
+
+/**
+ * Group a person's children by the *other* known parent.
+ * - Key = other parent's id, or "single" when no other parent is recorded.
+ * - Value = list of child Individuals shared with that other parent (or single parent).
+ */
 export function groupChildrenByOtherParent(
   personId: string,
   relationships: Relationship[],
   individuals: Individual[]
-): Array<{ partner: Individual | null; children: Individual[] }> {
-  const byKey = new Map<string, Individual[]>();
-
-  const parentChild = relationships.filter(
-    (r) => r.type === "parent-child" && r.parentIds.includes(personId)
+): { partner: Individual | null; children: Individual[] }[] {
+  const byId: Record<string, Individual> = Object.fromEntries(
+    individuals.map((i) => [i.id, i])
   );
 
-  parentChild.forEach((rel) => {
-    const child = individuals.find((i) => i.id === rel.childId);
-    if (!child) return;
+  const groups: { partner: Individual | null; children: Individual[] }[] = [];
 
-    // Determine other parent(s). Some data may store separate parent-child rows per parent.
-    let otherParentIds = rel.parentIds.filter((pid) => pid !== personId);
+  const pc = relationships
+    .filter(isParentChildRel)
+    .filter((r) => r.parentIds.includes(personId));
+
+  for (const rel of pc) {
+    const child = byId[rel.childId];
+    if (!child) continue;
+
+    const otherParentIds = rel.parentIds.filter((pid) => pid !== personId);
+
     if (otherParentIds.length === 0) {
-      const allParentIdsForChild = relationships
-        .filter((r) => r.type === "parent-child" && r.childId === rel.childId)
-        .flatMap((r) => r.parentIds as string[]);
-      otherParentIds = Array.from(new Set(allParentIdsForChild.filter((pid) => pid !== personId)));
+      // no other parent
+      let group = groups.find((g) => g.partner === null);
+      if (!group) {
+        group = { partner: null, children: [] };
+        groups.push(group);
+      }
+      group.children.push(child);
+    } else {
+      for (const otherId of otherParentIds) {
+        const partner = byId[otherId] ?? null;
+        let group = groups.find((g) => g.partner?.id === partner?.id);
+        if (!group) {
+          group = { partner, children: [] };
+          groups.push(group);
+        }
+        group.children.push(child);
+      }
     }
+  }
 
-    const keys = otherParentIds.length > 0 ? otherParentIds : ["__solo__"];
-    keys.forEach((k) => {
-      const arr = byKey.get(k) ?? [];
-      arr.push(child);
-      byKey.set(k, arr);
-    });
-  });
-
-  return Array.from(byKey.entries()).map(([k, children]) => ({
-    partner: k === "__solo__" ? null : individuals.find((i) => i.id === k) ?? null,
-    children,
-  }));
+  return groups;
 }
