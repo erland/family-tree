@@ -1,4 +1,5 @@
-import { Individual, Relationship } from "./genealogy";
+import { Individual } from "./individual";
+import { Relationship } from "./relationship";
 
 export interface GenealogyAPI {
   // Individuals
