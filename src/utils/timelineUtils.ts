@@ -40,6 +40,18 @@ export type TimelineBuckets = {
   undated: TimelineEvent[];
 };
 
+// ---------------- Type Guards ----------------
+type SpouseRel = Extract<Relationship, { type: "spouse" }>;
+type ParentChildRel = Extract<Relationship, { type: "parent-child" }>;
+
+function isParentChildRel(r: Relationship): r is ParentChildRel {
+  return r.type === "parent-child";
+}
+
+function isSpouseRel(r: Relationship): r is SpouseRel {
+  return r.type === "spouse";
+}
+
 // Translate ancestor path to kinship term in Swedish
 function relationName(path: string): string {
   if (path.length === 1) {
@@ -58,6 +70,8 @@ function relationName(path: string): string {
     if (path === "mfm") return "gammelmormor";
     if (path === "mmf") return "gammelmorfar";
     if (path === "mmm") return "gammelmormor";
+    if (path === "fmf") return "gammelfarfar";
+    if (path === "fmm") return "gammelfarmor";
   }
   return "förfader";
 }
@@ -75,7 +89,7 @@ function findAncestorsWithPath(
     const nextGen: { id: string; path: string }[] = [];
     for (const { id, path } of currentGen) {
       const parentRels = relationships.filter(
-        (r) => r.type === "parent-child" && r.childId === id
+        (r): r is ParentChildRel => isParentChildRel(r) && r.childId === id
       );
       for (const rel of parentRels) {
         rel.parentIds.forEach((pid) => {
@@ -131,80 +145,72 @@ export function buildTimelineEvents(
   }
 
   // Marriages + spouse deaths
-  relationships
-    .filter((r) => r.type === "spouse")
-    .forEach((rel) => {
-      const { person1Id, person2Id, weddingDate } = rel as any;
-      if (person1Id === individual.id || person2Id === individual.id) {
-        const spouseId = person1Id === individual.id ? person2Id : person1Id;
-        const spouse = allIndividuals.find((i) => i.id === spouseId);
+  relationships.filter(isSpouseRel).forEach((rel) => {
+    const { person1Id, person2Id, weddingDate } = rel;
+    if (person1Id === individual.id || person2Id === individual.id) {
+      const spouseId = person1Id === individual.id ? person2Id : person1Id;
+      const spouse = allIndividuals.find((i) => i.id === spouseId);
 
-        // marriage event
-        events.push({
-          type: "marriage",
-          date: weddingDate,
-          label: spouse
-            ? `Gift med ${fullName(spouse)}`
-            : "Gift",
-          individual,
-          relatedIndividuals: spouse ? [spouse] : [],
-          ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, weddingDate),
-          location: {
-            region: rel.weddingRegion,
-            city: rel.weddingCity,
-            congregation: rel.weddingCongregation,
-          },
-        });
+      // marriage event
+      events.push({
+        type: "marriage",
+        date: weddingDate,
+        label: spouse ? `Gift med ${fullName(spouse)}` : "Gift",
+        individual,
+        relatedIndividuals: spouse ? [spouse] : [],
+        ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, weddingDate),
+        location: {
+          region: rel.weddingRegion,
+          city: rel.weddingCity,
+          congregation: rel.weddingCongregation,
+        },
+      });
 
-        // spouse death event
-        if (spouse?.dateOfDeath) {
-          const birth = parseDate(individual.dateOfBirth);
-          const death = parseDate(individual.dateOfDeath);
-          const spouseDeath = parseDate(spouse.dateOfDeath);
-          if (birth && spouseDeath && (!death || spouseDeath < death)) {
-            const spouseAge = calculateAgeAtEvent(spouse.dateOfBirth, spouse.dateOfDeath);
-            const label =
-              spouse.gender === "male"
-                ? `Avliden make ${fullName(spouse)} ${spouseAge ?? ""}`
-                : spouse.gender === "female"
-                ? `Avliden maka ${fullName(spouse)} ${spouseAge ?? ""}`
-                : `Avliden partner ${fullName(spouse)} ${spouseAge ?? ""}`;
+      // spouse death event
+      if (spouse?.dateOfDeath) {
+        const birth = parseDate(individual.dateOfBirth);
+        const death = parseDate(individual.dateOfDeath);
+        const spouseDeath = parseDate(spouse.dateOfDeath);
+        if (birth && spouseDeath) {
+          const spouseAge = calculateAgeAtEvent(spouse.dateOfBirth, spouse.dateOfDeath);
+          const label =
+            spouse.gender === "male"
+              ? `Avliden make ${fullName(spouse)} ${spouseAge ?? ""}`
+              : spouse.gender === "female"
+              ? `Avliden maka ${fullName(spouse)} ${spouseAge ?? ""}`
+              : `Avliden partner ${fullName(spouse)} ${spouseAge ?? ""}`;
 
-            events.push({
-              type: "spouseDeath",
-              date: spouse.dateOfDeath,
-              label,
-              individual,
-              relatedIndividuals: [spouse],
-              ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, spouse.dateOfDeath),
-              location: {
-                region: spouse.deathRegion,
-                city: spouse.deathCity,
-                congregation: spouse.deathCongregation,
-              },
-            });
-          }
+          events.push({
+            type: "spouseDeath",
+            date: spouse.dateOfDeath,
+            label,
+            individual,
+            relatedIndividuals: [spouse],
+            ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, spouse.dateOfDeath),
+            location: {
+              region: spouse.deathRegion,
+              city: spouse.deathCity,
+              congregation: spouse.deathCongregation,
+            },
+          });
         }
       }
-    });
+    }
+  });
 
   // Children births & deaths
   const children = relationships
-    .filter((r) => r.type === "parent-child" && r.parentIds.includes(individual.id))
+    .filter((r): r is ParentChildRel => isParentChildRel(r) && r.parentIds.includes(individual.id))
     .map((rel) => allIndividuals.find((i) => i.id === rel.childId))
     .filter((c): c is Individual => !!c);
 
   children.forEach((child) => {
     const genderLabel =
-      child.gender === "male"
-        ? "son"
-        : child.gender === "female"
-        ? "dotter"
-        : "barn";
+      child.gender === "male" ? "son" : child.gender === "female" ? "dotter" : "barn";
 
     // Find the other parent
     const parentRel = relationships.find(
-      (r) => r.type === "parent-child" && r.childId === child.id
+      (r): r is ParentChildRel => isParentChildRel(r) && r.childId === child.id
     );
     const otherParentId = parentRel?.parentIds.find((pid) => pid !== individual.id);
     const otherParent = allIndividuals.find((i) => i.id === otherParentId);
@@ -249,15 +255,14 @@ export function buildTimelineEvents(
   // Grandchildren births & deaths
   children.forEach((child) => {
     const grandchildRels = relationships.filter(
-      (r) => r.type === "parent-child" && r.parentIds.includes(child.id)
+      (r): r is ParentChildRel => isParentChildRel(r) && r.parentIds.includes(child.id)
     );
     grandchildRels.forEach((rel) => {
       const grandchild = allIndividuals.find((i) => i.id === rel.childId);
       if (!grandchild) return;
 
-      // collect both parents of the grandchild
       const parentRel = relationships.find(
-        (r) => r.type === "parent-child" && r.childId === grandchild.id
+        (r): r is ParentChildRel => isParentChildRel(r) && r.childId === grandchild.id
       );
       const parentIndividuals =
         parentRel?.parentIds
@@ -301,7 +306,7 @@ export function buildTimelineEvents(
     });
   });
 
-  // Ancestor births & deaths (parents, grandparents, great-grandparents)
+  // Ancestor births & deaths
   const ancestorData = findAncestorsWithPath(individual, relationships, allIndividuals, 3);
   ancestorData.forEach(({ id, path }) => {
     const anc = allIndividuals.find((i) => i.id === id);
@@ -328,7 +333,7 @@ export function buildTimelineEvents(
       const birth = parseDate(individual.dateOfBirth);
       const death = parseDate(individual.dateOfDeath);
       const ancDeath = parseDate(anc.dateOfDeath);
-      if (birth && ancDeath && (!death || ancDeath < death)) {
+      if (birth && ancDeath) {
         events.push({
           type: "ancestorDeath",
           date: anc.dateOfDeath,
@@ -351,12 +356,12 @@ export function buildTimelineEvents(
 
   // Sibling events
   const parentRels = relationships.filter(
-    (r) => r.type === "parent-child" && r.childId === individual.id
+    (r): r is ParentChildRel => isParentChildRel(r) && r.childId === individual.id
   );
   const parentIds = parentRels.flatMap((r) => r.parentIds);
   const siblingRels = relationships.filter(
-    (r) =>
-      r.type === "parent-child" &&
+    (r): r is ParentChildRel =>
+      isParentChildRel(r) &&
       r.childId !== individual.id &&
       r.parentIds.some((pid) => parentIds.includes(pid))
   );
@@ -366,11 +371,7 @@ export function buildTimelineEvents(
     const sib = allIndividuals.find((i) => i.id === sid);
     if (!sib) return;
     const genderLabel =
-      sib.gender === "male"
-        ? "bror"
-        : sib.gender === "female"
-        ? "syster"
-        : "syskon";
+      sib.gender === "male" ? "bror" : sib.gender === "female" ? "syster" : "syskon";
 
     events.push({
       type: "siblingBirth",
@@ -428,7 +429,6 @@ export function buildTimelineEvents(
     }
   }
 
-  // Sort
   const sortByDate = (a: TimelineEvent, b: TimelineEvent) =>
     (a.date || "").localeCompare(b.date || "");
   beforeBirth.sort(sortByDate);
