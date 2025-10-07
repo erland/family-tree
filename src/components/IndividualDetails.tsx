@@ -22,6 +22,7 @@ import {
   getSpousesOf,
   groupChildrenByOtherParent,
 } from "../utils/peopleSelectors";
+import { getAllLocationEvents } from "../utils/timelineUtils";
 
 import AddChildDialog from "./AddChildDialog";
 import AddParentDialog from "./AddParentDialog";
@@ -109,11 +110,6 @@ export default function IndividualDetails({ individualId, onClose, onEdit }: Pro
           <Typography variant="body2" fontWeight={700}>
             Född: {individual.dateOfBirth ?? "-"}
           </Typography>
-          <Typography variant="body2">
-            {[individual.birthCity, individual.birthCongregation, individual.birthRegion]
-              .filter(Boolean)
-              .join(", ")}
-          </Typography>
         </Box>
       )}
 
@@ -121,11 +117,6 @@ export default function IndividualDetails({ individualId, onClose, onEdit }: Pro
         <Box sx={{ mt: 1 }}>
           <Typography variant="body2" fontWeight={700}>
             Död: {individual.dateOfDeath ?? "-"}
-          </Typography>
-          <Typography variant="body2">
-            {[individual.deathCity, individual.deathCongregation, individual.deathRegion]
-              .filter(Boolean)
-              .join(", ")}
           </Typography>
         </Box>
       )}
@@ -221,6 +212,28 @@ export default function IndividualDetails({ individualId, onClose, onEdit }: Pro
           </Button>
         </Box>
       </Box>
+
+      {(() => {
+        const moves = getAllLocationEvents(individual);
+        if (moves.length === 0) return null;
+
+        return (
+          <>
+            <Divider sx={{ my: 1 }} />
+            <Typography variant="subtitle1">Platser</Typography>
+            <List dense>
+              {moves.map((mv) => (
+                <ListItem key={mv.id} disableGutters>
+                  <ListItemText
+                    primary={mv.date ? `${mv.date}  ${mv.label}` : mv.label}
+                    secondary={mv.note}
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </>
+        );
+      })()}
 
       {/* Dialogs */}
       <AddChildDialog open={openAddChild} onClose={() => setOpenAddChild(false)} parentId={individual.id} />

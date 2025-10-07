@@ -1,5 +1,5 @@
 // src/utils/timelineUtils.ts
-import { Individual } from "../types/individual";
+import { Individual, Move } from "../types/individual";
 import { Relationship } from "../types/relationship";
 import { fullName } from "./nameUtils";
 import { formatAge as calculateAgeAtEvent, parseISO as parseDate } from "./dateUtils";
@@ -17,6 +17,7 @@ export type TimelineEventType =
   | "ancestorDeath"
   | "siblingBirth"
   | "siblingDeath"
+  | "move"
   | "custom";
 
 export type TimelineEvent = {
@@ -50,6 +51,86 @@ function isParentChildRel(r: Relationship): r is ParentChildRel {
 
 function isSpouseRel(r: Relationship): r is SpouseRel {
   return r.type === "spouse";
+}
+
+export type LocationEvent = {
+  id: string;
+  kind: "birth" | "move" | "death";
+  date?: string;
+  label: string;
+  note?: string;
+};
+
+/**
+ * Builds a complete chronological list of all known locations
+ * (birth, moves, death) for an individual.
+ *
+ * Order:
+ *   1. Birth
+ *   2. Moves with date (chronological)
+ *   3. Moves without date
+ *   4. Death
+ */
+export function getAllLocationEvents(individual: Individual): LocationEvent[] {
+  const events: LocationEvent[] = [];
+
+  // 1️⃣ Birth
+  const birthPlaces = [individual.birthCity, individual.birthRegion, individual.birthCongregation].filter(Boolean);
+  if (birthPlaces.length > 0 || individual.dateOfBirth) {
+    events.push({
+      id: "birth",
+      kind: "birth",
+      date: individual.dateOfBirth,
+      label: `Född i ${birthPlaces.join(", ")}`,
+    });
+  }
+
+  // 2️⃣ Moves
+  if (individual.moves && individual.moves.length > 0) {
+    for (const mv of individual.moves) {
+      const where = [mv.city, mv.region, mv.congregation].filter(Boolean).join(", ");
+      events.push({
+        id: mv.id,
+        kind: "move",
+        date: mv.date,
+        label: where ? `Flyttade till ${where}` : "Flyttade",
+        note: mv.note,
+      });
+    }
+  }
+
+  // 3️⃣ Death
+  const deathPlaces = [individual.deathCity, individual.deathRegion, individual.deathCongregation].filter(Boolean);
+  if (deathPlaces.length > 0 || individual.dateOfDeath) {
+    events.push({
+      id: "death",
+      kind: "death",
+      date: individual.dateOfDeath,
+      label: `Död i ${deathPlaces.join(", ")}`,
+    });
+  }
+
+  // 4️⃣ Custom sort order
+  events.sort((a, b) => {
+    // Birth always first
+    if (a.kind === "birth" && b.kind !== "birth") return -1;
+    if (b.kind === "birth" && a.kind !== "birth") return 1;
+
+    // Death always last
+    if (a.kind === "death" && b.kind !== "death") return 1;
+    if (b.kind === "death" && a.kind !== "death") return -1;
+
+    // For moves: dated ones before undated, chronological among dated
+    const aHasDate = !!a.date;
+    const bHasDate = !!b.date;
+    if (aHasDate && bHasDate) return a.date!.localeCompare(b.date!);
+    if (aHasDate && !bHasDate) return -1;
+    if (!aHasDate && bHasDate) return 1;
+
+    return 0;
+  });
+
+  return events;
 }
 
 // Translate ancestor path to kinship term in Swedish
@@ -406,6 +487,25 @@ export function buildTimelineEvents(
       });
     }
   });
+
+  // Add "Flyttade ..." events from individual.moves
+  if (individual.moves && individual.moves.length) {
+    for (const mv of individual.moves) {
+      events.push({
+        type: "move",
+        date: mv.date,
+        label: "Flyttade till",
+        individual,
+        relatedIndividuals: [individual],
+        ageAtEvent: calculateAgeAtEvent(individual.dateOfBirth, mv.date),
+        location: {
+          region: mv.region,
+          city: mv.city,
+          congregation: mv.congregation,
+        },
+      });
+    }
+  }
 
   // Split into buckets
   const beforeBirth: TimelineEvent[] = [];

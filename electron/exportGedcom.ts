@@ -132,6 +132,20 @@ export function generateGedcom(
       }
     }
 
+    // Moves as GEDCOM RESI
+    if (ind.moves && ind.moves.length) {
+      for (const mv of ind.moves) {
+        lines.push("1 RESI");
+        const d = formatDate(mv.date);
+        if (d) lines.push(`2 DATE ${d}`);
+        const placeBits = [mv.city, mv.region].filter(Boolean); // GEDCOM PLAC typically City, Region
+        const place = placeBits.join(", ");
+        if (place) lines.push(`2 PLAC ${place}`);
+        if (mv.congregation) lines.push(`2 NOTE Församling: ${mv.congregation}`);
+        if (mv.note) lines.push(`2 NOTE ${mv.note}`);
+      }
+    }
+    
     // 🔹 Reverse family links
     if (spouseFamilies[tag]) {
       for (const famId of spouseFamilies[tag]) {

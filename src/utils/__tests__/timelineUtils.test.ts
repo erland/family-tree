@@ -1,5 +1,5 @@
 // src/utils/__tests__/timelineUtils.test.ts
-import { buildTimelineEvents } from "../timelineUtils";
+import { buildTimelineEvents, getAllLocationEvents } from "../timelineUtils";
 import type { Individual } from "../../types/individual";
 import type { Relationship } from "../../types/relationship";
 
@@ -10,6 +10,86 @@ const makeInd = (id: string, givenName: string, gender?: string, birth?: string,
   gender,
   dateOfBirth: birth,
   dateOfDeath: death,
+});
+
+describe("getAllLocationEvents", () => {
+  it("returns only birth and death when no moves", () => {
+    const anna = makeInd("a", "Anna", "1800-01-01", "1880-01-01");
+    anna.birthCity = "Piteå";
+    anna.birthRegion = "Norrbotten";
+    anna.deathCity = "Luleå";
+    anna.deathRegion = "Norrbotten";
+
+    const events = getAllLocationEvents(anna);
+    expect(events.map((e) => e.kind)).toEqual(["birth", "death"]);
+    expect(events[0].label).toContain("Född i Piteå");
+    expect(events[1].label).toContain("Död i Luleå");
+  });
+
+  it("sorts moves with date chronologically between birth and death", () => {
+    const ind = makeInd("b", "Bertil", "1800-01-01", "1880-01-01");
+    ind.birthCity = "Piteå";
+    ind.deathCity = "Stockholm";
+    ind.moves = [
+      { id: "m1", date: "1820-05-01", city: "Umeå", region: "Västerbotten" },
+      { id: "m2", date: "1830-05-01", city: "Luleå", region: "Norrbotten" },
+    ];
+
+    const events = getAllLocationEvents(ind);
+    expect(events.map((e) => e.kind)).toEqual(["birth", "move", "move", "death"]);
+    expect(events[1].label).toContain("Umeå");
+    expect(events[2].label).toContain("Luleå");
+  });
+
+  it("places undated moves after dated ones but before death", () => {
+    const ind = makeInd("c", "Cecilia", "1800", "1880");
+    ind.birthCity = "Piteå";
+    ind.deathCity = "Stockholm";
+    ind.moves = [
+      { id: "m1", date: "1820", city: "Umeå" },
+      { id: "m2", city: "Luleå" }, // no date
+    ];
+
+    const events = getAllLocationEvents(ind);
+    expect(events.map((e) => e.kind)).toEqual(["birth", "move", "move", "death"]);
+    expect(events[1].label).toContain("Umeå"); // dated first
+    expect(events[2].label).toContain("Luleå"); // undated before death
+  });
+
+  it("handles missing birth and death gracefully", () => {
+    const ind = makeInd("d", "David");
+    ind.moves = [{ id: "m1", city: "Umeå", region: "Västerbotten" }];
+
+    const events = getAllLocationEvents(ind);
+    expect(events.length).toBe(1);
+    expect(events[0].label).toContain("Flyttade till Umeå");
+  });
+
+  it("includes note text when present", () => {
+    const ind = makeInd("e", "Eva", "1800");
+    ind.birthCity = "Piteå";
+    ind.moves = [{ id: "m1", date: "1820", city: "Umeå", note: "Flyttade för arbete" }];
+
+    const events = getAllLocationEvents(ind);
+    const move = events.find((e) => e.kind === "move");
+    expect(move?.note).toBe("Flyttade för arbete");
+  });
+
+  it("sorts correctly when multiple undated moves", () => {
+    const ind = makeInd("f", "Fredrik", "1800", "1880");
+    ind.birthCity = "Piteå";
+    ind.deathCity = "Stockholm";
+    ind.moves = [
+      { id: "m1", city: "Kiruna" },
+      { id: "m2", city: "Umeå" },
+    ];
+
+    const events = getAllLocationEvents(ind);
+    // Still: birth first, then both moves (any order since both undated), then death
+    expect(events[0].kind).toBe("birth");
+    expect(events[events.length - 1].kind).toBe("death");
+    expect(events.filter((e) => e.kind === "move").length).toBe(2);
+  });
 });
 
 describe("timelineUtils", () => {

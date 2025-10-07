@@ -16,6 +16,8 @@ import { v4 as uuidv4 } from "uuid";
 import { useAppDispatch } from "../store";
 import { addIndividual, updateIndividual } from "../features/individualsSlice";
 import IndividualFormFields, { PersonFormValues } from "./IndividualFormFields";
+import MoveListEditor from "./MoveListEditor";
+
 
 export default function IndividualFormDialog({
   open,
@@ -41,6 +43,7 @@ export default function IndividualFormDialog({
     deathRegion: individual?.deathRegion ?? "",
     deathCity: individual?.deathCity ?? "",
     deathCongregation: individual?.deathCongregation ?? "",
+    moves: individual?.moves ?? [],
   }));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -84,6 +87,10 @@ export default function IndividualFormDialog({
         fields={{ names: true, gender: true, birth: true, death: true }}
         required={{ givenName: true }}
         autoFocusFirst
+      />
+      <MoveListEditor
+        value={form.moves}
+        onChange={(moves) => setForm((f) => ({ ...f, moves }))}
       />
       </DialogContent>
       <DialogActions>
