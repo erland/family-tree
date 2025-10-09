@@ -66,17 +66,22 @@ describe("peopleSelectors", () => {
         { id: "s1", type: "spouse", person1Id: "a", person2Id: "b" },
         { id: "s2", type: "spouse", person1Id: "a", person2Id: "e" },
       ];
-      const aSpouses = getSpousesOf("a", rels, all).map((s) => s.id).sort();
+      const aSpouses = getSpousesOf("a", rels, all)
+        .map((s) => s.partner?.id)
+        .filter(Boolean)
+        .sort();
       expect(aSpouses).toEqual(["b", "e"]);
-
-      const bSpouses = getSpousesOf("b", rels, all).map((s) => s.id);
+  
+      const bSpouses = getSpousesOf("b", rels, all)
+        .map((s) => s.partner?.id)
+        .filter(Boolean);
       expect(bSpouses).toEqual(["a"]);
     });
-
+  
     it("returns [] when no spouse found", () => {
       expect(getSpousesOf("c", [], all)).toEqual([]);
     });
-
+  
     it("ignores spouse pointing to unknown individual", () => {
       const rels: Relationship[] = [
         { id: "s1", type: "spouse", person1Id: "a", person2Id: "x" }, // x not in all

@@ -64,7 +64,7 @@ export function renderIndividualPage(
     autoTable(doc, {
       startY: cursorY,
       head: [["Make/maka", "Född", "Död", "Ålder"]],
-      body: spouses.map((partner) =>
+      body: spouses.map(({ partner }) =>
         partner
           ? [
               fullName(partner),

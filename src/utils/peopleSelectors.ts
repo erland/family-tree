@@ -49,22 +49,33 @@ export function getChildrenOf(
 }
 
 /**
- * Spouses/partners of a given person (as Individuals).
- * (Find all spouse relationships where person is p1 or p2, return "the other one")
+ * Spouses/partners of a given person.
+ * Returns an array of objects with partner (Individual | undefined),
+ * weddingDate (string | undefined) and relationship (Relationship).
  */
 export function getSpousesOf(
   personId: string,
   relationships: Relationship[],
   individuals: Individual[]
-): Individual[] {
-  const partnerIds = new Set<string>();
+): { partner: Individual; weddingDate?: string; relationship: Relationship }[] {
+  const results: { partner: Individual; weddingDate?: string; relationship: Relationship }[] = [];
 
-  relationships.filter(isSpouseRel).forEach((r) => {
-    if (r.person1Id === personId) partnerIds.add(r.person2Id);
-    if (r.person2Id === personId) partnerIds.add(r.person1Id);
-  });
+  for (const rel of relationships) {
+    if (rel.type !== "spouse") continue;
+    if (rel.person1Id !== personId && rel.person2Id !== personId) continue;
 
-  return individuals.filter((i) => partnerIds.has(i.id));
+    const partnerId = rel.person1Id === personId ? rel.person2Id : rel.person1Id;
+    const partner = individuals.find((i) => i.id === partnerId);
+    if (!partner) continue; // skip unknown individuals
+
+    results.push({
+      partner,
+      weddingDate: rel.weddingDate,
+      relationship: rel,
+    });
+  }
+
+  return results;
 }
 
 /**
