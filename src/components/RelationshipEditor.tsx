@@ -125,6 +125,8 @@ export default function RelationshipEditor({ open, onClose, relationship }: Prop
     onClose();
   };
 
+  const datePattern = /^\d{4}(-\d{2}){0,2}$/;
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
@@ -172,13 +174,19 @@ export default function RelationshipEditor({ open, onClose, relationship }: Prop
               sx={{ mb: 2 }}
             />
             <TextField
-              label="Vigseldatum"
-              type="date"
+              label="Vigseldatum (YYYY[-MM[-DD]])"
               value={weddingDate}
               onChange={(e) => setWeddingDate(e.target.value)}
               fullWidth
               margin="dense"
               InputLabelProps={{ shrink: true }}
+              placeholder="Ex: 1883, 1883-05 eller 1883-05-23"
+              error={!!weddingDate && !datePattern.test(weddingDate)}
+              helperText={
+                !!weddingDate && !datePattern.test(weddingDate)
+                  ? "Ogiltigt format - använd ÅÅÅÅ, ÅÅÅÅ-MM eller ÅÅÅÅ-MM-DD"
+                  : undefined
+              }
               sx={{ mb: 2 }}
             />
 

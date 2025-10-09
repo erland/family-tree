@@ -24,6 +24,8 @@ export default function MoveListEditor({ value = [], onChange }: Props) {
     onChange(next);
   };
 
+  const datePattern = /^\d{4}(-\d{2}){0,2}$/;
+
   return (
     <Box sx={{ mt: 2 }}>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
@@ -46,6 +48,13 @@ export default function MoveListEditor({ value = [], onChange }: Props) {
                 fullWidth
                 value={mv.date || ""}
                 onChange={(e) => setAt(idx, { date: e.target.value })}
+                placeholder="Ex: 1883, 1883-05 eller 1883-05-23"
+                error={!!mv.date && !datePattern.test(mv.date)}
+                helperText={
+                  !!mv.date && !datePattern.test(mv.date)
+                    ? "Ogiltigt format - använd ÅÅÅÅ, ÅÅÅÅ-MM eller ÅÅÅÅ-MM-DD"
+                    : undefined
+                }
               />
             </Grid>
             <Grid item xs={12} sm={4}>

@@ -65,6 +65,7 @@ export default function IndividualDetails({ individualId, onClose, onEdit }: Pro
     relationships,
     individuals
   );
+  console.log(spouses);
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column", gap: 1 }}>

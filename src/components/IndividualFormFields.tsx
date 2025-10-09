@@ -52,6 +52,7 @@ export default function IndividualFormFields({
   autoFocusFirst,
 }: Props) {
   const show = { names: !!fields.names, gender: !!fields.gender, birth: !!fields.birth, death: !!fields.death };
+  const datePattern = /^\d{4}(-\d{2}){0,2}$/;
 
   return (
     <Grid container spacing={2}>
@@ -132,16 +133,25 @@ export default function IndividualFormFields({
           </Grid>
 
           <Grid item xs={12} sm={6}>
+
             <TextField
-              type="date"
-              label="Födelsedatum"
+              label="Födelsedatum (YYYY[-MM[-DD]])"
+              size="small"
+              fullWidth
               value={value.dateOfBirth ?? ""}
               required={!!required?.dateOfBirth}
-              error={!!errors?.dateOfBirth}
-              helperText={errors?.dateOfBirth}
+              error={
+                !!errors?.dateOfBirth ||
+                (!!value.dateOfBirth && !datePattern.test(value.dateOfBirth))
+              }
+              helperText={
+                errors?.dateOfBirth ||
+                (!!value.dateOfBirth && !datePattern.test(value.dateOfBirth)
+                  ? "Ogiltigt format - använd ÅÅÅÅ, ÅÅÅÅ-MM eller ÅÅÅÅ-MM-DD"
+                  : undefined)
+              }
               onChange={(e) => onChange({ dateOfBirth: e.target.value || undefined })}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
+              placeholder="Ex: 1883, 1883-05 eller 1883-05-23"
               disabled={disabled}
             />
           </Grid>
@@ -195,15 +205,23 @@ export default function IndividualFormFields({
 
           <Grid item xs={12} sm={6}>
             <TextField
-              type="date"
-              label="Dödsdatum"
+              label="Dödsdatum (YYYY[-MM[-DD]])"
+              size="small"
+              fullWidth
               value={value.dateOfDeath ?? ""}
               required={!!required?.dateOfDeath}
-              error={!!errors?.dateOfDeath}
-              helperText={errors?.dateOfDeath}
+              error={
+                !!errors?.dateOfDeath ||
+                (!!value.dateOfDeath && !datePattern.test(value.dateOfDeath))
+              }
+              helperText={
+                errors?.dateOfDeath ||
+                (!!value.dateOfDeath && !datePattern.test(value.dateOfDeath)
+                  ? "Ogiltigt format - använd ÅÅÅÅ, ÅÅÅÅ-MM eller ÅÅÅÅ-MM-DD"
+                  : undefined)
+              }
               onChange={(e) => onChange({ dateOfDeath: e.target.value || undefined })}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
+              placeholder="Ex: 1937, 1937-04 eller 1937-04-19"
               disabled={disabled}
             />
           </Grid>
