@@ -13,6 +13,7 @@ import {
 import { exportExcel, exportRelationshipsExcel } from "./exportExcel.js";   // 👈 use the new unified export
 import { importExcel } from "./importExcel.js";
 import { generateGedcom } from "./exportGedcom.js";
+import { importGedcom } from "./importGedcom.js";
 import fs from "fs";
 
 export function registerIpcHandlers() {
@@ -116,5 +117,13 @@ export function registerIpcHandlers() {
       return { success: true, path: filePath };
     }
     return { success: false };
+  });
+  ipcMain.handle("importGedcom", async (_event, filePath: string) => {
+    const { individuals, relationships } = await importGedcom(filePath);
+  
+    for (const ind of individuals) await addIndividual(ind);
+    for (const rel of relationships) await addRelationship(rel);
+  
+    return { count: individuals.length, relCount: relationships.length };
   });
 }

@@ -94,6 +94,39 @@ export function formatGedcomDate(dateStr?: string): string | undefined {
   return [day, mon, String(y)].filter(Boolean).join(" ");
 }
 
+/** Parse GEDCOM "DD MON YYYY", "MON YYYY", or "YYYY" into ISO "YYYY-MM-DD". */
+export function parseGedcomDate(raw?: string): string | undefined {
+  if (!raw) return undefined;
+  const months: Record<string, string> = {
+    JAN: "01",
+    FEB: "02",
+    MAR: "03",
+    APR: "04",
+    MAY: "05",
+    JUN: "06",
+    JUL: "07",
+    AUG: "08",
+    SEP: "09",
+    OCT: "10",
+    NOV: "11",
+    DEC: "12",
+  };
+  const parts = raw.trim().split(/\s+/);
+  if (parts.length === 3) {
+    const [day, mon, year] = parts;
+    const mm = months[mon.toUpperCase()];
+    if (mm) return `${year}-${mm}-${day.padStart(2, "0")}`;
+  } else if (parts.length === 2) {
+    const [mon, year] = parts;
+    const mm = months[mon.toUpperCase()];
+    if (mm) return `${year}-${mm}`;
+  } else if (parts.length === 1) {
+    const [year] = parts;
+    if (/^\d{4}$/.test(year)) return year;
+  }
+  return raw; // fallback if unrecognized
+}
+
 // Back-compat convenience re-exports used elsewhere
 export { parseISO as parseDate };
 export { formatAge as calculateAgeAtEvent };

@@ -8,6 +8,7 @@ import {
   splitDateYYYYMMDD,
   buildDateYYYYMMDD,
   formatGedcomDate,
+  parseGedcomDate,
 } from "../dateUtils";
 
 describe("dateUtils", () => {
@@ -224,5 +225,41 @@ describe("dateUtils", () => {
       expect(buildPartialIsoDate("", "", "1901")).toBe("1901");
     });
 
+  });
+  describe("parseGedcomDate", () => {
+    it("parses full GEDCOM date '26 NOV 1901' → '1901-11-26'", () => {
+      expect(parseGedcomDate("26 NOV 1901")).toBe("1901-11-26");
+    });
+  
+    it("parses lowercase or mixed-case month names", () => {
+      expect(parseGedcomDate("26 nov 1901")).toBe("1901-11-26");
+      expect(parseGedcomDate("26 Nov 1901")).toBe("1901-11-26");
+    });
+  
+    it("parses partial 'NOV 1901' → '1901-11'", () => {
+      expect(parseGedcomDate("NOV 1901")).toBe("1901-11");
+    });
+  
+    it("parses year-only '1901' → '1901'", () => {
+      expect(parseGedcomDate("1901")).toBe("1901");
+    });
+  
+    it("pads single-digit days properly", () => {
+      expect(parseGedcomDate("2 JAN 1843")).toBe("1843-01-02");
+    });
+  
+    it("ignores extra whitespace", () => {
+      expect(parseGedcomDate("  26   NOV   1901  ")).toBe("1901-11-26");
+    });
+  
+    it("returns undefined for empty or null input", () => {
+      expect(parseGedcomDate("")).toBeUndefined();
+      expect(parseGedcomDate(undefined)).toBeUndefined();
+    });
+  
+    it("returns original string for unrecognized formats", () => {
+      expect(parseGedcomDate("26 13 1901")).toBe("26 13 1901"); // invalid month
+      expect(parseGedcomDate("MAYBE 1901")).toBe("MAYBE 1901");
+    });
   });
 });

@@ -24,5 +24,6 @@ export interface GenealogyAPI {
   exportIndividualsExcel: () => Promise<{ success: boolean; path?: string }>;
   exportRelationshipsExcel: () => Promise<{ success: boolean; path?: string }>; // 👈 new
   exportGedcom: () => Promise<{ success: boolean; path?: string }>; // 👈 new
+  importGedcom(filePath: string): Promise<{ count: number; relCount: number }>;
   importExcel(filePath: string): Promise<{ count: number; relCount: number }>;
 }

@@ -13,6 +13,10 @@ const resources = {
       reports: "Rapporter",
       individuals: "Personer",
       relationships: "Relationer",
+      importGedcom: "Importera GEDCOM",
+      exportGedcom: "Exportera GEDCOM",
+      importExcel: "Importera Excel",
+      exportExcel: "Exportera Excel",
     },
   },
 };
