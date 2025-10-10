@@ -1,6 +1,6 @@
 import {
   splitIsoDate,
-  buildIsoDate,
+  buildPartialIsoDate,
   formatDate,
   parseISO,
   monthsBetween,
@@ -46,22 +46,6 @@ describe("dateUtils", () => {
         monthName: "",
         year: "",
       });
-    });
-  });
-
-  describe("buildIsoDate", () => {
-    it("builds a complete ISO string when all parts given", () => {
-      expect(buildIsoDate(23, "jun", 1985)).toBe("1985-06-23");
-      // NOTE: function treats month as zero-based
-    });
-
-    it("defaults missing day/month to '01'/'00'", () => {
-      expect(buildIsoDate(null, "aug", 1985)).toBe("1985-08-01");
-      expect(buildIsoDate(null, null, 1985)).toBe("1985-01-01");
-    });
-
-    it("returns undefined if year is missing", () => {
-      expect(buildIsoDate(23, "jan", null as any)).toBeUndefined();
     });
   });
 
@@ -177,4 +161,68 @@ describe("dateUtils", () => {
     });
   });
 
+  describe("buildPartialIsoDate", () => {
+    it("returns undefined when year is missing", () => {
+      expect(buildPartialIsoDate(undefined, undefined, undefined)).toBeUndefined();
+      expect(buildPartialIsoDate("15", "jan", "")).toBeUndefined();
+    });
+  
+    it("returns only the year when only year is provided", () => {
+      expect(buildPartialIsoDate(undefined, undefined, "1901")).toBe("1901");
+      expect(buildPartialIsoDate("", "", "2020")).toBe("2020");
+    });
+  
+    it("returns year-month when year and month are provided", () => {
+      expect(buildPartialIsoDate(undefined, "jan", "1901")).toBe("1901-01");
+      expect(buildPartialIsoDate(undefined, "Feb", "1999")).toBe("1999-02");
+      expect(buildPartialIsoDate(undefined, "oktober", "2024")).toBe("2024-10");
+    });
+  
+    it("returns full date when year, month, and day are provided", () => {
+      expect(buildPartialIsoDate("5", "mar", "1901")).toBe("1901-03-05");
+      expect(buildPartialIsoDate(5, "Mar", 1901)).toBe("1901-03-05");
+      expect(buildPartialIsoDate("31", "dec", "2000")).toBe("2000-12-31");
+    });
+  
+    it("handles numeric months", () => {
+      // Even though your function expects Swedish month names,
+      // it should gracefully handle numeric month strings
+      expect(buildPartialIsoDate("15", "3", "1901")).toBe("1901-03-15");
+      expect(buildPartialIsoDate(undefined, "10", "1901")).toBe("1901-10");
+    });
+  
+    it("trims and lowercases month names", () => {
+      expect(buildPartialIsoDate("1", " Maj ", "1901")).toBe("1901-05-01");
+      expect(buildPartialIsoDate(undefined, " JULI ", "1901")).toBe("1901-07");
+    });
+  
+    it("pads single-digit days and months", () => {
+      expect(buildPartialIsoDate("1", "jan", "1901")).toBe("1901-01-01");
+      expect(buildPartialIsoDate(undefined, "mar", "1901")).toBe("1901-03");
+    });
+    it("returns undefined if year is missing entirely", () => {
+      expect(buildPartialIsoDate("15", "mar", undefined)).toBeUndefined();
+      expect(buildPartialIsoDate(undefined, undefined, null)).toBeUndefined();
+    });
+  
+    it("returns only the year if month is invalid or unrecognized", () => {
+      expect(buildPartialIsoDate(undefined, "nonsense", "1901")).toBe("1901");
+      expect(buildPartialIsoDate("10", "foobar", "2020")).toBe("2020");
+    });
+  
+    it("ignores out-of-range numeric months (<1 or >12)", () => {
+      expect(buildPartialIsoDate("10", "0", "1901")).toBe("1901");
+      expect(buildPartialIsoDate(undefined, "13", "1901")).toBe("1901");
+    });
+  
+    it("handles missing day correctly (month+year only)", () => {
+      expect(buildPartialIsoDate(undefined, "maj", "2000")).toBe("2000-05");
+      expect(buildPartialIsoDate("", "dec", "1988")).toBe("1988-12");
+    });
+  
+    it("handles month provided but empty day and monthNum undefined", () => {
+      expect(buildPartialIsoDate("", "", "1901")).toBe("1901");
+    });
+
+  });
 });

@@ -9,12 +9,31 @@ export function splitIsoDate(iso?: string) {
   return { day: d ?? "", monthName: MONTHS_SV[+m - 1] ?? "", year: y ?? "" };
 }
 
-export function buildIsoDate(day?: any, monthName?: any, year?: any) {
+export function buildPartialIsoDate(day?: any, monthName?: any, year?: any): string | undefined {
   if (!year) return undefined;
-  const mIdx = monthName ? MONTHS_SV.findIndex(m => String(monthName).toLowerCase().startsWith(m)) + 1 : 1;
-  const dd = day ? String(day).padStart(2,"0") : "01";
-  const mm = String(mIdx).padStart(2,"0");
-  return `${year}-${mm}-${dd}`;
+
+  const yearStr = String(year).trim();
+  let monthNum: number | undefined;
+
+  if (monthName) {
+    const m = String(monthName).trim().toLowerCase();
+
+    // Handle numeric month values ("3" → 3)
+    if (!isNaN(Number(m))) {
+      const num = Number(m);
+      if (num >= 1 && num <= 12) monthNum = num;
+    } else {
+      const idx = MONTHS_SV.findIndex((sv) => m.startsWith(sv));
+      if (idx >= 0) monthNum = idx + 1;
+    }
+  }
+
+  const dayStr = day ? String(day).padStart(2, "0") : undefined;
+  const monthStr = monthNum ? String(monthNum).padStart(2, "0") : undefined;
+
+  if (yearStr && monthStr && dayStr) return `${yearStr}-${monthStr}-${dayStr}`;
+  if (yearStr && monthStr) return `${yearStr}-${monthStr}`;
+  return yearStr; // year only
 }
 
 export function parseISO(d?: string): Date | null {

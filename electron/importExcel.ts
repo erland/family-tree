@@ -2,7 +2,7 @@ import ExcelJS from "exceljs";
 import { Individual } from "../src/types/individual";
 import { Relationship } from "../src/types/relationship";
 import { v4 as uuidv4 } from "uuid";
-import { buildIsoDate } from "../src/utils/dateUtils.js";
+import { buildPartialIsoDate } from "../src/utils/dateUtils.js";
 
 export interface ImportResult {
   individuals: Individual[];
@@ -37,11 +37,11 @@ export async function importExcel(filePath: string): Promise<ImportResult> {
       givenName: get("Förnamn") ?? "",
       birthFamilyName: get("Efternamn 1") ?? "",
       familyName: get("Efternamn 2") ?? "",
-      dateOfBirth: buildIsoDate(get("Fdag"), get("Fmån"), get("Får")),
+      dateOfBirth: buildPartialIsoDate(get("Fdag"), get("Fmån"), get("Får")),
       birthCity: get("Födelseort") ?? "",
       birthCongregation: get("Födelseförsamling") ?? "",
       birthRegion: get("Födelselän") ?? "",
-      dateOfDeath: buildIsoDate(get("Ddag"), get("Dmån"), get("Dår")),
+      dateOfDeath: buildPartialIsoDate(get("Ddag"), get("Dmån"), get("Dår")),
       deathCity: get("Dödsort") ?? "",
       deathCongregation: get("Dödsförsamling") ?? "",
       deathRegion: get("Dödslän") ?? "",
