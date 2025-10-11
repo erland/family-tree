@@ -26,11 +26,20 @@ export function generateGedcom(
   // Families (spouse + children)
   let famCount = 0;
   const families: Record<
-  string,
-  { husband?: string; wife?: string; children: string[]; hasMarriage?: boolean }
-> = {};
+    string,
+    {
+      husband?: string;
+      wife?: string;
+      children: string[];
+      hasMarriage?: boolean;
+      weddingDate?: string;
+      weddingCity?: string;
+      weddingRegion?: string;
+      weddingCongregation?: string;
+    }
+  > = {};
 
-  // Spouse relationships
+  // --- Spouse relationships (FAM blocks)
   for (const rel of relationships) {
     if (rel.type === "spouse") {
       famCount++;
@@ -39,12 +48,16 @@ export function generateGedcom(
         husband: rel.person1Id ? indiMap[rel.person1Id] : undefined,
         wife: rel.person2Id ? indiMap[rel.person2Id] : undefined,
         children: [],
-        hasMarriage: true
+        hasMarriage: true,
+        weddingDate: rel.weddingDate,
+        weddingCity: rel.weddingCity,
+        weddingRegion: rel.weddingRegion,
+        weddingCongregation: rel.weddingCongregation,
       };
     }
   }
 
-  // Parent-child relationships
+  // --- Parent-child relationships
   for (const rel of relationships) {
     if (rel.type !== "parent-child") continue;
     const child = indiMap[rel.childId];
@@ -83,7 +96,7 @@ export function generateGedcom(
     families[famId].children.push(child);
   }
 
-  // Reverse link maps
+  // --- Reverse link maps
   const childFamilies: Record<string, string[]> = {};
   const spouseFamilies: Record<string, string[]> = {};
 
@@ -102,7 +115,7 @@ export function generateGedcom(
     }
   }
 
-  // Export individuals
+  // --- Individuals
   for (const ind of individuals) {
     const tag = indiMap[ind.id];
     const familyName = ind.familyName || ind.birthFamilyName || "";
@@ -110,7 +123,7 @@ export function generateGedcom(
     lines.push(`1 NAME ${ind.givenName || ""} /${familyName}/`);
     lines.push(`1 SEX ${ind.gender === "male" ? "M" : ind.gender === "female" ? "F" : "U"}`);
 
-    // --- Birth event
+    // --- Birth
     if (ind.dateOfBirth || ind.birthCity || ind.birthRegion || ind.birthCongregation) {
       lines.push("1 BIRT");
       const d = formatDate(ind.dateOfBirth);
@@ -120,7 +133,7 @@ export function generateGedcom(
       if (ind.birthCongregation) lines.push(`2 NOTE Församling: ${ind.birthCongregation}`);
     }
 
-    // --- Death event
+    // --- Death
     if (ind.dateOfDeath || ind.deathCity || ind.deathRegion || ind.deathCongregation) {
       lines.push("1 DEAT");
       const d = formatDate(ind.dateOfDeath);
@@ -130,8 +143,8 @@ export function generateGedcom(
       if (ind.deathCongregation) lines.push(`2 NOTE Församling: ${ind.deathCongregation}`);
     }
 
-    // Moves
-    if (ind.moves && ind.moves.length) {
+    // --- Moves
+    if (ind.moves?.length) {
       for (const mv of ind.moves) {
         lines.push("1 RESI");
         const d = formatDate(mv.date);
@@ -143,7 +156,7 @@ export function generateGedcom(
       }
     }
 
-    // Story / biography
+    // --- Story
     if (ind.story) {
       const storyLines = ind.story.split(/\r?\n/);
       for (const [i, text] of storyLines.entries()) {
@@ -152,24 +165,29 @@ export function generateGedcom(
       }
     }
 
-    // Family references
-    if (spouseFamilies[tag]) {
-      for (const famId of spouseFamilies[tag]) lines.push(`1 FAMS ${famId}`);
-    }
-    if (childFamilies[tag]) {
-      for (const famId of childFamilies[tag]) lines.push(`1 FAMC ${famId}`);
-    }
+    // --- Family references
+    spouseFamilies[tag]?.forEach((fid) => lines.push(`1 FAMS ${fid}`));
+    childFamilies[tag]?.forEach((fid) => lines.push(`1 FAMC ${fid}`));
   }
 
-  // Families
+  // --- Families section
   for (const [famId, fam] of Object.entries(families)) {
     lines.push(`0 ${famId} FAM`);
     if (fam.husband) lines.push(`1 HUSB ${fam.husband}`);
     if (fam.wife) lines.push(`1 WIFE ${fam.wife}`);
-    // ✅ only include MARR if this family came from a spouse relationship
+
+    // --- Marriage event (if applicable)
     if (fam.hasMarriage) {
-      lines.push(`1 MARR`);
+      lines.push("1 MARR");
+      const d = formatDate(fam.weddingDate);
+      if (d) lines.push(`2 DATE ${d}`);
+      const place = [fam.weddingCity, fam.weddingRegion].filter(Boolean).join(", ");
+      if (place) lines.push(`2 PLAC ${place}`);
+      if (fam.weddingCongregation)
+        lines.push(`2 NOTE Församling: ${fam.weddingCongregation}`);
     }
+
+    // --- Children
     for (const child of fam.children) lines.push(`1 CHIL ${child}`);
   }
 

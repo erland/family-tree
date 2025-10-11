@@ -16,6 +16,10 @@ interface FamilyBlock {
   wife?: string;
   children: string[];
   hasMarriage?: boolean;
+  weddingDate?: string;
+  weddingCity?: string;
+  weddingRegion?: string;
+  weddingCongregation?: string;
 }
 
 export async function importGedcom(filePath: string): Promise<ImportResult> {
@@ -47,6 +51,7 @@ export function parseGedcomContent(content: string): ImportResult {
     const [level, tag, ...rest] = line.split(" ");
     const data = rest.join(" ");
 
+    // --- Individuals
     if (level === "0" && tag.startsWith("@I")) {
       if (currentInd) individuals.push(currentInd);
       const id = uuidv4();
@@ -57,7 +62,7 @@ export function parseGedcomContent(content: string): ImportResult {
         familyName: "",
         gender: "unknown",
         story: "",
-        moves: [], // 👈 new: track moves
+        moves: [],
       } as Individual;
       continue;
     }
@@ -68,29 +73,30 @@ export function parseGedcomContent(content: string): ImportResult {
         currentInd.givenName = given.trim();
         currentInd.familyName = famRaw?.trim() ?? "";
       } else if (level === "1" && tag === "SEX") {
-        currentInd.gender = data === "M" ? "male" : data === "F" ? "female" : "unknown";
+        currentInd.gender =
+          data === "M" ? "male" : data === "F" ? "female" : "unknown";
       } else if (level === "1" && (tag === "BIRT" || tag === "DEAT")) {
         const isBirth = tag === "BIRT";
         let date: string | undefined;
         let plac: string | undefined;
         let congregation: string | undefined;
-      
+
         for (let j = idx + 1; j < lines.length; j++) {
           const sub = lines[j].trim();
           if (sub.startsWith("1 ")) break;
-          if (sub.includes("2 DATE")) date = sub.split("2 DATE")[1]?.trim();
-          else if (sub.includes("2 PLAC")) plac = sub.split("2 PLAC")[1]?.trim();
-          else if (sub.includes("2 NOTE")) {
+          if (sub.startsWith("2 DATE")) date = sub.split("2 DATE")[1]?.trim();
+          else if (sub.startsWith("2 PLAC")) plac = sub.split("2 PLAC")[1]?.trim();
+          else if (sub.startsWith("2 NOTE")) {
             const text = sub.split("2 NOTE")[1]?.trim();
             if (text?.toLowerCase().startsWith("församling:")) {
               congregation = text.substring("Församling:".length).trim();
             }
           }
         }
-      
+
         const { city, region } = getPlaceParts(plac);
         const parsedDate = parseGedcomDate(date);
-      
+
         if (isBirth) {
           currentInd.dateOfBirth = parsedDate;
           currentInd.birthCity = city;
@@ -104,23 +110,20 @@ export function parseGedcomContent(content: string): ImportResult {
         }
       }
 
-      // 👇 NEW: parse move events (GEDCOM tag RESI)
+      // --- Moves (RESI)
       else if (level === "1" && tag === "RESI") {
         let date: string | undefined;
         let plac: string | undefined;
         let congregation: string | undefined;
         let note: string | undefined;
-      
-        // Parse all sub-lines until next level-1 tag
+
         for (let j = idx + 1; j < lines.length; j++) {
           const sub = lines[j].trim();
           if (sub.startsWith("1 ")) break;
-      
-          if (sub.includes("2 DATE")) {
-            date = sub.split("2 DATE")[1]?.trim();
-          } else if (sub.includes("2 PLAC")) {
-            plac = sub.split("2 PLAC")[1]?.trim();
-          } else if (sub.includes("2 NOTE")) {
+
+          if (sub.startsWith("2 DATE")) date = sub.split("2 DATE")[1]?.trim();
+          else if (sub.startsWith("2 PLAC")) plac = sub.split("2 PLAC")[1]?.trim();
+          else if (sub.startsWith("2 NOTE")) {
             const text = sub.split("2 NOTE")[1]?.trim();
             if (text?.toLowerCase().startsWith("församling:")) {
               congregation = text.substring("Församling:".length).trim();
@@ -129,11 +132,11 @@ export function parseGedcomContent(content: string): ImportResult {
             }
           }
         }
-      
+
         const { city, region } = getPlaceParts(plac);
         const parsedDate = parseGedcomDate(date);
-      
-        if (!currentInd.moves) currentInd.moves = [];
+
+        currentInd.moves ||= [];
         currentInd.moves.push({
           id: uuidv4(),
           date: parsedDate,
@@ -143,13 +146,13 @@ export function parseGedcomContent(content: string): ImportResult {
           note,
         });
       }
-      // 👇 Story / NOTE block
+
+      // --- Story (NOTE / CONT)
       else if (level === "1" && tag === "NOTE") {
         let noteText = data;
-        // Capture possible continued lines
         for (let j = idx + 1; j < lines.length; j++) {
           const sub = lines[j].trim();
-          if (sub.startsWith("1 ")) break; // next top-level tag
+          if (sub.startsWith("1 ")) break;
           if (sub.startsWith("2 CONT")) {
             noteText += "\n" + sub.substring(7).trim();
           }
@@ -158,6 +161,7 @@ export function parseGedcomContent(content: string): ImportResult {
       }
     }
 
+    // --- Family blocks
     if (level === "0" && tag.startsWith("@F")) {
       if (currentFam) families.push(currentFam);
       currentFam = { tag, children: [] };
@@ -168,14 +172,41 @@ export function parseGedcomContent(content: string): ImportResult {
       if (level === "1" && tag === "HUSB") currentFam.husband = data;
       else if (level === "1" && tag === "WIFE") currentFam.wife = data;
       else if (level === "1" && tag === "CHIL") currentFam.children.push(data);
-      else if (level === "1" && tag === "MARR") currentFam.hasMarriage = true;
+
+      // --- Marriage event parsing
+      else if (level === "1" && tag === "MARR") {
+        currentFam.hasMarriage = true;
+        let date: string | undefined;
+        let plac: string | undefined;
+        let congregation: string | undefined;
+
+        for (let j = idx + 1; j < lines.length; j++) {
+          const sub = lines[j].trim();
+          if (sub.startsWith("1 ")) break;
+          if (sub.startsWith("2 DATE")) date = sub.split("2 DATE")[1]?.trim();
+          else if (sub.startsWith("2 PLAC")) plac = sub.split("2 PLAC")[1]?.trim();
+          else if (sub.startsWith("2 NOTE")) {
+            const text = sub.split("2 NOTE")[1]?.trim();
+            if (text?.toLowerCase().startsWith("församling:")) {
+              congregation = text.substring("Församling:".length).trim();
+            }
+          }
+        }
+
+        const { city, region } = getPlaceParts(plac);
+        const parsedDate = parseGedcomDate(date);
+        currentFam.weddingDate = parsedDate;
+        currentFam.weddingCity = city;
+        currentFam.weddingRegion = region;
+        currentFam.weddingCongregation = congregation;
+      }
     }
   }
 
   if (currentInd) individuals.push(currentInd);
   if (currentFam) families.push(currentFam);
 
-  // build relationships
+  // --- Build relationships
   for (const fam of families) {
     const husbandId = fam.husband ? idMap[fam.husband] : undefined;
     const wifeId = fam.wife ? idMap[fam.wife] : undefined;
@@ -186,6 +217,10 @@ export function parseGedcomContent(content: string): ImportResult {
         type: "spouse",
         person1Id: husbandId,
         person2Id: wifeId,
+        weddingDate: fam.weddingDate,
+        weddingCity: fam.weddingCity,
+        weddingRegion: fam.weddingRegion,
+        weddingCongregation: fam.weddingCongregation,
       });
     }
 

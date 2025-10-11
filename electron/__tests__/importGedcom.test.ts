@@ -108,6 +108,34 @@ describe("parseGedcomContent", () => {
     expect(parentRel?.parentIds.length).toBe(2);
     expect(parentRel?.childId).toBeDefined();
   });
+  it("imports wedding date, place, and Församling correctly", () => {
+    const gedcom = `
+0 HEAD
+0 @I1@ INDI
+1 NAME Johan /Andersson/
+1 SEX M
+0 @I2@ INDI
+1 NAME Maria /Andersson/
+1 SEX F
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 12 JUN 1905
+2 PLAC Stockholm, Uppland
+2 NOTE Församling: Storkyrkan
+0 TRLR
+`;
+
+    const { relationships } = parseGedcomContent(gedcom);
+    const marriage = relationships.find((r) => r.type === "spouse");
+
+    expect(marriage).toBeDefined();
+    expect(marriage?.weddingDate).toBe("1905-06-12");
+    expect(marriage?.weddingCity).toBe("Stockholm");
+    expect(marriage?.weddingRegion).toBe("Uppland");
+    expect(marriage?.weddingCongregation).toBe("Storkyrkan");
+  });
   it("imports spouse relationships only when MARR tag is present", () => {
     const gedcom = `
   0 HEAD
@@ -154,7 +182,7 @@ describe("parseGedcomContent", () => {
     );
     expect(hasUnmarriedSpouse).toBeUndefined();
   });
-  
+
   it("handles missing gender, missing places, and unknown tags gracefully", () => {
     const gedcom = `
 0 HEAD

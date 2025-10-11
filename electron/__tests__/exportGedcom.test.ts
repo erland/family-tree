@@ -151,6 +151,51 @@ describe("generateGedcom", () => {
     expect(unmarriedFam).not.toMatch(/1 MARR/);
   });
     
+  it("exports wedding date, place, and Församling for spouse relationships", () => {
+    const husband: Individual = {
+      id: "1",
+      givenName: "Johan",
+      familyName: "Andersson",
+      gender: "male",
+    } as Individual;
+
+    const wife: Individual = {
+      id: "2",
+      givenName: "Maria",
+      familyName: "Andersson",
+      gender: "female",
+    } as Individual;
+
+    const relationships: Relationship[] = [
+      {
+        id: "r1",
+        type: "spouse",
+        person1Id: husband.id,
+        person2Id: wife.id,
+        weddingDate: "1905-06-12",
+        weddingCity: "Stockholm",
+        weddingRegion: "Uppland",
+        weddingCongregation: "Storkyrkan",
+      } as any,
+    ];
+
+    const ged = generateGedcom([husband, wife], relationships);
+    const lines = ged.split("\n");
+
+    // Locate the FAM block
+    const famIndex = lines.findIndex((l) => l.includes("0 @F1@ FAM"));
+    expect(famIndex).toBeGreaterThan(-1);
+    const famBlock = lines.slice(famIndex, famIndex + 10);
+
+    // Ensure MARR event exists
+    expect(famBlock).toContain("1 MARR");
+
+    // Ensure date and place are formatted correctly
+    expect(famBlock).toContain("2 DATE 12 JUN 1905");
+    expect(famBlock).toContain("2 PLAC Stockholm, Uppland");
+    expect(famBlock).toContain("2 NOTE Församling: Storkyrkan");
+  });
+  
   it("handles individuals with missing gender or partial dates gracefully", () => {
     const individuals: Individual[] = [
       {
