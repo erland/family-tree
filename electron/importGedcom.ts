@@ -73,43 +73,88 @@ export function parseGedcomContent(content: string): ImportResult {
         const isBirth = tag === "BIRT";
         let date: string | undefined;
         let plac: string | undefined;
+        let congregation: string | undefined;
+      
         for (let j = idx + 1; j < lines.length; j++) {
-          const sub = lines[j];
+          const sub = lines[j].trim();
           if (sub.startsWith("1 ")) break;
           if (sub.includes("2 DATE")) date = sub.split("2 DATE")[1]?.trim();
-          if (sub.includes("2 PLAC")) plac = sub.split("2 PLAC")[1]?.trim();
+          else if (sub.includes("2 PLAC")) plac = sub.split("2 PLAC")[1]?.trim();
+          else if (sub.includes("2 NOTE")) {
+            const text = sub.split("2 NOTE")[1]?.trim();
+            if (text?.toLowerCase().startsWith("församling:")) {
+              congregation = text.substring("Församling:".length).trim();
+            }
+          }
         }
+      
         const { city, region } = getPlaceParts(plac);
         const parsedDate = parseGedcomDate(date);
+      
         if (isBirth) {
           currentInd.dateOfBirth = parsedDate;
           currentInd.birthCity = city;
           currentInd.birthRegion = region;
+          if (congregation) currentInd.birthCongregation = congregation;
         } else {
           currentInd.dateOfDeath = parsedDate;
           currentInd.deathCity = city;
           currentInd.deathRegion = region;
+          if (congregation) currentInd.deathCongregation = congregation;
         }
-      } 
+      }
+
       // 👇 NEW: parse move events (GEDCOM tag RESI)
       else if (level === "1" && tag === "RESI") {
         let date: string | undefined;
         let plac: string | undefined;
+        let congregation: string | undefined;
+        let note: string | undefined;
+      
+        // Parse all sub-lines until next level-1 tag
         for (let j = idx + 1; j < lines.length; j++) {
-          const sub = lines[j];
+          const sub = lines[j].trim();
           if (sub.startsWith("1 ")) break;
-          if (sub.includes("2 DATE")) date = sub.split("2 DATE")[1]?.trim();
-          if (sub.includes("2 PLAC")) plac = sub.split("2 PLAC")[1]?.trim();
+      
+          if (sub.includes("2 DATE")) {
+            date = sub.split("2 DATE")[1]?.trim();
+          } else if (sub.includes("2 PLAC")) {
+            plac = sub.split("2 PLAC")[1]?.trim();
+          } else if (sub.includes("2 NOTE")) {
+            const text = sub.split("2 NOTE")[1]?.trim();
+            if (text?.toLowerCase().startsWith("församling:")) {
+              congregation = text.substring("Församling:".length).trim();
+            } else if (text) {
+              note = text;
+            }
+          }
         }
+      
         const { city, region } = getPlaceParts(plac);
         const parsedDate = parseGedcomDate(date);
+      
         if (!currentInd.moves) currentInd.moves = [];
         currentInd.moves.push({
           id: uuidv4(),
           date: parsedDate,
           city,
           region,
+          congregation,
+          note,
         });
+      }
+      // 👇 Story / NOTE block
+      else if (level === "1" && tag === "NOTE") {
+        let noteText = data;
+        // Capture possible continued lines
+        for (let j = idx + 1; j < lines.length; j++) {
+          const sub = lines[j].trim();
+          if (sub.startsWith("1 ")) break; // next top-level tag
+          if (sub.startsWith("2 CONT")) {
+            noteText += "\n" + sub.substring(7).trim();
+          }
+        }
+        currentInd.story = noteText.trim();
       }
     }
 

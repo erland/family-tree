@@ -109,20 +109,24 @@ export function generateGedcom(
     lines.push(`1 NAME ${ind.givenName || ""} /${familyName}/`);
     lines.push(`1 SEX ${ind.gender === "male" ? "M" : ind.gender === "female" ? "F" : "U"}`);
 
-    // Birth / death
-    if (ind.dateOfBirth || ind.birthCity || ind.birthRegion) {
+    // --- Birth event
+    if (ind.dateOfBirth || ind.birthCity || ind.birthRegion || ind.birthCongregation) {
       lines.push("1 BIRT");
       const d = formatDate(ind.dateOfBirth);
       if (d) lines.push(`2 DATE ${d}`);
       const place = [ind.birthCity, ind.birthRegion].filter(Boolean).join(", ");
       if (place) lines.push(`2 PLAC ${place}`);
+      if (ind.birthCongregation) lines.push(`2 NOTE Församling: ${ind.birthCongregation}`);
     }
-    if (ind.dateOfDeath || ind.deathCity || ind.deathRegion) {
+
+    // --- Death event
+    if (ind.dateOfDeath || ind.deathCity || ind.deathRegion || ind.deathCongregation) {
       lines.push("1 DEAT");
       const d = formatDate(ind.dateOfDeath);
       if (d) lines.push(`2 DATE ${d}`);
       const place = [ind.deathCity, ind.deathRegion].filter(Boolean).join(", ");
       if (place) lines.push(`2 PLAC ${place}`);
+      if (ind.deathCongregation) lines.push(`2 NOTE Församling: ${ind.deathCongregation}`);
     }
 
     // Moves
@@ -138,6 +142,15 @@ export function generateGedcom(
       }
     }
 
+    // Story / biography
+    if (ind.story) {
+      const storyLines = ind.story.split(/\r?\n/);
+      for (const [i, text] of storyLines.entries()) {
+        if (i === 0) lines.push(`1 NOTE ${text}`);
+        else lines.push(`2 CONT ${text}`);
+      }
+    }
+    
     // Family references
     if (spouseFamilies[tag]) {
       for (const famId of spouseFamilies[tag]) lines.push(`1 FAMS ${famId}`);

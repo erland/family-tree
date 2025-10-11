@@ -196,4 +196,82 @@ describe("generateGedcom", () => {
     expect(thirdResi.some(l => l.includes("Församling: Storkyrkan"))).toBe(true);
     expect(thirdResi.every(l => !l.startsWith("2 PLAC"))).toBe(true);
   });
+  it("exports Församling notes for birth and death events", () => {
+    const individuals = [
+      {
+        id: "1",
+        givenName: "Karl",
+        familyName: "Johansson",
+        gender: "male",
+        dateOfBirth: "1901-02-12",
+        birthCity: "Skövde",
+        birthRegion: "Västergötland",
+        birthCongregation: "Skara",
+        dateOfDeath: "1980-04-05",
+        deathCity: "Göteborg",
+        deathRegion: "Västra Götaland",
+        deathCongregation: "Domkyrko",
+      },
+    ];
+
+    const relationships: any[] = [];
+
+    const gedcom = generateGedcom(individuals as any, relationships);
+    const lines = gedcom.split("\n");
+
+    // --- Birth section checks ---
+    const birthIndex = lines.findIndex((l) => l.trim() === "1 BIRT");
+    expect(birthIndex).toBeGreaterThan(-1);
+    const birthBlock = lines.slice(birthIndex, birthIndex + 6);
+
+    expect(birthBlock).toContain("2 DATE 12 FEB 1901");
+    expect(birthBlock).toContain("2 PLAC Skövde, Västergötland");
+    expect(birthBlock).toContain("2 NOTE Församling: Skara");
+
+    // --- Death section checks ---
+    const deathIndex = lines.findIndex((l) => l.trim() === "1 DEAT");
+    expect(deathIndex).toBeGreaterThan(-1);
+    const deathBlock = lines.slice(deathIndex, deathIndex + 6);
+
+    expect(deathBlock).toContain("2 DATE 05 APR 1980");
+    expect(deathBlock).toContain("2 PLAC Göteborg, Västra Götaland");
+    expect(deathBlock).toContain("2 NOTE Församling: Domkyrko");
+  });
+  it("exports story field as NOTE/CONT lines", () => {
+    const individuals = [
+      {
+        id: "1",
+        givenName: "Erik",
+        familyName: "Lind",
+        gender: "male",
+        story: "Born in a small village.\nLoved carpentry.\nMoved to town.",
+      },
+    ];
+    const gedcom = generateGedcom(individuals as any, []);
+    const lines = gedcom.split("\n");
+    const noteIdx = lines.findIndex(l => l.startsWith("1 NOTE"));
+    expect(noteIdx).toBeGreaterThan(-1);
+    expect(lines[noteIdx]).toBe("1 NOTE Born in a small village.");
+    expect(lines[noteIdx + 1]).toBe("2 CONT Loved carpentry.");
+    expect(lines[noteIdx + 2]).toBe("2 CONT Moved to town.");
+  });
+  it("handles missing genders, undefined IDs, and incomplete families gracefully", () => {
+    const individuals = [
+      { id: "a", givenName: "NoGender", familyName: "Unknown", gender: "unknown" },
+      { id: "b", givenName: "Child", familyName: "Unknown" },
+    ];
+  
+    const relationships = [
+      { id: "r1", type: "spouse", person1Id: undefined, person2Id: "a" },
+      { id: "r2", type: "parent-child", parentIds: ["a"], childId: "b" },
+    ];
+  
+    const gedcom = generateGedcom(individuals as any, relationships as any);
+    const lines = gedcom.split("\n");
+  
+    expect(gedcom).toContain("1 SEX U"); // gender unknown
+    expect(gedcom).toContain("0 @F1@ FAM"); // created even if missing one parent
+    expect(gedcom).toContain("1 CHIL @I2@"); // child linked properly
+    expect(gedcom).toContain("0 TRLR"); // terminator
+  });
 });
