@@ -114,6 +114,43 @@ describe("generateGedcom", () => {
     expect(erikLines.some(l => l.includes("1 FAMS @F"))).toBe(true);
   });
 
+  it("exports MARR tag only for spouse relationships (not just shared parents)", () => {
+    const marriedMan = { id: "m1", givenName: "MarriedMan", gender: "male" } as any;
+    const marriedWoman = { id: "w1", givenName: "MarriedWoman", gender: "female" } as any;
+    const unmarriedMan = { id: "u1", givenName: "UnmarriedMan", gender: "male" } as any;
+    const unmarriedWoman = { id: "u2", givenName: "UnmarriedWoman", gender: "female" } as any;
+    const child = { id: "c1", givenName: "Child" } as any;
+  
+    const relationships = [
+      { id: "s1", type: "spouse" as const, person1Id: marriedMan.id, person2Id: marriedWoman.id },
+      { id: "p1", type: "parent-child" as const, parentIds: [marriedMan.id, marriedWoman.id], childId: child.id },
+      { id: "p2", type: "parent-child" as const, parentIds: [unmarriedMan.id, unmarriedWoman.id], childId: child.id },
+    ] satisfies Relationship[];
+  
+    const ged = generateGedcom(
+      [marriedMan, marriedWoman, unmarriedMan, unmarriedWoman, child],
+      relationships as any
+    );
+  
+    // Split GEDCOM into family blocks
+    const famBlocks = ged
+      .split(/^0 /m)
+      .filter((b) => b.trim().startsWith("@F"));
+  
+    // Identify blocks by parent IDs (I1/I2 etc.)
+    const marriedFam = famBlocks.find((b) => b.includes("HUSB @I1@") && b.includes("WIFE @I2@"));
+    const unmarriedFam = famBlocks.find((b) => b.includes("HUSB @I3@") && b.includes("WIFE @I4@"));
+  
+    expect(typeof marriedFam).toBe("string");
+    expect(typeof unmarriedFam).toBe("string");
+  
+    // Married family should contain a MARR line
+    expect(marriedFam).toMatch(/1 MARR/);
+  
+    // Unmarried family should NOT contain MARR
+    expect(unmarriedFam).not.toMatch(/1 MARR/);
+  });
+    
   it("handles individuals with missing gender or partial dates gracefully", () => {
     const individuals: Individual[] = [
       {

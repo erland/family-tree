@@ -108,7 +108,53 @@ describe("parseGedcomContent", () => {
     expect(parentRel?.parentIds.length).toBe(2);
     expect(parentRel?.childId).toBeDefined();
   });
-
+  it("imports spouse relationships only when MARR tag is present", () => {
+    const gedcom = `
+  0 HEAD
+  0 @I1@ INDI
+  1 NAME Man /Married/
+  1 SEX M
+  0 @I2@ INDI
+  1 NAME Woman /Married/
+  1 SEX F
+  0 @I3@ INDI
+  1 NAME Child /Married/
+  1 SEX F
+  0 @I4@ INDI
+  1 NAME Man /Unmarried/
+  1 SEX M
+  0 @I5@ INDI
+  1 NAME Woman /Unmarried/
+  1 SEX F
+  0 @I6@ INDI
+  1 NAME Child /Unmarried/
+  1 SEX F
+  0 @F1@ FAM
+  1 HUSB @I1@
+  1 WIFE @I2@
+  1 CHIL @I3@
+  1 MARR
+  0 @F2@ FAM
+  1 HUSB @I4@
+  1 WIFE @I5@
+  1 CHIL @I6@
+  0 TRLR
+  `;
+    const result = parseGedcomContent(gedcom);
+  
+    // married family should yield both spouse + parent-child
+    const marriedSpouse = result.relationships.find(r => r.type === "spouse");
+    expect(marriedSpouse).toBeDefined();
+  
+    // unmarried family (no MARR) → only parent-child
+    const allParents = result.relationships.filter(r => r.type === "parent-child");
+    expect(allParents.length).toBeGreaterThan(0);
+    const hasUnmarriedSpouse = result.relationships.find(
+      r => r.type === "spouse" && r.person1Id?.includes("Unmarried")
+    );
+    expect(hasUnmarriedSpouse).toBeUndefined();
+  });
+  
   it("handles missing gender, missing places, and unknown tags gracefully", () => {
     const gedcom = `
 0 HEAD

@@ -26,9 +26,9 @@ export function generateGedcom(
   // Families (spouse + children)
   let famCount = 0;
   const families: Record<
-    string,
-    { husband?: string; wife?: string; children: string[] }
-  > = {};
+  string,
+  { husband?: string; wife?: string; children: string[]; hasMarriage?: boolean }
+> = {};
 
   // Spouse relationships
   for (const rel of relationships) {
@@ -39,6 +39,7 @@ export function generateGedcom(
         husband: rel.person1Id ? indiMap[rel.person1Id] : undefined,
         wife: rel.person2Id ? indiMap[rel.person2Id] : undefined,
         children: [],
+        hasMarriage: true
       };
     }
   }
@@ -150,7 +151,7 @@ export function generateGedcom(
         else lines.push(`2 CONT ${text}`);
       }
     }
-    
+
     // Family references
     if (spouseFamilies[tag]) {
       for (const famId of spouseFamilies[tag]) lines.push(`1 FAMS ${famId}`);
@@ -165,6 +166,10 @@ export function generateGedcom(
     lines.push(`0 ${famId} FAM`);
     if (fam.husband) lines.push(`1 HUSB ${fam.husband}`);
     if (fam.wife) lines.push(`1 WIFE ${fam.wife}`);
+    // ✅ only include MARR if this family came from a spouse relationship
+    if (fam.hasMarriage) {
+      lines.push(`1 MARR`);
+    }
     for (const child of fam.children) lines.push(`1 CHIL ${child}`);
   }
 
