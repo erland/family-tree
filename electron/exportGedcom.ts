@@ -1,8 +1,12 @@
+// src/utils/gedcom/exportGedcom.ts
 import { Individual } from "../src/types/individual";
 import { Relationship } from "../src/types/relationship";
-import { dialog } from "@electron/remote"; // or via ipcRenderer if in renderer
 import { formatDate } from "../src/utils/dateUtils.js";
 
+/**
+ * Pure GEDCOM string generator — no Electron or file system dependencies.
+ * Suitable for unit tests.
+ */
 export function generateGedcom(
   individuals: Individual[],
   relationships: Relationship[]
@@ -19,14 +23,14 @@ export function generateGedcom(
   const indiMap: Record<string, string> = {};
   individuals.forEach((ind, idx) => (indiMap[ind.id] = `@I${idx + 1}@`));
 
-  // Family structures
+  // Families (spouse + children)
   let famCount = 0;
   const families: Record<
     string,
     { husband?: string; wife?: string; children: string[] }
   > = {};
 
-  // Spouse relations first
+  // Spouse relationships
   for (const rel of relationships) {
     if (rel.type === "spouse") {
       famCount++;
@@ -39,30 +43,26 @@ export function generateGedcom(
     }
   }
 
-  // Parent-child relations
+  // Parent-child relationships
   for (const rel of relationships) {
     if (rel.type !== "parent-child") continue;
     const child = indiMap[rel.childId];
     if (!child) continue;
 
-    // Try to find existing family with same parents
     let famId = Object.entries(families).find(([_, fam]) => {
-      const famParents = [fam.husband, fam.wife].filter(
-        (p): p is string => !!p
-      );
+      const famParents = [fam.husband, fam.wife]
+        .filter((p): p is string => Boolean(p))
+        .sort();
       const relParents = rel.parentIds
         .map((pid) => indiMap[pid])
-        .filter((p): p is string => !!p);
-      return (
-        famParents.length === relParents.length &&
-        famParents.every((p) => relParents.includes(p))
-      );
+        .filter((p): p is string => Boolean(p))
+        .sort();
+      return famParents.join(",") === relParents.join(",");
     })?.[0];
 
     if (!famId) {
       famCount++;
       famId = `@F${famCount}@`;
-
       let husband: string | undefined;
       let wife: string | undefined;
       for (const pid of rel.parentIds) {
@@ -76,14 +76,13 @@ export function generateGedcom(
           else if (!wife) wife = tag;
         }
       }
-
       families[famId] = { husband, wife, children: [] };
     }
 
     families[famId].children.push(child);
   }
 
-  // Map of family memberships for reverse links
+  // Reverse link maps
   const childFamilies: Record<string, string[]> = {};
   const spouseFamilies: Record<string, string[]> = {};
 
@@ -105,68 +104,55 @@ export function generateGedcom(
   // Export individuals
   for (const ind of individuals) {
     const tag = indiMap[ind.id];
-    const familyName = ind.familyName || ind.birthFamilyName || ""
+    const familyName = ind.familyName || ind.birthFamilyName || "";
     lines.push(`0 ${tag} INDI`);
     lines.push(`1 NAME ${ind.givenName || ""} /${familyName}/`);
-    if (ind.gender === "male") lines.push("1 SEX M");
-    else if (ind.gender === "female") lines.push("1 SEX F");
-    else lines.push("1 SEX U");
+    lines.push(`1 SEX ${ind.gender === "male" ? "M" : ind.gender === "female" ? "F" : "U"}`);
 
-    if (ind.dateOfBirth) {
+    // Birth / death
+    if (ind.dateOfBirth || ind.birthCity || ind.birthRegion) {
       lines.push("1 BIRT");
       const d = formatDate(ind.dateOfBirth);
       if (d) lines.push(`2 DATE ${d}`);
-      if (ind.birthCity || ind.birthRegion) {
-        const place = [ind.birthCity, ind.birthRegion].filter(Boolean).join(", ");
-        lines.push(`2 PLAC ${place}`);
-      }
+      const place = [ind.birthCity, ind.birthRegion].filter(Boolean).join(", ");
+      if (place) lines.push(`2 PLAC ${place}`);
     }
-
-    if (ind.dateOfDeath) {
+    if (ind.dateOfDeath || ind.deathCity || ind.deathRegion) {
       lines.push("1 DEAT");
       const d = formatDate(ind.dateOfDeath);
       if (d) lines.push(`2 DATE ${d}`);
-      if (ind.deathCity || ind.deathRegion) {
-        const place = [ind.deathCity, ind.deathRegion].filter(Boolean).join(", ");
-        lines.push(`2 PLAC ${place}`);
-      }
+      const place = [ind.deathCity, ind.deathRegion].filter(Boolean).join(", ");
+      if (place) lines.push(`2 PLAC ${place}`);
     }
 
-    // Moves as GEDCOM RESI
+    // Moves
     if (ind.moves && ind.moves.length) {
       for (const mv of ind.moves) {
         lines.push("1 RESI");
         const d = formatDate(mv.date);
         if (d) lines.push(`2 DATE ${d}`);
-        const placeBits = [mv.city, mv.region].filter(Boolean); // GEDCOM PLAC typically City, Region
-        const place = placeBits.join(", ");
+        const place = [mv.city, mv.region].filter(Boolean).join(", ");
         if (place) lines.push(`2 PLAC ${place}`);
         if (mv.congregation) lines.push(`2 NOTE Församling: ${mv.congregation}`);
         if (mv.note) lines.push(`2 NOTE ${mv.note}`);
       }
     }
-    
-    // 🔹 Reverse family links
+
+    // Family references
     if (spouseFamilies[tag]) {
-      for (const famId of spouseFamilies[tag]) {
-        lines.push(`1 FAMS ${famId}`);
-      }
+      for (const famId of spouseFamilies[tag]) lines.push(`1 FAMS ${famId}`);
     }
     if (childFamilies[tag]) {
-      for (const famId of childFamilies[tag]) {
-        lines.push(`1 FAMC ${famId}`);
-      }
+      for (const famId of childFamilies[tag]) lines.push(`1 FAMC ${famId}`);
     }
   }
 
-  // Export families
+  // Families
   for (const [famId, fam] of Object.entries(families)) {
     lines.push(`0 ${famId} FAM`);
     if (fam.husband) lines.push(`1 HUSB ${fam.husband}`);
     if (fam.wife) lines.push(`1 WIFE ${fam.wife}`);
-    for (const child of fam.children) {
-      lines.push(`1 CHIL ${child}`);
-    }
+    for (const child of fam.children) lines.push(`1 CHIL ${child}`);
   }
 
   lines.push("0 TRLR");

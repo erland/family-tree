@@ -10,5 +10,13 @@
       "resolveJsonModule": true,
       "types": ["node", "electron"]
     },
-    "include": ["electron"]
+    "include": ["electron"],
+    "exclude": [
+      "electron/__tests__/**",   // 👈 exclude test folders
+      "**/*.test.ts",            // 👈 exclude any .test.ts file
+      "src/**/__tests__/**",
+      "node_modules",
+      "dist",
+      "coverage"
+    ]
   }
