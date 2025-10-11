@@ -49,7 +49,9 @@ function annularSectorPath(
 
 function nameParts(p?: Individual | null): { given: string; family: string } {
   if (!p) return { given: "", family: "" };
-  return { given: p.givenName ?? "", family: p.familyName ?? "" };
+  const given = p.givenName ?? "";
+  const family = p.birthFamilyName || p.familyName || "";
+  return { given, family };
 }
 
 function fontSizeForGen(g: number) {
