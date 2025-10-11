@@ -20,6 +20,10 @@ interface FamilyBlock {
 
 export async function importGedcom(filePath: string): Promise<ImportResult> {
   const content = fs.readFileSync(filePath, "utf-8");
+  return parseGedcomContent(content);
+}
+
+export function parseGedcomContent(content: string): ImportResult {
   const lines = content.split(/\r?\n/);
 
   const individuals: Individual[] = [];
