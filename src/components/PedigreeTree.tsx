@@ -33,6 +33,7 @@ import MarriageNode from "./MarriageNode";
 import SearchBar from "../components/SearchBar";
 import IndividualDetails from "../components/IndividualDetails";
 import IndividualFormDialog from "../components/IndividualFormDialog";
+import CircularPedigree from "./CircularPedigree"; // 👈 NEW
 
 const fitViewOptions: FitViewOptions = { padding: 0.2, includeHiddenNodes: true };
 const nodeTypes = {
@@ -123,7 +124,7 @@ function PedigreeInner({
       <Background />
       <MiniMap pannable zoomable />
       <Controls showInteractive>
-        {/* 👇 Custom max depth select, sits with zoom/fit buttons */}
+        {/* 👇 Max depth select stays with the ReactFlow controls */}
         <Select
           size="small"
           value={maxGenerations}
@@ -152,6 +153,7 @@ export default function PedigreeTree() {
   const [mode, setMode] = useState<"descendants" | "ancestors">("descendants");
   const [selected, setSelected] = useState<Individual | null>(null);
   const [maxGenerations, setMaxGenerations] = useState(3);
+  const [layoutKind, setLayoutKind] = useState<"orthogonal" | "circular">("orthogonal");
 
   const [editing, setEditing] = useState<Individual | null>(null);
 
@@ -185,6 +187,39 @@ export default function PedigreeTree() {
             <ToggleButton value="descendants">Efterkommande</ToggleButton>
             <ToggleButton value="ancestors">Förfäder</ToggleButton>
           </ToggleButtonGroup>
+
+          {/* Layout toggle */}
+          <ToggleButtonGroup
+            value={layoutKind}
+            exclusive
+            onChange={(_e, val) => val && setLayoutKind(val)}
+            size="small"
+          >
+            <ToggleButton value="orthogonal">Ortogonal</ToggleButton>
+            <ToggleButton value="circular" disabled={!root}>
+              Cirkulär
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          {/* When in circular mode, expose generations here (since RF Controls are hidden) */}
+          {layoutKind === "circular" && (
+            <Select
+              size="small"
+              value={maxGenerations}
+              onChange={(e) => setMaxGenerations(Number(e.target.value))}
+              sx={{
+                ml: 1,
+                background: "white",
+                ".MuiSelect-select": { py: 0.5, px: 1, fontSize: "0.75rem" },
+              }}
+            >
+              {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
+                <MenuItem key={g} value={g}>
+                  {g}
+                </MenuItem>
+              ))}
+            </Select>
+          )}
         </Box>
 
         {/* Toolbar - row 2 (only visible if root selected) */}
@@ -236,17 +271,21 @@ export default function PedigreeTree() {
           </Box>
         )}
 
-        {/* Tree */}
+        {/* Tree area */}
         <Box sx={{ flexGrow: 1 }}>
-          <ReactFlowProvider>
-            <PedigreeInner
-              rootId={root?.id ?? undefined}
-              mode={mode}
-              maxGenerations={maxGenerations}
-              onSelectIndividual={setSelected}
-              setMaxGenerations={setMaxGenerations}
-            />
-          </ReactFlowProvider>
+          {layoutKind === "circular" && root ? (
+            <CircularPedigree rootId={root.id} generations={maxGenerations} />
+          ) : (
+            <ReactFlowProvider>
+              <PedigreeInner
+                rootId={root?.id ?? undefined}
+                mode={mode}
+                maxGenerations={maxGenerations}
+                onSelectIndividual={setSelected}
+                setMaxGenerations={setMaxGenerations}
+              />
+            </ReactFlowProvider>
+          )}
         </Box>
       </Box>
 
