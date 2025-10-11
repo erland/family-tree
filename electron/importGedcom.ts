@@ -53,6 +53,7 @@ export async function importGedcom(filePath: string): Promise<ImportResult> {
         familyName: "",
         gender: "unknown",
         story: "",
+        moves: [], // 👈 new: track moves
       } as Individual;
       continue;
     }
@@ -85,6 +86,26 @@ export async function importGedcom(filePath: string): Promise<ImportResult> {
           currentInd.deathCity = city;
           currentInd.deathRegion = region;
         }
+      } 
+      // 👇 NEW: parse move events (GEDCOM tag RESI)
+      else if (level === "1" && tag === "RESI") {
+        let date: string | undefined;
+        let plac: string | undefined;
+        for (let j = idx + 1; j < lines.length; j++) {
+          const sub = lines[j];
+          if (sub.startsWith("1 ")) break;
+          if (sub.includes("2 DATE")) date = sub.split("2 DATE")[1]?.trim();
+          if (sub.includes("2 PLAC")) plac = sub.split("2 PLAC")[1]?.trim();
+        }
+        const { city, region } = getPlaceParts(plac);
+        const parsedDate = parseGedcomDate(date);
+        if (!currentInd.moves) currentInd.moves = [];
+        currentInd.moves.push({
+          id: uuidv4(),
+          date: parsedDate,
+          city,
+          region,
+        });
       }
     }
 
@@ -110,7 +131,6 @@ export async function importGedcom(filePath: string): Promise<ImportResult> {
     const husbandId = fam.husband ? idMap[fam.husband] : undefined;
     const wifeId = fam.wife ? idMap[fam.wife] : undefined;
 
-    // only create spouse link if explicit marriage
     if (fam.hasMarriage && husbandId && wifeId) {
       relationships.push({
         id: uuidv4(),
