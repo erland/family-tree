@@ -105,19 +105,36 @@ export default function PlacesPage() {
 
       {/* Right: selected place details */}
       <Box sx={{ flex: 1, overflowY: "auto", p: 1 }}>
-        {selectedPlace ? (
-          <>
-            <Typography variant="h6" gutterBottom>
-              {selectedPlace.name}
-            </Typography>
-            {selectedPlace.individuals.map(({ ind, event, date }, idx) => (
-              <Typography key={idx} sx={{ mb: 0.5 }}>
-                {date ? `${date}: ` : ""}
-                <strong>{fullName(ind)}</strong> ({event})
+        {selectedPlace ? (() => {
+          const baseName = selectedPlace.name;
+          const isNumbered = /\d+$/.test(baseName); // ends with a number?
+
+          // If "Plats" (without number) → include "Plats 1", "Plats 2", etc.
+          const relatedPlaces =
+            !isNumbered && /\d+$/.test(places.find(p => p.name.startsWith(baseName + " "))?.name || "")
+              ? places.filter(p => p.name === baseName || p.name.startsWith(baseName + " "))
+              : [selectedPlace];
+
+          // Merge all individuals from related places
+          const combinedIndividuals = relatedPlaces.flatMap(p => p.individuals);
+
+          // Sort by date
+          combinedIndividuals.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+
+          return (
+            <>
+              <Typography variant="h6" gutterBottom>
+                {baseName}
               </Typography>
-            ))}
-          </>
-        ) : (
+              {combinedIndividuals.map(({ ind, event, date }, idx) => (
+                <Typography key={idx} sx={{ mb: 0.5 }}>
+                  {date ? `${date}: ` : ""}
+                  <strong>{fullName(ind)}</strong> ({event})
+                </Typography>
+              ))}
+            </>
+          );
+        })() : (
           <Typography variant="body1" color="text.secondary">
             Välj en plats för att visa personer.
           </Typography>
