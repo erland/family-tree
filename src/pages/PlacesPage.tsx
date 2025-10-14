@@ -12,6 +12,7 @@ import { useAppSelector } from "../store";
 import { Individual } from "../types/individual";
 import Fuse from "fuse.js";
 import { fullName } from "../utils/nameUtils";
+import { calculateAgeAtEvent } from "../utils/dateUtils";
 
 type PlaceInfo = {
   name: string;
@@ -107,11 +108,11 @@ export default function PlacesPage() {
       <Box sx={{ flex: 1, overflowY: "auto", p: 1 }}>
         {selectedPlace ? (() => {
           const baseName = selectedPlace.name;
-          const isNumbered = /\d+$/.test(baseName); // ends with a number?
+          const isNumbered = /\d+$/.test(baseName);
 
           // If "Plats" (without number) → include "Plats 1", "Plats 2", etc.
           const relatedPlaces =
-            !isNumbered && /\d+$/.test(places.find(p => p.name.startsWith(baseName + " "))?.name || "")
+            !isNumbered
               ? places.filter(p => p.name === baseName || p.name.startsWith(baseName + " "))
               : [selectedPlace];
 
@@ -126,12 +127,16 @@ export default function PlacesPage() {
               <Typography variant="h6" gutterBottom>
                 {baseName}
               </Typography>
-              {combinedIndividuals.map(({ ind, event, date }, idx) => (
-                <Typography key={idx} sx={{ mb: 0.5 }}>
-                  {date ? `${date}: ` : ""}
-                  <strong>{fullName(ind)}</strong> ({event})
-                </Typography>
-              ))}
+              {combinedIndividuals.map(({ ind, event, date }, idx) => {
+                const age = event === "Födelse" ? undefined : calculateAgeAtEvent(ind.dateOfBirth, date);
+                return (
+                  <Typography key={idx} sx={{ mb: 0.5 }}>
+                    {date ? `${date}: ` : ""}
+                    <strong>{fullName(ind)}</strong> ({event}
+                    {age ? `, ${age}` : ""})
+                  </Typography>
+                );
+              })}
             </>
           );
         })() : (
