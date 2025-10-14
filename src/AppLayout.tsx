@@ -15,11 +15,10 @@ import {
 
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
-import PersonIcon from "@mui/icons-material/Person";
-import TimelineIcon from "@mui/icons-material/Timeline";
-import DescriptionIcon from "@mui/icons-material/Description";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import TimelineIcon from "@mui/icons-material/Timeline";
 import FavoriteIcon from "@mui/icons-material/Favorite";
+import LocationOnIcon from "@mui/icons-material/LocationOn"; // 🆕 NEW for Platser
 
 import { useAppDispatch } from "./store";
 import { fetchIndividuals } from "./features/individualsSlice";
@@ -39,12 +38,14 @@ export default function AppLayout() {
     dispatch(fetchRelationships());
   }, [dispatch]);
 
+  // 🧭 Updated navigation items with Platser
   const navItems = [
     { to: "/", labelKey: "dashboard", icon: <DashboardIcon /> },
     { to: "/tree", labelKey: "tree", icon: <AccountTreeIcon /> },
     { to: "/timeline", labelKey: "timeline", icon: <TimelineIcon /> },
     { to: "/individuals", labelKey: "individuals", icon: <PersonAddIcon /> },
     { to: "/relationships", labelKey: "relationships", icon: <FavoriteIcon /> },
+    { to: "/places", labelKey: "places", icon: <LocationOnIcon /> }, // 🆕 Platser
   ];
 
   return (
@@ -62,9 +63,9 @@ export default function AppLayout() {
       <Drawer
         variant="permanent"
         sx={{
-          width: 240,
+          width: drawerWidth,
           flexShrink: 0,
-          "& .MuiDrawer-paper": { width: 240, boxSizing: "border-box" },
+          "& .MuiDrawer-paper": { width: drawerWidth, boxSizing: "border-box" },
         }}
       >
         <Toolbar />
@@ -78,7 +79,9 @@ export default function AppLayout() {
                   selected={location.pathname === item.to}
                 >
                   <ListItemIcon>{item.icon}</ListItemIcon>
-                  <ListItemText primary={t(item.labelKey)} />
+                  <ListItemText
+                    primary={t(item.labelKey, { defaultValue: item.labelKey })}
+                  />
                 </ListItemButton>
               </ListItem>
             ))}
@@ -91,7 +94,7 @@ export default function AppLayout() {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3
+          p: 3,
         }}
       >
         <Toolbar />

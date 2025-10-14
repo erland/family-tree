@@ -10,6 +10,7 @@ import Tree from "./pages/Tree";
 import Timeline from "./pages/Timeline";
 import IndividualsPage from "./pages/Individuals";
 import RelationshipsPage from "./pages/Relationships";
+import PlacesPage from "./pages/PlacesPage";
 
 import "./i18n";
 
@@ -32,6 +33,7 @@ const router = createHashRouter([
       { index: true, element: <Dashboard /> },
       { path: "tree", element: <Tree /> },
       { path: "timeline", element: <Timeline /> },
+      { path: "places", element: <PlacesPage /> },
       { path: "individuals", element: <IndividualsPage /> },
       { path: "relationships", element: <RelationshipsPage /> },
     ],
