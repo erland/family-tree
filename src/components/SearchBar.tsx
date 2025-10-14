@@ -50,7 +50,20 @@ export default function SearchBar({
   const anchorRef = useRef<HTMLInputElement | null>(null);
 
   const entries: SearchEntry[] = useMemo(() => {
-    const base = individuals.map((i) => ({ ...i }));
+    const base = individuals.map((i) => {
+      const givenName = i.givenName?.trim() ?? "";
+      const familyName = (i.familyName ?? i.birthFamilyName ?? "").trim();
+      const birthFamilyName = (i.birthFamilyName ?? i.familyName ?? "").trim();
+      const fullName = `${givenName} ${familyName}`.trim().toLowerCase();
+      const fullBirthName = `${givenName} ${birthFamilyName}`.trim().toLowerCase();
+      
+      return {
+        ...i,
+        // 👇 Add normalized searchable fields
+        fullBirthName: fullBirthName,
+        fullName: fullName,
+      };
+    });
 
     const spouseExtras: SearchEntry[] = relationships
       .filter((r): r is Relationship & { type: "spouse" } => r.type === "spouse")
@@ -84,9 +97,12 @@ export default function SearchBar({
     () =>
       new Fuse(entries, {
         keys: [
-          "givenName",
-          "familyName",
-          "story",
+          { name: "fullName", weight: 0.6 },
+          { name: "fullBirthName", weight: 0.6 },
+          { name: "givenName", weight: 0.3 },
+          { name: "familyName", weight: 0.3 },
+          { name: "birthFamilyName", weight: 0.3 },
+          { name: "story", weight: 0.1 },
           "dateOfBirth",
           "birthRegion",
           "birthCongregation",
