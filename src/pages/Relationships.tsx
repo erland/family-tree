@@ -10,6 +10,9 @@ import {
   TableHead,
   TableRow,
   Typography,
+  Dialog,
+  DialogActions,
+  DialogTitle,
 } from "@mui/material";
 import { Add, Delete, Edit, FileDownload } from "@mui/icons-material";
 import { useAppDispatch, useAppSelector } from "../store";
@@ -29,6 +32,11 @@ export default function RelationshipsPage() {
   const [filteredIds, setFilteredIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // 🔹 Confirmation dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Relationship | null>(null);
+  const [pendingLabel, setPendingLabel] = useState<string>("");
+
   useEffect(() => {
     dispatch(fetchRelationships());
   }, [dispatch]);
@@ -36,13 +44,8 @@ export default function RelationshipsPage() {
   const resolveName = (id: string) => fullName(individuals.find((i) => i.id === id));
 
   const visibleRelationships = useMemo(() => {
-    // 🟢 If no search query, show all relationships
     if (searchQuery.length === 0) return relationships;
-  
-    // 🟡 If there is a search query but no matches, show none
     if (filteredIds.length === 0) return [];
-  
-    // 🔵 Otherwise, filter relationships where any participant is in filteredIds
     return relationships.filter((r) => {
       if (r.type === "spouse") {
         return (
@@ -52,21 +55,56 @@ export default function RelationshipsPage() {
       }
       if (r.type === "parent-child") {
         return (
-          (r as any).parentIds.some((pid: string) =>
-            filteredIds.includes(pid)
-          ) || filteredIds.includes((r as any).childId)
+          (r as any).parentIds.some((pid: string) => filteredIds.includes(pid)) ||
+          filteredIds.includes((r as any).childId)
         );
       }
       return false;
     });
   }, [relationships, filteredIds, searchQuery]);
-  
+
+  // 🔹 Ask before deleting
+  const askDelete = (r: Relationship) => {
+    let label = "";
+    if (r.type === "spouse") {
+      label = `${resolveName((r as any).person1Id)} & ${resolveName(
+        (r as any).person2Id
+      )}`;
+    } else if (r.type === "parent-child") {
+      label = `${(r as any).parentIds.map(resolveName).join(" & ")} → ${resolveName(
+        (r as any).childId
+      )}`;
+    } else {
+      label = r.type;
+    }
+    setPendingDelete(r);
+    setPendingLabel(label);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (pendingDelete) dispatch(deleteRelationship(pendingDelete.id));
+    setConfirmOpen(false);
+    setPendingDelete(null);
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmOpen(false);
+    setPendingDelete(null);
+  };
+
   return (
     <Box p={2} sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Typography variant="h4" gutterBottom>Relationer</Typography>
+      <Typography variant="h4" gutterBottom>
+        Relationer
+      </Typography>
 
       <Box sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center" }}>
-        <SearchBar onResults={setFilteredIds} onQueryChange={setSearchQuery} showDropdown={false} />
+        <SearchBar
+          onResults={setFilteredIds}
+          onQueryChange={setSearchQuery}
+          showDropdown={false}
+        />
         <Button
           startIcon={<Add />}
           variant="contained"
@@ -106,15 +144,27 @@ export default function RelationshipsPage() {
                 <TableCell>{r.type}</TableCell>
                 <TableCell>
                   {r.type === "spouse" &&
-                    `${resolveName((r as any).person1Id)} & ${resolveName((r as any).person2Id)} — ${r.weddingDate || ""}`}
+                    `${resolveName((r as any).person1Id)} & ${resolveName(
+                      (r as any).person2Id
+                    )} — ${r.weddingDate || ""}`}
                   {r.type === "parent-child" &&
-                    `${(r as any).parentIds.map(resolveName).join(" & ")} → ${resolveName((r as any).childId)}`}
+                    `${(r as any).parentIds
+                      .map(resolveName)
+                      .join(" & ")} → ${resolveName((r as any).childId)}`}
                 </TableCell>
                 <TableCell>
-                  <IconButton onClick={() => { setEditingRel(r); setEditorOpen(true); }}>
+                  <IconButton
+                    onClick={() => {
+                      setEditingRel(r);
+                      setEditorOpen(true);
+                    }}
+                  >
                     <Edit />
                   </IconButton>
-                  <IconButton onClick={() => dispatch(deleteRelationship(r.id))}>
+                  <IconButton
+                    onClick={() => askDelete(r)}
+                    color="error"
+                  >
                     <Delete />
                   </IconButton>
                 </TableCell>
@@ -129,6 +179,23 @@ export default function RelationshipsPage() {
         onClose={() => setEditorOpen(false)}
         relationship={editingRel}
       />
+
+      {/* 🔹 Delete confirmation dialog */}
+      <Dialog open={confirmOpen} onClose={handleCancelDelete}>
+        <DialogTitle>
+          {`Är du säker på att du vill ta bort relationen: ${pendingLabel}?`}
+        </DialogTitle>
+        <DialogActions>
+          <Button onClick={handleCancelDelete}>Avbryt</Button>
+          <Button
+            onClick={handleConfirmDelete}
+            color="error"
+            variant="contained"
+          >
+            Ta bort
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

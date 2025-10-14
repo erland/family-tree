@@ -9,6 +9,9 @@ import {
   TableHead,
   TableRow,
   IconButton,
+  Dialog,
+  DialogActions,
+  DialogTitle,
 } from "@mui/material";
 import { Add, Edit, Delete } from "@mui/icons-material";
 import {
@@ -26,7 +29,7 @@ import { Individual } from "../types/individual";
 import SearchBar from "../components/SearchBar";
 import IndividualDetails from "../components/IndividualDetails";
 import IndividualFormDialog from "../components/IndividualFormDialog";
-import { fullName } from "../utils/nameUtils"; // at top
+import { fullName } from "../utils/nameUtils";
 import { dialog } from "@tauri-apps/api/dialog";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import { exportAllIndividualsPdf } from "../utils/exportAllIndividualsPdf";
@@ -38,16 +41,20 @@ export default function IndividualsPage() {
   const [filteredIds, setFilteredIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const visibleIndividuals = 
+  const visibleIndividuals =
     searchQuery.length === 0
-    ? individuals                         // no query → show all
-    : filteredIds.length > 0
-    ? individuals.filter((i) => filteredIds.includes(i.id)) // matches found
-    : [];                                   // query but no matches → show none
+      ? individuals
+      : filteredIds.length > 0
+      ? individuals.filter((i) => filteredIds.includes(i.id))
+      : [];
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Individual | null>(null);
   const [selected, setSelected] = useState<Individual | null>(null);
+
+  // 🔹 Confirmation dialog state
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Individual | null>(null);
 
   useEffect(() => {
     dispatch(fetchIndividuals());
@@ -63,8 +70,23 @@ export default function IndividualsPage() {
     setEditing(null);
   };
 
-  const handleDelete = (id: string) => {
-    dispatch(deleteIndividual(id));
+  // 🔹 Ask before deleting
+  const askDelete = (ind: Individual) => {
+    setPendingDelete(ind);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (pendingDelete) {
+      dispatch(deleteIndividual(pendingDelete.id));
+    }
+    setConfirmOpen(false);
+    setPendingDelete(null);
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmOpen(false);
+    setPendingDelete(null);
   };
 
   return (
@@ -78,18 +100,16 @@ export default function IndividualsPage() {
     >
       {/* Toolbar */}
       <Box sx={{ p: 2, display: "flex", gap: 1, alignItems: "center" }}>
-        <SearchBar onResults={setFilteredIds} onQueryChange={setSearchQuery} showDropdown={false} />
+        <SearchBar
+          onResults={setFilteredIds}
+          onQueryChange={setSearchQuery}
+          showDropdown={false}
+        />
 
-        {/* Add new person */}
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => handleOpen()}
-        >
+        <Button variant="contained" startIcon={<Add />} onClick={() => handleOpen()}>
           Ny
         </Button>
 
-        {/* Export Excel */}
         <Tooltip title="Exportera Excel">
           <IconButton
             onClick={async () => {
@@ -103,7 +123,6 @@ export default function IndividualsPage() {
           </IconButton>
         </Tooltip>
 
-        {/* Import Excel */}
         <Tooltip title="Importera Excel">
           <IconButton
             onClick={async () => {
@@ -123,14 +142,12 @@ export default function IndividualsPage() {
           </IconButton>
         </Tooltip>
 
-        {/* Export GEDCOM */}
         <Tooltip title="Exportera GEDCOM">
           <IconButton onClick={() => window.genealogyAPI.exportGedcom()}>
             <FilePresent />
           </IconButton>
         </Tooltip>
 
-        {/* Export PDF (all individuals) */}
         <Tooltip title="Exportera alla till PDF">
           <IconButton
             onClick={() => exportAllIndividualsPdf(individuals, relationships)}
@@ -140,9 +157,8 @@ export default function IndividualsPage() {
         </Tooltip>
       </Box>
 
-      {/* Content area: table + overlay details */}
+      {/* Content area */}
       <Box sx={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        {/* Table */}
         <Box sx={{ height: "100%", overflow: "auto", p: 2 }}>
           <Table>
             <TableHead>
@@ -176,7 +192,7 @@ export default function IndividualsPage() {
                     <IconButton
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete(ind.id);
+                        askDelete(ind);
                       }}
                     >
                       <Delete />
@@ -188,7 +204,7 @@ export default function IndividualsPage() {
           </Table>
         </Box>
 
-        {/* Overlay Details */}
+        {/* Right-side Details panel */}
         {selected && (
           <Box
             sx={{
@@ -219,6 +235,25 @@ export default function IndividualsPage() {
         onClose={handleClose}
         individual={editing}
       />
+
+      {/* 🔹 Delete confirmation dialog */}
+      <Dialog open={confirmOpen} onClose={handleCancelDelete}>
+        <DialogTitle>
+          {pendingDelete
+            ? `Är du säker på att du vill ta bort ${fullName(pendingDelete)}?`
+            : ""}
+        </DialogTitle>
+        <DialogActions>
+          <Button onClick={handleCancelDelete}>Avbryt</Button>
+          <Button
+            onClick={handleConfirmDelete}
+            color="error"
+            variant="contained"
+          >
+            Ta bort
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
