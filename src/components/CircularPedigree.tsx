@@ -1,5 +1,5 @@
 // src/components/CircularPedigree.tsx
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useAppSelector } from "../store";
 import { buildAncestorMatrix } from "../utils/ancestors";
 import { Individual } from "../types/individual";
@@ -7,18 +7,14 @@ import { Relationship } from "../types/relationship";
 
 type Props = {
   rootId: string;
-  generations: number; // number of outer generations (e.g. 4 -> center + 4 rings)
+  generations: number;
 };
 
-const SIZE = 900;            // viewBox size
-const MARGIN = 24;           // outer padding
-const CENTER_R = 48;         // proband circle radius
-const BASE_RING_GAP = 140;   // base thickness per ring before weighting
-
-// ✅ First N gens (closest to center) are TANGENT; outer gens are RADIAL
+const SIZE = 900;
+const MARGIN = 24;
+const CENTER_R = 48;
+const BASE_RING_GAP = 140;
 const INNER_TANGENT_GENERATIONS = 4;
-
-// ✅ Outermost ring thickness relative to innermost (e.g., 1.5 = 150%)
 const OUTER_THICKNESS_FACTOR = 2;
 
 function polar(cx: number, cy: number, r: number, a: number) {
@@ -55,7 +51,7 @@ function nameParts(p?: Individual | null): { given: string; family: string } {
 }
 
 function fontSizeForGen(g: number) {
-  const fs = 16 - g; // slightly smaller further out
+  const fs = 16 - g;
   return Math.max(10, Math.min(14, fs));
 }
 
@@ -67,16 +63,44 @@ export default function CircularPedigree({ rootId, generations }: Props) {
     () => buildAncestorMatrix(rootId, individuals, relationships, generations),
     [rootId, individuals, relationships, generations]
   );
-
   const byId = useMemo(() => new Map(individuals.map((i) => [i.id, i])), [individuals]);
 
+  // ───────────────────────────────────────────
+  // Detect duplicates (matrix only)
+  // ───────────────────────────────────────────
+  const duplicateIds = useMemo(() => {
+    const allIds: string[] = [];
+    for (const row of matrix) for (const id of row) if (id) allIds.push(id);
+    const counts = new Map<string, number>();
+    for (const id of allIds) counts.set(id, (counts.get(id) || 0) + 1);
+    const dups = new Set<string>();
+    counts.forEach((cnt, id) => cnt > 1 && dups.add(id));
+    return dups;
+  }, [matrix]);
+
+  // ───────────────────────────────────────────
+  // Highlight state for click-link behaviour
+  // ───────────────────────────────────────────
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!highlightedId) return;
+    const t = setTimeout(() => setHighlightedId(null), 1500);
+    return () => clearTimeout(t);
+  }, [highlightedId]);
+
+  const handleClickDuplicate = (id: string) => {
+    setHighlightedId(id);
+  };
+
+  // ───────────────────────────────────────────
+  // Geometry setup
+  // ───────────────────────────────────────────
   const cx = SIZE / 2;
   const cy = SIZE / 2;
   const maxRadius = Math.min(cx, cy) - MARGIN;
 
-  // ---- Ring radii with weighted thickness (outer rings wider) ----
-  // weights grow linearly from 1 (innermost) to OUTER_THICKNESS_FACTOR (outermost)
-  const weights: number[] = [0]; // index 0 unused for thickness
+  const weights: number[] = [0];
   for (let g = 1; g <= generations; g++) {
     const t =
       generations > 1
@@ -86,8 +110,6 @@ export default function CircularPedigree({ rootId, generations }: Props) {
   }
   const sumWeights = weights.slice(1).reduce((a, b) => a + b, 0);
   const desiredTotalThickness = BASE_RING_GAP * sumWeights;
-
-  // scale uniformly if the total would exceed canvas
   const available = Math.max(0, maxRadius - CENTER_R);
   const scale =
     desiredTotalThickness > 0 ? Math.min(1, available / desiredTotalThickness) : 1;
@@ -101,8 +123,13 @@ export default function CircularPedigree({ rootId, generations }: Props) {
   for (let g = 1; g <= generations; g++) {
     radii[g] = radii[g - 1] + thicknesses[g];
   }
-  // ---------------------------------------------------------------
 
+  const isCenterDup = duplicateIds.has(rootId);
+  const centerHighlighted = highlightedId === rootId;
+
+  // ───────────────────────────────────────────
+  // Render
+  // ───────────────────────────────────────────
   return (
     <svg
       viewBox={`0 0 ${SIZE} ${SIZE}`}
@@ -118,10 +145,20 @@ export default function CircularPedigree({ rootId, generations }: Props) {
       ))}
 
       {/* Center person */}
-      <circle cx={cx} cy={cy} r={radii[0]} fill="#fafafa" stroke="#bdbdbd" />
+      <circle
+        cx={cx}
+        cy={cy}
+        r={radii[0]}
+        fill="#fafafa"
+        stroke={centerHighlighted ? "red" : "#bdbdbd"}
+        strokeWidth={centerHighlighted ? 3 : 1}
+        onClick={isCenterDup ? () => handleClickDuplicate(rootId) : undefined}
+        style={{ cursor: isCenterDup ? "pointer" : "default" }}
+      />
       {(function () {
         const p = byId.get(rootId);
         const { given, family } = nameParts(p);
+        const isHighlighted = centerHighlighted;
         return (
           <text
             x={cx}
@@ -130,9 +167,11 @@ export default function CircularPedigree({ rootId, generations }: Props) {
             dominantBaseline="central"
             fontSize={14}
             style={{ pointerEvents: "none" }}
+            fill={isHighlighted ? "red" : undefined}
           >
             <tspan x={cx} dy="-0.2em" fontWeight={500}>
               {given}
+              {isCenterDup && " 🔁"}
             </tspan>
             <tspan x={cx} dy="1.1em" fontWeight={700}>
               {family}
@@ -143,13 +182,13 @@ export default function CircularPedigree({ rootId, generations }: Props) {
 
       {/* Generation rings */}
       {matrix.slice(1).map((row, genIdx) => {
-        const g = genIdx + 1; // 1..generations
+        const g = genIdx + 1;
         const inner = radii[g - 1];
         const outer = radii[g];
         const thickness = outer - inner;
         const slots = row.length;
         const step = (Math.PI * 2) / Math.max(1, slots);
-        const startOffset = -Math.PI / 2; // 12 o'clock
+        const startOffset = -Math.PI / 2;
         const fs = fontSizeForGen(g);
 
         return (
@@ -159,16 +198,13 @@ export default function CircularPedigree({ rootId, generations }: Props) {
               const end = start + step;
               const mid = start + step / 2;
 
-              // Label anchor point
               const labelR =
                 g <= INNER_TANGENT_GENERATIONS
-                  ? inner + thickness * 0.56 // tangent: a bit outward
-                  : inner + thickness * 0.50; // radial: center of ring
+                  ? inner + thickness * 0.56
+                  : inner + thickness * 0.5;
               const { x: lx, y: ly } = polar(cx, cy, labelR, mid);
 
               const angleDeg = (mid * 180) / Math.PI;
-
-              // ✅ Compute final rotation first, then ensure upright
               let rotate = g <= INNER_TANGENT_GENERATIONS ? angleDeg + 90 : angleDeg;
               const normRot = ((rotate % 360) + 360) % 360;
               if (normRot > 90 && normRot < 270) rotate += 180;
@@ -177,21 +213,26 @@ export default function CircularPedigree({ rootId, generations }: Props) {
               const { given, family } = nameParts(person);
               const hasLabel = Boolean(given || family);
 
-              // Divider only across this ring (inner -> outer)
               const ix = cx + inner * Math.cos(start);
               const iy = cy + inner * Math.sin(start);
               const ox = cx + outer * Math.cos(start);
               const oy = cy + outer * Math.sin(start);
 
+              const isDup = Boolean(id && duplicateIds.has(id));
+              const isHighlighted = id && highlightedId === id;
+
               return (
-                <g key={`slot-${g}-${i}`}>
-                  {/* wedge */}
+                <g
+                  key={`slot-${g}-${i}`}
+                  onClick={isDup && id ? () => handleClickDuplicate(id) : undefined}
+                  style={{ cursor: isDup ? "pointer" : "default" }}
+                >
                   <path
                     d={annularSectorPath(cx, cy, inner, outer, start, end)}
                     fill={id ? "#fcfcff" : "#fff"}
-                    stroke="#cfd8dc"
+                    stroke={isHighlighted ? "red" : "#cfd8dc"}
+                    strokeWidth={isHighlighted ? 3 : 1}
                   />
-                  {/* radial divider (limited to this generation) */}
                   <line
                     x1={ix}
                     y1={iy}
@@ -200,7 +241,6 @@ export default function CircularPedigree({ rootId, generations }: Props) {
                     stroke="#eeeeee"
                     style={{ pointerEvents: "none" }}
                   />
-                  {/* label */}
                   {hasLabel && (
                     <text
                       x={lx}
@@ -210,9 +250,11 @@ export default function CircularPedigree({ rootId, generations }: Props) {
                       transform={`rotate(${rotate}, ${lx}, ${ly})`}
                       fontSize={fs}
                       style={{ pointerEvents: "none" }}
+                      fill={isHighlighted ? "red" : undefined}
                     >
                       <tspan x={lx} dy="-0.2em" fontWeight={500}>
                         {given}
+                        {isDup && " 🔁"}
                       </tspan>
                       <tspan x={lx} dy="1.1em" fontWeight={700}>
                         {family}
