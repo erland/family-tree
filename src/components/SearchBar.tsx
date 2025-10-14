@@ -34,10 +34,12 @@ type SearchEntry = {
 export default function SearchBar({
   onSelect,
   onResults,
+  onQueryChange,
   showDropdown = true,
 }: {
   onSelect?: (id: string) => void;
   onResults?: (ids: string[]) => void;
+  onQueryChange?: (value: string) => void;
   showDropdown?: boolean;
 }) {
   const individuals = useAppSelector((s) => s.individuals.items);
@@ -130,7 +132,11 @@ export default function SearchBar({
         size="small"
         label="Sök person eller plats"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => {
+          const val = e.target.value;
+          setQuery(val);
+          onQueryChange?.(val);
+        }}
         inputRef={anchorRef}
       />
       {showDropdown && results.length > 0 && rect && (

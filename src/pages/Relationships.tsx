@@ -27,6 +27,7 @@ export default function RelationshipsPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingRel, setEditingRel] = useState<Relationship | undefined>();
   const [filteredIds, setFilteredIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     dispatch(fetchRelationships());
@@ -35,8 +36,13 @@ export default function RelationshipsPage() {
   const resolveName = (id: string) => fullName(individuals.find((i) => i.id === id));
 
   const visibleRelationships = useMemo(() => {
-    if (!filteredIds.length) return relationships;
-
+    // 🟢 If no search query, show all relationships
+    if (searchQuery.length === 0) return relationships;
+  
+    // 🟡 If there is a search query but no matches, show none
+    if (filteredIds.length === 0) return [];
+  
+    // 🔵 Otherwise, filter relationships where any participant is in filteredIds
     return relationships.filter((r) => {
       if (r.type === "spouse") {
         return (
@@ -46,20 +52,21 @@ export default function RelationshipsPage() {
       }
       if (r.type === "parent-child") {
         return (
-          (r as any).parentIds.some((pid: string) => filteredIds.includes(pid)) ||
-          filteredIds.includes((r as any).childId)
+          (r as any).parentIds.some((pid: string) =>
+            filteredIds.includes(pid)
+          ) || filteredIds.includes((r as any).childId)
         );
       }
       return false;
     });
-  }, [relationships, filteredIds]);
-
+  }, [relationships, filteredIds, searchQuery]);
+  
   return (
     <Box p={2} sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <Typography variant="h4" gutterBottom>Relationer</Typography>
 
       <Box sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center" }}>
-        <SearchBar onResults={setFilteredIds} showDropdown={false} />
+        <SearchBar onResults={setFilteredIds} onQueryChange={setSearchQuery} showDropdown={false} />
         <Button
           startIcon={<Add />}
           variant="contained"

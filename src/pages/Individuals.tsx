@@ -36,10 +36,14 @@ export default function IndividualsPage() {
   const individuals = useAppSelector((s) => s.individuals.items);
   const relationships = useAppSelector((s) => s.relationships.items);
   const [filteredIds, setFilteredIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const visibleIndividuals = filteredIds.length
-    ? individuals.filter((i) => filteredIds.includes(i.id))
-    : individuals;
+  const visibleIndividuals = 
+    searchQuery.length === 0
+    ? individuals                         // no query → show all
+    : filteredIds.length > 0
+    ? individuals.filter((i) => filteredIds.includes(i.id)) // matches found
+    : [];                                   // query but no matches → show none
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Individual | null>(null);
@@ -74,7 +78,7 @@ export default function IndividualsPage() {
     >
       {/* Toolbar */}
       <Box sx={{ p: 2, display: "flex", gap: 1, alignItems: "center" }}>
-        <SearchBar onResults={setFilteredIds} showDropdown={false} />
+        <SearchBar onResults={setFilteredIds} onQueryChange={setSearchQuery} showDropdown={false} />
 
         {/* Add new person */}
         <Button
