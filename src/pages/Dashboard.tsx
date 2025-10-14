@@ -1,12 +1,39 @@
 import React from "react";
-import { Box, Button, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Typography,
+  Paper,
+  Grid,
+} from "@mui/material";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import DescriptionIcon from "@mui/icons-material/Description";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import PeopleIcon from "@mui/icons-material/People";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import FamilyRestroomIcon from "@mui/icons-material/FamilyRestroom";
 import { useTranslation } from "react-i18next";
+import { useAppSelector } from "../store";
+import { Relationship } from "../types/relationship";
 
 export default function Dashboard() {
   const { t } = useTranslation();
+  const individuals = useAppSelector((s) => s.individuals.items);
+  const relationships = useAppSelector((s) => s.relationships.items) as Relationship[];
+
+  // 🧮 Compute summary counts
+  const individualCount = individuals.length;
+  const marriageCount = relationships.filter((r) => r.type === "spouse").length;
+
+  const familySet = new Set<string>();
+  for (const r of relationships) {
+    if (r.type === "parent-child") {
+      const rel = r as any;
+      const key = [...(rel.parentIds || [])].sort().join(",") + "->" + rel.childId;
+      familySet.add(key);
+    }
+  }
+  const familyCount = familySet.size;
 
   const handleImportExcel = async () => {
     const [filePath] = await window.electronAPI.showOpenDialog({
@@ -41,10 +68,74 @@ export default function Dashboard() {
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <Typography variant="h6">{t("dashboard")}</Typography>
 
-      <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+      {/* ─────────────── Summary cards ─────────────── */}
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={4}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <PeopleIcon color="primary" sx={{ fontSize: 36 }} />
+            <Box>
+              <Typography variant="h6">Individer</Typography>
+              <Typography variant="h5" fontWeight={600}>
+                {individualCount}
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} sm={4}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <FavoriteIcon color="error" sx={{ fontSize: 36 }} />
+            <Box>
+              <Typography variant="h6">Äktenskap</Typography>
+              <Typography variant="h5" fontWeight={600}>
+                {marriageCount}
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} sm={4}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 2,
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
+            <FamilyRestroomIcon color="success" sx={{ fontSize: 36 }} />
+            <Box>
+              <Typography variant="h6">Familjer</Typography>
+              <Typography variant="h5" fontWeight={600}>
+                {familyCount}
+              </Typography>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* ─────────────── Import/Export buttons ─────────────── */}
+      <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mt: 2 }}>
         <Button
           variant="contained"
           startIcon={<UploadFileIcon />}
@@ -76,6 +167,13 @@ export default function Dashboard() {
         >
           Exportera GEDCOM
         </Button>
+      </Box>
+
+      <Box sx={{ mt: 3 }}>
+        <Typography variant="body2" color="text.secondary">
+          Databasen innehåller {individualCount} individer, {marriageCount} äktenskap och{" "}
+          {familyCount} familjer.
+        </Typography>
       </Box>
     </Box>
   );
