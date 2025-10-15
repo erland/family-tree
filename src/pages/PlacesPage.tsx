@@ -48,7 +48,6 @@ export default function PlacesPage() {
       }
     }
 
-    // Sort individuals chronologically
     for (const info of map.values()) {
       info.individuals.sort((a, b) =>
         (a.date || "").localeCompare(b.date || "")
@@ -76,51 +75,73 @@ export default function PlacesPage() {
 
   return (
     <Box sx={{ display: "flex", height: "100%", gap: 2, p: 2 }}>
-      {/* Left: place list */}
-      <Box sx={{ width: 300, flexShrink: 0, display: "flex", flexDirection: "column" }}>
+      {/* Left column: search + scrollable places list */}
+      <Box
+        sx={{
+          width: 300,
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          borderRight: "1px solid #ddd",
+        }}
+      >
         <TextField
           placeholder="Sök plats..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           size="small"
+          fullWidth
           sx={{ mb: 1 }}
         />
         <Divider />
-        <List dense sx={{ overflowY: "auto", flex: 1 }}>
-          {filtered.map((p) => (
-            <ListItemButton
-              key={p.name}
-              selected={selectedPlace?.name === p.name}
-              onClick={() => setSelectedPlace(p)}
-            >
-              <ListItemText
-                primary={p.name}
-                secondary={`${p.individuals.length} personer`}
-              />
-            </ListItemButton>
-          ))}
-        </List>
+
+        {/* Scrollable list (fills window height below search) */}
+        <Box
+          sx={{
+            mt: 1,
+            overflowY: "auto",
+            // dynamically fills the remaining vertical space below the search bar
+            maxHeight: "calc(100vh - 200px)", // adjust offset if you want slightly more/less
+            pr: 1,
+          }}
+        >
+          <List dense>
+            {filtered.map((p) => (
+              <ListItemButton
+                key={p.name}
+                selected={selectedPlace?.name === p.name}
+                onClick={() => setSelectedPlace(p)}
+              >
+                <ListItemText
+                  primary={p.name}
+                  secondary={`${p.individuals.length} personer`}
+                />
+              </ListItemButton>
+            ))}
+          </List>
+        </Box>
       </Box>
 
-      <Divider orientation="vertical" flexItem />
-
-      {/* Right: selected place details */}
-      <Box sx={{ flex: 1, overflowY: "auto", p: 1 }}>
+      {/* Right column: events */}
+      <Box sx={{ flex: 1, overflow: "hidden", p: 1 }}>
         {selectedPlace ? (() => {
           const baseName = selectedPlace.name;
           const isNumbered = /\d+$/.test(baseName);
 
-          // If "Plats" (without number) → include "Plats 1", "Plats 2", etc.
           const relatedPlaces =
             !isNumbered
-              ? places.filter(p => p.name === baseName || p.name.startsWith(baseName + " "))
+              ? places.filter(
+                  (p) => p.name === baseName || p.name.startsWith(baseName + " ")
+                )
               : [selectedPlace];
 
-          // Merge all individuals from related places
-          const combinedIndividuals = relatedPlaces.flatMap(p => p.individuals);
+          const combinedIndividuals = relatedPlaces.flatMap(
+            (p) => p.individuals
+          );
 
-          // Sort by date
-          combinedIndividuals.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+          combinedIndividuals.sort((a, b) =>
+            (a.date || "").localeCompare(b.date || "")
+          );
 
           return (
             <>
@@ -128,7 +149,10 @@ export default function PlacesPage() {
                 {baseName}
               </Typography>
               {combinedIndividuals.map(({ ind, event, date }, idx) => {
-                const age = event === "Födelse" ? undefined : calculateAgeAtEvent(ind.dateOfBirth, date);
+                const age =
+                  event === "Födelse"
+                    ? undefined
+                    : calculateAgeAtEvent(ind.dateOfBirth, date);
                 return (
                   <Typography key={idx} sx={{ mb: 0.5 }}>
                     {date ? `${date}: ` : ""}
