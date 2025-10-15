@@ -1,4 +1,3 @@
-// src/pages/Timeline.tsx
 import React, { useMemo, useState } from "react";
 import {
   Box,
@@ -16,6 +15,7 @@ import { Individual } from "../types/individual";
 import SearchBar from "../components/SearchBar";
 import { buildTimelineEvents, TimelineEvent } from "../utils/timelineUtils";
 import { fullName } from "../utils/nameUtils";
+import { formatLocation } from "../utils/location"; // ✅ NEW import
 
 export default function Timeline() {
   const individuals = useAppSelector((s) => s.individuals.items);
@@ -60,40 +60,35 @@ export default function Timeline() {
                 <TableCell sx={{ whiteSpace: "pre-line" }}>
                   {(() => {
                     const loc = ev.location
-                      ? [ev.location.city, ev.location.congregation, ev.location.region]
-                          .filter(Boolean)
-                          .join(", ")
-                      : null;
+                      ? formatLocation({
+                          city: ev.location.city,
+                          congregation: ev.location.congregation,
+                          region: ev.location.region,
+                        })
+                      : "";
 
                     return (
                       <>
                         {/* Location (if exists) */}
-                        {loc && <>{loc}<br /></>}
-
-                        {/* First related individual */}
-                        {ev.relatedIndividuals && ev.relatedIndividuals.length > 0 && (
-                          <Link
-                            key={ev.relatedIndividuals[0].id}
-                            component="button"
-                            onClick={() => setSelected(ev.relatedIndividuals![0])}
-                          >
-                            {fullName(ev.relatedIndividuals[0])}
-                          </Link>
+                        {loc && (
+                          <>
+                            {loc}
+                            <br />
+                          </>
                         )}
 
-                        {/* Remaining related individuals */}
-                        {ev.relatedIndividuals &&
-                          ev.relatedIndividuals.slice(1).map((relInd) => (
-                            <React.Fragment key={relInd.id}>
-                              <br />
-                              <Link
-                                component="button"
-                                onClick={() => setSelected(relInd)}
-                              >
-                                {fullName(relInd)}
-                              </Link>
-                            </React.Fragment>
-                          ))}
+                        {/* Related individuals */}
+                        {ev.relatedIndividuals?.map((relInd, i) => (
+                          <React.Fragment key={relInd.id}>
+                            {i > 0 && <br />}
+                            <Link
+                              component="button"
+                              onClick={() => setSelected(relInd)}
+                            >
+                              {fullName(relInd)}
+                            </Link>
+                          </React.Fragment>
+                        ))}
                       </>
                     );
                   })()}
@@ -116,16 +111,16 @@ export default function Timeline() {
 
       {selected ? (
         <>
-          <Typography variant="h6">
-            {fullName(selected)}
-          </Typography>
+          <Typography variant="h6">{fullName(selected)}</Typography>
           {renderEvents("Före födsel", beforeBirth)}
           {renderEvents("Under livet", lifeEvents, true)} {/* 👈 only here */}
           {renderEvents("Efter döden", afterDeath)}
           {renderEvents("Odaterade händelser", undated, false, false)}
         </>
       ) : (
-        <Typography variant="body1">Välj en individ för att visa tidslinjen.</Typography>
+        <Typography variant="body1">
+          Välj en individ för att visa tidslinjen.
+        </Typography>
       )}
     </Box>
   );

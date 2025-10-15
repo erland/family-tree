@@ -1,4 +1,3 @@
-// src/components/IndividualDetails.tsx
 import {
   Box,
   IconButton,
@@ -23,6 +22,7 @@ import {
   groupChildrenByOtherParent,
 } from "../utils/peopleSelectors";
 import { getAllLocationEvents } from "../utils/timelineUtils";
+import { formatLocation } from "../utils/location"; // ✅ NEW import
 
 import AddChildDialog from "./AddChildDialog";
 import AddParentDialog from "./AddParentDialog";
@@ -57,7 +57,7 @@ export default function IndividualDetails({ individualId, onClose, onEdit }: Pro
     individual.deathCity ||
     individual.deathCongregation;
 
-  // Centralized selectors (no ad-hoc filtering here)
+  // Centralized selectors
   const parents = getParentsOf(individual.id, relationships, individuals);
   const spouses = getSpousesOf(individual.id, relationships, individuals);
   const childrenByOtherParent = groupChildrenByOtherParent(
@@ -65,7 +65,6 @@ export default function IndividualDetails({ individualId, onClose, onEdit }: Pro
     relationships,
     individuals
   );
-  console.log(spouses);
 
   return (
     <Box sx={{ height: "100%", display: "flex", flexDirection: "column", gap: 1 }}>
@@ -111,6 +110,19 @@ export default function IndividualDetails({ individualId, onClose, onEdit }: Pro
           <Typography variant="body2" fontWeight={700}>
             Född: {individual.dateOfBirth ?? "-"}
           </Typography>
+          {formatLocation({
+            city: individual.birthCity,
+            congregation: individual.birthCongregation,
+            region: individual.birthRegion,
+          }) && (
+            <Typography variant="body2" color="text.secondary">
+              {formatLocation({
+                city: individual.birthCity,
+                congregation: individual.birthCongregation,
+                region: individual.birthRegion,
+              })}
+            </Typography>
+          )}
         </Box>
       )}
 
@@ -119,6 +131,19 @@ export default function IndividualDetails({ individualId, onClose, onEdit }: Pro
           <Typography variant="body2" fontWeight={700}>
             Död: {individual.dateOfDeath ?? "-"}
           </Typography>
+          {formatLocation({
+            city: individual.deathCity,
+            congregation: individual.deathCongregation,
+            region: individual.deathRegion,
+          }) && (
+            <Typography variant="body2" color="text.secondary">
+              {formatLocation({
+                city: individual.deathCity,
+                congregation: individual.deathCongregation,
+                region: individual.deathRegion,
+              })}
+            </Typography>
+          )}
         </Box>
       )}
 
@@ -161,7 +186,11 @@ export default function IndividualDetails({ individualId, onClose, onEdit }: Pro
               <ListItem
                 key={relationship.id ?? idx}
                 secondaryAction={
-                  <IconButton edge="end" onClick={() => setEditingRel(relationship)} aria-label="Redigera relation">
+                  <IconButton
+                    edge="end"
+                    onClick={() => setEditingRel(relationship)}
+                    aria-label="Redigera relation"
+                  >
                     <Edit fontSize="small" />
                   </IconButton>
                 }
@@ -214,6 +243,7 @@ export default function IndividualDetails({ individualId, onClose, onEdit }: Pro
         </Box>
       </Box>
 
+      {/* Locations / moves */}
       {(() => {
         const moves = getAllLocationEvents(individual);
         if (moves.length === 0) return null;
@@ -237,7 +267,11 @@ export default function IndividualDetails({ individualId, onClose, onEdit }: Pro
       })()}
 
       {/* Dialogs */}
-      <AddChildDialog open={openAddChild} onClose={() => setOpenAddChild(false)} parentId={individual.id} />
+      <AddChildDialog
+        open={openAddChild}
+        onClose={() => setOpenAddChild(false)}
+        parentId={individual.id}
+      />
 
       <AddParentDialog
         open={openAddParent}

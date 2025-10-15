@@ -1,12 +1,12 @@
-// src/utils/exportPersonPdf.ts
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Individual } from "../types/individual";
 import { Relationship } from "../types/relationship";
 import { fullName } from "./nameUtils";
-import { buildTimelineEvents, TimelineEvent } from "./timelineUtils";
+import { buildTimelineEvents } from "./timelineUtils";
 import { calculateAgeAtEvent } from "./dateUtils";
 import { getParentsOf, getSpousesOf, groupChildrenByOtherParent } from "./peopleSelectors";
+import { formatLocation } from "./location"; // ✅ NEW import
 
 /**
  * Render one individual onto a jsPDF instance (on the current page).
@@ -21,28 +21,55 @@ export function renderIndividualPage(
 
   // === Header ===
   doc.setFontSize(18);
-  doc.text(`${fullName(individual)} ${individual.familyName && individual.birthFamilyName && individual.familyName!=individual.birthFamilyName?" (ursprungligen "+individual.birthFamilyName + ")": ""}`, 14, 20);
+  doc.text(
+    `${fullName(individual)} ${
+      individual.familyName &&
+      individual.birthFamilyName &&
+      individual.familyName !== individual.birthFamilyName
+        ? "(ursprungligen " + individual.birthFamilyName + ")"
+        : ""
+    }`,
+    14,
+    20
+  );
 
   doc.setFontSize(12);
+
+  // 🧩 Birth info with formatted location
+  const birthLoc = formatLocation({
+    city: individual.birthCity,
+    congregation: individual.birthCongregation,
+    region: individual.birthRegion,
+  });
   doc.text(
-    `Född: ${individual.dateOfBirth || "-"} ${[individual.birthCity, individual.birthCongregation, individual.birthRegion].filter(Boolean).join(", ")}`,
+    `Född: ${individual.dateOfBirth || "-"}${birthLoc ? " " + birthLoc : ""}`,
     14,
     30
   );
+
+  // 🪦 Death info with formatted location
   if (individual.dateOfDeath) {
+    const deathLoc = formatLocation({
+      city: individual.deathCity,
+      congregation: individual.deathCongregation,
+      region: individual.deathRegion,
+    });
     doc.text(
-      `Död: ${individual.dateOfDeath} ${[individual.deathCity, individual.deathCongregation, individual.deathRegion].filter(Boolean).join(", ")}`,
+      `Död: ${individual.dateOfDeath}${deathLoc ? " " + deathLoc : ""}`,
       14,
       38
     );
-    doc.text(`Ålder: ${calculateAgeAtEvent(individual.dateOfBirth, individual.dateOfDeath)}`, 14, 46);
+    doc.text(
+      `Ålder: ${calculateAgeAtEvent(individual.dateOfBirth, individual.dateOfDeath)}`,
+      14,
+      46
+    );
   }
 
   let cursorY = 55;
 
   // === Parents ===
   const parents = getParentsOf(individual.id, relationships, individuals);
-
   if (parents.length > 0) {
     autoTable(doc, {
       startY: cursorY,
@@ -59,7 +86,6 @@ export function renderIndividualPage(
 
   // === Spouses ===
   const spouses = getSpousesOf(individual.id, relationships, individuals);
-
   if (spouses.length > 0) {
     autoTable(doc, {
       startY: cursorY,
@@ -83,8 +109,9 @@ export function renderIndividualPage(
   const flatChildren = grouped.flatMap(({ partner, children }) =>
     children.map((child) => ({ child, otherParent: partner }))
   );
+
   if (flatChildren.length > 0) {
-      autoTable(doc, {
+    autoTable(doc, {
       startY: cursorY,
       head: [["Barn", "Född", "Död", "Ålder", "Andra föräldern"]],
       body: flatChildren.map(({ child, otherParent }) =>
@@ -104,7 +131,6 @@ export function renderIndividualPage(
 
   // === Timeline ===
   const { lifeEvents } = buildTimelineEvents(individual, relationships, individuals);
-
   if (lifeEvents.length > 0) {
     autoTable(doc, {
       startY: cursorY,
@@ -113,9 +139,11 @@ export function renderIndividualPage(
         ev.date ?? "",
         ev.label,
         ev.ageAtEvent,
-        [ev.location?.city, ev.location?.congregation, ev.location?.region]
-          .filter(Boolean)
-          .join(", "),
+        formatLocation({
+          city: ev.location?.city,
+          congregation: ev.location?.congregation,
+          region: ev.location?.region,
+        }),
       ]),
     });
     cursorY = (doc as any).lastAutoTable.finalY + 10;
@@ -128,7 +156,7 @@ export function renderIndividualPage(
     doc.setFontSize(11);
     doc.text(individual.story, 14, cursorY + 8, { maxWidth: 180 });
   }
-  
+
   return cursorY;
 }
 
