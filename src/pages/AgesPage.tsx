@@ -105,13 +105,26 @@ export default function AgesPage() {
       });
     }
 
-    // Add unknown group
+    // Count unknown males/females separately
+    const unknownMales = individuals.filter(
+      (ind) =>
+        (!ind.dateOfBirth || !ind.dateOfDeath) &&
+        ["m", "male", "man"].includes((ind.gender || "").toLowerCase())
+    ).length;
+
+    const unknownFemales = individuals.filter(
+      (ind) =>
+        (!ind.dateOfBirth || !ind.dateOfDeath) &&
+        ["f", "female", "kvinna"].includes((ind.gender || "").toLowerCase())
+    ).length;
+
+    // Add proper unknown bin
     bins.push({
       range: "Okänd",
       min: -1,
       max: -1,
-      male: 0,
-      female: unknownCount,
+      male: unknownMales,
+      female: unknownFemales,
     });
 
     return { ageData: bins, average: avg, median: med };
