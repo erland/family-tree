@@ -27,10 +27,14 @@ import IndividualFormDialog from "../components/IndividualFormDialog";
 
 export default function AgesPage() {
   const individuals = useAppSelector((s) => s.individuals.items) as Individual[];
-  const [selectedRange, setSelectedRange] = useState<[number, number] | null>(null);
+  const [selectedRange, setSelectedRange] = useState<[number, number] | null>(
+    null
+  );
   const [showUnknown, setShowUnknown] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Individual | null>(null);
-  const [genderFilter, setGenderFilter] = useState<"all" | "male" | "female">("all"); // 🆕
+  const [genderFilter, setGenderFilter] = useState<
+    "all" | "male" | "female"
+  >("all");
 
   // 🧩 Form dialog state (for editing)
   const [formOpen, setFormOpen] = useState(false);
@@ -50,7 +54,6 @@ export default function AgesPage() {
   const { ageData, average, median } = useMemo(() => {
     const males: number[] = [];
     const females: number[] = [];
-    let unknownCount = 0;
 
     for (const ind of individuals) {
       const gender = (ind.gender || "").toLowerCase();
@@ -58,33 +61,37 @@ export default function AgesPage() {
         const ageStr = calculateAgeAtEvent(ind.dateOfBirth, ind.dateOfDeath);
         const num = Number(ageStr?.replace(/[^\d]/g, ""));
         if (isNaN(num)) continue;
+
         if (gender === "m" || gender === "male" || gender === "man") males.push(num);
-        else if (gender === "f" || gender === "female" || gender === "kvinna") females.push(num);
-      } else {
-        unknownCount++;
+        else if (gender === "f" || gender === "female" || gender === "kvinna")
+          females.push(num);
       }
     }
 
-    const filterAges =
+    // Choose which group to calculate from
+    const selectedAges =
       genderFilter === "male"
         ? males
         : genderFilter === "female"
         ? females
         : [...males, ...females];
 
-    const allAges = [...filterAges].sort((a, b) => a - b);
+    // Sort for median
+    const sorted = [...selectedAges].sort((a, b) => a - b);
+
     const avg =
-      allAges.length > 0
-        ? Math.round(allAges.reduce((a, b) => a + b, 0) / allAges.length)
-        : "–";
-    const med =
-      allAges.length > 0
-        ? Math.round(
-            (allAges[Math.floor(allAges.length / 2)] +
-              allAges[Math.ceil(allAges.length / 2) - 1]) / 2
-          )
+      sorted.length > 0
+        ? Math.round(sorted.reduce((a, b) => a + b, 0) / sorted.length)
         : "–";
 
+    const med =
+      sorted.length > 0
+        ? sorted.length % 2 === 0
+          ? Math.round((sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2)
+          : sorted[Math.floor(sorted.length / 2)]
+        : "–";
+
+    // Build histogram bins
     const bins: {
       range: string;
       min: number;
@@ -105,7 +112,7 @@ export default function AgesPage() {
       });
     }
 
-    // Count unknown males/females separately
+    // Count unknowns
     const unknownMales = individuals.filter(
       (ind) =>
         (!ind.dateOfBirth || !ind.dateOfDeath) &&
@@ -118,7 +125,6 @@ export default function AgesPage() {
         ["f", "female", "kvinna"].includes((ind.gender || "").toLowerCase())
     ).length;
 
-    // Add proper unknown bin
     bins.push({
       range: "Okänd",
       min: -1,
@@ -176,7 +182,7 @@ export default function AgesPage() {
           Åldersfördelning
         </Typography>
 
-        {/* 🧩 Gender filter toggle */}
+        {/* Gender filter toggle */}
         <ToggleButtonGroup
           value={genderFilter}
           exclusive
@@ -220,7 +226,6 @@ export default function AgesPage() {
               <YAxis />
               <Tooltip />
               <Legend />
-              {/* Stacked gender bars */}
               {genderFilter !== "female" && (
                 <Bar dataKey="male" stackId="a" fill="#42a5f5" name="Män" />
               )}
@@ -239,7 +244,8 @@ export default function AgesPage() {
             </Typography>
           ) : selectedRange ? (
             <Typography variant="subtitle1" gutterBottom>
-              Personer mellan {selectedRange[0]}–{selectedRange[1]} år ({peopleInRange.length})
+              Personer mellan {selectedRange[0]}–{selectedRange[1]} år (
+              {peopleInRange.length})
             </Typography>
           ) : (
             <Typography variant="body2" color="text.secondary">
@@ -251,22 +257,50 @@ export default function AgesPage() {
         {/* People list */}
         <Box sx={{ flex: 1, overflowY: "auto" }}>
           <List dense>
-            {peopleInRange.map((ind) => (
-              <ListItemButton
-                key={ind.id}
-                onClick={() => setSelectedPerson(ind)}
-                selected={selectedPerson?.id === ind.id}
-              >
-                <ListItemText
-                  primary={fullName(ind)}
-                  secondary={
-                    ind.dateOfBirth && ind.dateOfDeath
-                      ? `${ind.dateOfBirth} – ${ind.dateOfDeath}`
-                      : "Okända datum"
-                  }
-                />
-              </ListItemButton>
-            ))}
+            {peopleInRange.map((ind) => {
+              const age =
+                ind.dateOfBirth && ind.dateOfDeath
+                  ? calculateAgeAtEvent(ind.dateOfBirth, ind.dateOfDeath)
+                  : undefined;
+
+              const secondary =
+                ind.dateOfBirth && ind.dateOfDeath
+                  ? `${ind.dateOfBirth} – ${ind.dateOfDeath}`
+                  : ind.dateOfBirth
+                  ? `${ind.dateOfBirth} – Okänt`
+                  : ind.dateOfDeath
+                  ? `Okänt – ${ind.dateOfDeath}`
+                  : "";
+
+              return (
+                <ListItemButton
+                  key={ind.id}
+                  onClick={() => setSelectedPerson(ind)}
+                  selected={selectedPerson?.id === ind.id}
+                >
+                  <ListItemText
+                    primary={
+                      <>
+                        {fullName(ind)}
+                        {age && (
+                          <>
+                            {" "}
+                            <Typography
+                              component="span"
+                              variant="body2"
+                              color="text.secondary"
+                            >
+                              ({age})
+                            </Typography>
+                          </>
+                        )}
+                      </>
+                    }
+                    secondary={secondary}
+                  />
+                </ListItemButton>
+              );
+            })}
           </List>
         </Box>
       </Box>
