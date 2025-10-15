@@ -10,19 +10,22 @@ import {
 } from "@mui/material";
 import { useAppSelector } from "../store";
 import { Individual } from "../types/individual";
+import { Relationship } from "../types/relationship";
 import Fuse from "fuse.js";
 import { fullName } from "../utils/nameUtils";
 import { calculateAgeAtEvent } from "../utils/dateUtils";
 import IndividualDetails from "../components/IndividualDetails";
 import IndividualFormDialog from "../components/IndividualFormDialog"; // 👈 for editing
-
-type PlaceInfo = {
-  name: string;
-  individuals: { ind: Individual; event: string; date?: string }[];
-};
+import {
+  buildPlacesIndex,
+  expandRelatedPlaces,
+  PlaceInfo,
+} from "../utils/places";
 
 export default function PlacesPage() {
   const individuals = useAppSelector((s) => s.individuals.items) as Individual[];
+  const relationships = useAppSelector((s) => s.relationships.items) as Relationship[];
+
   const [query, setQuery] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<PlaceInfo | null>(null);
   const [selectedPerson, setSelectedPerson] = useState<Individual | null>(null);
@@ -41,40 +44,11 @@ export default function PlacesPage() {
     setEditing(null);
   };
 
-  // 🧮 Build places map
-  const places = useMemo(() => {
-    const map = new Map<string, PlaceInfo>();
-
-    const add = (name: string | undefined, ind: Individual, event: string, date?: string) => {
-      if (!name) return;
-      const key = name.trim();
-      if (!key) return;
-      if (!map.has(key)) map.set(key, { name: key, individuals: [] });
-      map.get(key)!.individuals.push({ ind, event, date });
-    };
-
-    for (const ind of individuals) {
-      add(ind.birthCity, ind, "Födelse", ind.dateOfBirth);
-      add(ind.deathCity, ind, "Död", ind.dateOfDeath);
-      if ((ind as any).weddingCity)
-        add((ind as any).weddingCity, ind, "Vigsel", (ind as any).weddingDate);
-      if ((ind as any).moves) {
-        for (const m of (ind as any).moves) {
-          add(m.city, ind, "Flytt", m.date);
-        }
-      }
-    }
-
-    for (const info of map.values()) {
-      info.individuals.sort((a, b) =>
-        (a.date || "").localeCompare(b.date || "")
-      );
-    }
-
-    return Array.from(map.values()).sort((a, b) =>
-      a.name.localeCompare(b.name, "sv")
-    );
-  }, [individuals]);
+  // 🧮 Build places index (birth/death/moves + weddings from relationships)
+  const places = useMemo(
+    () => buildPlacesIndex(individuals, relationships),
+    [individuals, relationships]
+  );
 
   // 🔎 Fuzzy search
   const fuse = useMemo(
@@ -86,9 +60,7 @@ export default function PlacesPage() {
     [places]
   );
 
-  const filtered = query
-    ? fuse.search(query).map((r) => r.item)
-    : places;
+  const filtered = query ? fuse.search(query).map((r) => r.item) : places;
 
   return (
     <Box sx={{ display: "flex", height: "100%", gap: 2, p: 2, position: "relative" }}>
@@ -142,31 +114,14 @@ export default function PlacesPage() {
       <Box sx={{ flex: 1, overflow: "hidden", p: 1, position: "relative" }}>
         {selectedPlace ? (() => {
           const baseName = selectedPlace.name;
-          const isNumbered = /\d+$/.test(baseName);
-          const endsWithQuestion = baseName.endsWith("?");
 
-          // 🧠 Determine related places for event display
-          const relatedPlaces =
-            !isNumbered && !endsWithQuestion
-              ? places.filter(
-                  (p) =>
-                    // exact match
-                    p.name === baseName ||
-                    // uncertain version, e.g. "Brändön?"
-                    p.name === baseName + "?" ||
-                    // numbered variants, e.g. "Brändön 1", "Brändön 5"
-                    p.name.startsWith(baseName + " ")
-                )
-              : // otherwise (numbered or uncertain) → exact match only
-                places.filter((p) => p.name === baseName);
+          // 🧠 Determine related places for event display (exact + '?' + numbered siblings)
+          const relatedPlaces = expandRelatedPlaces(places, baseName);
 
-          // Merge all individuals from related places
-          const combinedIndividuals = relatedPlaces.flatMap((p) => p.individuals);
-
-          // Sort by date
-          combinedIndividuals.sort((a, b) =>
-            (a.date || "").localeCompare(b.date || "")
-          );
+          // Merge all individuals from related places and sort by date
+          const combinedIndividuals = relatedPlaces
+            .flatMap((p) => p.individuals)
+            .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 
           return (
             <>
@@ -175,9 +130,7 @@ export default function PlacesPage() {
               </Typography>
               {combinedIndividuals.map(({ ind, event, date }, idx) => {
                 const age =
-                  event === "Födelse"
-                    ? undefined
-                    : calculateAgeAtEvent(ind.dateOfBirth, date);
+                  event === "Födelse" ? undefined : calculateAgeAtEvent(ind.dateOfBirth, date);
                 return (
                   <Typography key={idx} sx={{ mb: 0.5 }}>
                     {date ? `${date}: ` : ""}
