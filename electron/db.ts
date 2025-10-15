@@ -21,7 +21,7 @@ export async function initDB() {
     JSONFile = lowdbNode.JSONFile;
   }
 
-  const dbPath = path.join(app.getPath("userData"), "genealogy.json");
+  const dbPath = path.join(app.getPath("userData"), "family-tree.json");
   db = new Low(new JSONFile(dbPath), defaultData);
 
   await db.read();
