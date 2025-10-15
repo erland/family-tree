@@ -13,6 +13,7 @@ import { Individual } from "../types/individual";
 import Fuse from "fuse.js";
 import { fullName } from "../utils/nameUtils";
 import { calculateAgeAtEvent } from "../utils/dateUtils";
+import IndividualDetails from "../components/IndividualDetails"; // 👈 same as IndividualsPage
 
 type PlaceInfo = {
   name: string;
@@ -23,6 +24,7 @@ export default function PlacesPage() {
   const individuals = useAppSelector((s) => s.individuals.items) as Individual[];
   const [query, setQuery] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<PlaceInfo | null>(null);
+  const [selectedPerson, setSelectedPerson] = useState<Individual | null>(null); // 👈 new
 
   // 🧮 Build places map
   const places = useMemo(() => {
@@ -74,7 +76,7 @@ export default function PlacesPage() {
     : places;
 
   return (
-    <Box sx={{ display: "flex", height: "100%", gap: 2, p: 2 }}>
+    <Box sx={{ display: "flex", height: "100%", gap: 2, p: 2, position: "relative" }}>
       {/* Left column: search + scrollable places list */}
       <Box
         sx={{
@@ -100,8 +102,7 @@ export default function PlacesPage() {
           sx={{
             mt: 1,
             overflowY: "auto",
-            // dynamically fills the remaining vertical space below the search bar
-            maxHeight: "calc(100vh - 200px)", // adjust offset if you want slightly more/less
+            maxHeight: "calc(100vh - 200px)",
             pr: 1,
           }}
         >
@@ -123,7 +124,7 @@ export default function PlacesPage() {
       </Box>
 
       {/* Right column: events */}
-      <Box sx={{ flex: 1, overflow: "hidden", p: 1 }}>
+      <Box sx={{ flex: 1, overflow: "hidden", p: 1, position: "relative" }}>
         {selectedPlace ? (() => {
           const baseName = selectedPlace.name;
           const isNumbered = /\d+$/.test(baseName);
@@ -156,7 +157,19 @@ export default function PlacesPage() {
                 return (
                   <Typography key={idx} sx={{ mb: 0.5 }}>
                     {date ? `${date}: ` : ""}
-                    <strong>{fullName(ind)}</strong> ({event}
+                    <Typography
+                      component="span"
+                      onClick={() => setSelectedPerson(ind)} // 👈 opens the drawer
+                      sx={{
+                        fontWeight: "bold",
+                        color: "primary.main",
+                        cursor: "pointer",
+                        "&:hover": { textDecoration: "underline" },
+                      }}
+                    >
+                      {fullName(ind)}
+                    </Typography>{" "}
+                    ({event}
                     {age ? `, ${age}` : ""})
                   </Typography>
                 );
@@ -167,6 +180,32 @@ export default function PlacesPage() {
           <Typography variant="body1" color="text.secondary">
             Välj en plats för att visa personer.
           </Typography>
+        )}
+
+        {/* 🧩 Right-side details panel (same as in IndividualsPage) */}
+        {selectedPerson && (
+          <Box
+            sx={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: 300,
+              borderLeft: "1px solid #ddd",
+              p: 2,
+              bgcolor: "#fafafa",
+              overflowY: "auto",
+              zIndex: 2,
+            }}
+          >
+            <IndividualDetails
+              individualId={selectedPerson.id}
+              onClose={() => setSelectedPerson(null)}
+              onEdit={(ind) => {
+                // optional edit logic if you want inline editing
+              }}
+            />
+          </Box>
         )}
       </Box>
     </Box>
