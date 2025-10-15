@@ -5,11 +5,6 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  MenuItem,
-  Select,
-  InputLabel,
-  FormControl,
-  TextField,
 } from "@mui/material";
 import { Individual, IndividualSchema } from "../types/individual";
 import { v4 as uuidv4 } from "uuid";
@@ -18,6 +13,22 @@ import { addIndividual, updateIndividual } from "../features/individualsSlice";
 import IndividualFormFields, { PersonFormValues } from "./IndividualFormFields";
 import MoveListEditor from "./MoveListEditor";
 
+// 🧩 Central default form values
+const defaultFormValues: PersonFormValues = {
+  givenName: "",
+  familyName: "",
+  birthFamilyName: "",
+  gender: "",
+  dateOfBirth: "",
+  birthRegion: "",
+  birthCity: "",
+  birthCongregation: "",
+  dateOfDeath: "",
+  deathRegion: "",
+  deathCity: "",
+  deathCongregation: "",
+  moves: [],
+};
 
 export default function IndividualFormDialog({
   open,
@@ -30,36 +41,32 @@ export default function IndividualFormDialog({
 }) {
   const dispatch = useAppDispatch();
 
-  const [form, setForm] = useState<PersonFormValues>(() => ({
-    givenName: individual?.givenName ?? "",
-    familyName: individual?.familyName ?? "",
-    birthFamilyName: individual?.birthFamilyName ?? "",
-    gender: individual?.gender ?? "",
-    dateOfBirth: individual?.dateOfBirth ?? "",
-    birthRegion: individual?.birthRegion ?? "",
-    birthCity: individual?.birthCity ?? "",
-    birthCongregation: individual?.birthCongregation ?? "",
-    dateOfDeath: individual?.dateOfDeath ?? "",
-    deathRegion: individual?.deathRegion ?? "",
-    deathCity: individual?.deathCity ?? "",
-    deathCongregation: individual?.deathCongregation ?? "",
-    moves: individual?.moves ?? [],
-  }));
+  const [form, setForm] = useState<PersonFormValues>(defaultFormValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // 🧩 Reset form every time the dialog opens or a new person is selected
   useEffect(() => {
-    setForm(individual || {});
-    setErrors({});
-  }, [individual]);
+    if (open) {
+      if (individual) {
+        // Existing person → merge with defaults
+        setForm({ ...defaultFormValues, ...individual });
+      } else {
+        // New person → fresh blank form
+        setForm(defaultFormValues);
+      }
+      setErrors({});
+    }
+  }, [individual, open]);
 
   const handleChange =
     (field: keyof Individual) => (e: React.ChangeEvent<HTMLInputElement>) => {
-      setForm({ ...form, [field]: e.target.value });
+      setForm((f) => ({ ...f, [field]: e.target.value }));
     };
 
   const handleSave = () => {
     const candidate = { ...form, id: individual?.id || uuidv4() };
     const result = IndividualSchema.safeParse(candidate);
+
     if (!result.success) {
       const errMap: Record<string, string> = {};
       result.error.issues.forEach((issue) => {
@@ -74,24 +81,31 @@ export default function IndividualFormDialog({
     } else {
       dispatch(addIndividual(result.data));
     }
+
     onClose();
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog
+      key={individual?.id || "new"} // 🧩 Forces remount between persons
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+    >
       <DialogTitle>{individual ? "Redigera person" : "Ny person"}</DialogTitle>
       <DialogContent>
-      <IndividualFormFields
-        value={form}
-        onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
-        fields={{ names: true, gender: true, birth: true, death: true }}
-        required={{ givenName: true }}
-        autoFocusFirst
-      />
-      <MoveListEditor
-        value={form.moves}
-        onChange={(moves) => setForm((f) => ({ ...f, moves }))}
-      />
+        <IndividualFormFields
+          value={form}
+          onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+          fields={{ names: true, gender: true, birth: true, death: true }}
+          required={{ givenName: true }}
+          autoFocusFirst
+        />
+        <MoveListEditor
+          value={form.moves}
+          onChange={(moves) => setForm((f) => ({ ...f, moves }))}
+        />
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Avbryt</Button>
