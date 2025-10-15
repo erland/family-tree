@@ -6,6 +6,8 @@ import {
   List,
   ListItemButton,
   ListItemText,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import { useAppSelector } from "../store";
 import { Individual } from "../types/individual";
@@ -28,6 +30,7 @@ export default function AgesPage() {
   const [selectedRange, setSelectedRange] = useState<[number, number] | null>(null);
   const [showUnknown, setShowUnknown] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Individual | null>(null);
+  const [genderFilter, setGenderFilter] = useState<"all" | "male" | "female">("all"); // 🆕
 
   // 🧩 Form dialog state (for editing)
   const [formOpen, setFormOpen] = useState(false);
@@ -62,19 +65,25 @@ export default function AgesPage() {
       }
     }
 
-    const allAges = [...males, ...females].sort((a, b) => a - b);
+    const filterAges =
+      genderFilter === "male"
+        ? males
+        : genderFilter === "female"
+        ? females
+        : [...males, ...females];
+
+    const allAges = [...filterAges].sort((a, b) => a - b);
     const avg =
-    allAges.length > 0
-      ? Math.round(allAges.reduce((a, b) => a + b, 0) / allAges.length)
-      : "-";
-  
-  const med =
-    allAges.length > 0
-      ? Math.round(
-          (allAges[Math.floor(allAges.length / 2)] +
-            allAges[Math.ceil(allAges.length / 2) - 1]) / 2
-        )
-      : "-";
+      allAges.length > 0
+        ? Math.round(allAges.reduce((a, b) => a + b, 0) / allAges.length)
+        : "–";
+    const med =
+      allAges.length > 0
+        ? Math.round(
+            (allAges[Math.floor(allAges.length / 2)] +
+              allAges[Math.ceil(allAges.length / 2) - 1]) / 2
+          )
+        : "–";
 
     const bins: {
       range: string;
@@ -106,24 +115,36 @@ export default function AgesPage() {
     });
 
     return { ageData: bins, average: avg, median: med };
-  }, [individuals]);
+  }, [individuals, genderFilter]);
 
-  // 🧮 People in selected range
+  // 🧮 Filter people in selected range by gender
   const peopleInRange = useMemo(() => {
+    const genderMatches = (ind: Individual) => {
+      if (genderFilter === "all") return true;
+      const g = (ind.gender || "").toLowerCase();
+      if (genderFilter === "male")
+        return g === "m" || g === "male" || g === "man";
+      if (genderFilter === "female")
+        return g === "f" || g === "female" || g === "kvinna";
+      return false;
+    };
+
     if (showUnknown) {
       return individuals.filter(
-        (ind) => !ind.dateOfBirth || !ind.dateOfDeath
+        (ind) => (!ind.dateOfBirth || !ind.dateOfDeath) && genderMatches(ind)
       );
     }
+
     if (!selectedRange) return [];
+
     const [min, max] = selectedRange;
     return individuals.filter((ind) => {
       if (!ind.dateOfBirth || !ind.dateOfDeath) return false;
       const age = calculateAgeAtEvent(ind.dateOfBirth, ind.dateOfDeath);
       const num = Number(age?.replace(/[^\d]/g, ""));
-      return num >= min && num <= max;
+      return num >= min && num <= max && genderMatches(ind);
     });
-  }, [selectedRange, showUnknown, individuals]);
+  }, [selectedRange, showUnknown, individuals, genderFilter]);
 
   return (
     <Box sx={{ display: "flex", height: "100%", p: 2, position: "relative" }}>
@@ -135,14 +156,26 @@ export default function AgesPage() {
           display: "flex",
           flexDirection: "column",
           transition: "margin-right 0.3s ease, width 0.3s ease",
-          mr: selectedPerson ? "300px" : 0, // Shrink chart when details pane open
+          mr: selectedPerson ? "300px" : 0,
         }}
       >
         <Typography variant="h6" gutterBottom>
           Åldersfördelning
         </Typography>
 
-        {/* Average / median stats */}
+        {/* 🧩 Gender filter toggle */}
+        <ToggleButtonGroup
+          value={genderFilter}
+          exclusive
+          onChange={(e, val) => val && setGenderFilter(val)}
+          sx={{ mb: 2 }}
+        >
+          <ToggleButton value="all">Alla</ToggleButton>
+          <ToggleButton value="male">Män</ToggleButton>
+          <ToggleButton value="female">Kvinnor</ToggleButton>
+        </ToggleButtonGroup>
+
+        {/* Average / median */}
         <Typography variant="body1" sx={{ mb: 1 }}>
           <strong>Medelålder:</strong> {average} år &nbsp;&nbsp;
           <strong>Medianålder:</strong> {median} år
@@ -174,9 +207,13 @@ export default function AgesPage() {
               <YAxis />
               <Tooltip />
               <Legend />
-              {/* 🧩 Gender-based stacked bars */}
-              <Bar dataKey="male" stackId="a" fill="#42a5f5" name="Män" />
-              <Bar dataKey="female" stackId="a" fill="#f48fb1" name="Kvinnor" />
+              {/* Stacked gender bars */}
+              {genderFilter !== "female" && (
+                <Bar dataKey="male" stackId="a" fill="#42a5f5" name="Män" />
+              )}
+              {genderFilter !== "male" && (
+                <Bar dataKey="female" stackId="a" fill="#f48fb1" name="Kvinnor" />
+              )}
             </BarChart>
           </ResponsiveContainer>
         </Box>
