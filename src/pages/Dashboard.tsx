@@ -21,8 +21,8 @@ import { useTranslation } from "react-i18next";
 import { useAppSelector, useAppDispatch } from "../store";
 import { useState } from "react";
 import { Relationship } from "../types/relationship";
-import { clearIndividuals } from "../features/individualsSlice";
-import { clearRelationships } from "../features/relationshipsSlice";
+import { clearIndividuals, fetchIndividuals } from "../features/individualsSlice";
+import { clearRelationships, fetchRelationships } from "../features/relationshipsSlice";
 
 export function ResetDatabaseButton() {
   const [open, setOpen] = useState(false);
@@ -63,6 +63,7 @@ export default function Dashboard() {
   const { t } = useTranslation();
   const individuals = useAppSelector((s) => s.individuals.items);
   const relationships = useAppSelector((s) => s.relationships.items) as Relationship[];
+  const dispatch = useAppDispatch();
 
   // 🧮 Compute summary counts
   const individualCount = individuals.length;
@@ -86,6 +87,9 @@ export default function Dashboard() {
     if (filePath) {
       const result = await window.genealogyAPI.importExcel(filePath);
       alert(`Importerade ${result.count} personer och ${result.relCount} relationer.`);
+
+      await dispatch(fetchIndividuals());
+      await dispatch(fetchRelationships());
     }
   };
 
@@ -97,6 +101,9 @@ export default function Dashboard() {
     if (filePath) {
       const result = await window.genealogyAPI.importGedcom(filePath);
       alert(`Importerade ${result.count} personer och ${result.relCount} relationer.`);
+
+      await dispatch(fetchIndividuals());
+      await dispatch(fetchRelationships());
     }
   };
 
