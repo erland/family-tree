@@ -150,3 +150,8 @@ export async function updateRelationship(id: string, updates: any) {
 export async function deleteRelationship(id: string) {
   await remove("relationships", id);
 }
+export async function resetDatabase() {
+  await db.read();
+  db.data = { individuals: [], relationships: [] };
+  await db.write();
+}

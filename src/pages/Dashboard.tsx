@@ -2,6 +2,11 @@ import React from "react";
 import {
   Box,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
   Typography,
   Paper,
   Grid,
@@ -13,8 +18,46 @@ import PeopleIcon from "@mui/icons-material/People";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FamilyRestroomIcon from "@mui/icons-material/FamilyRestroom";
 import { useTranslation } from "react-i18next";
-import { useAppSelector } from "../store";
+import { useAppSelector, useAppDispatch } from "../store";
+import { useState } from "react";
 import { Relationship } from "../types/relationship";
+import { clearIndividuals } from "../features/individualsSlice";
+import { clearRelationships } from "../features/relationshipsSlice";
+
+export function ResetDatabaseButton() {
+  const [open, setOpen] = useState(false);
+  const dispatch = useAppDispatch();
+
+  const handleConfirm = async () => {
+    await window.genealogyAPI.resetDatabase();
+    dispatch(clearIndividuals());
+    dispatch(clearRelationships());
+    setOpen(false);
+    window.location.reload();
+  };
+
+  return (
+    <>
+      <Button variant="outlined" color="error" onClick={() => setOpen(true)}>
+        Rensa databas
+      </Button>
+
+      <Dialog open={open} onClose={() => setOpen(false)}>
+        <DialogTitle>Bekräfta radering</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Är du säker på att du vill ta bort alla personer och relationer?
+            Denna åtgärd kan inte ångras.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpen(false)}>Avbryt</Button>
+          <Button color="error" onClick={handleConfirm}>Radera allt</Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+}
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -167,6 +210,7 @@ export default function Dashboard() {
         >
           Exportera GEDCOM
         </Button>
+        <ResetDatabaseButton/>
       </Box>
 
       <Box sx={{ mt: 3 }}>

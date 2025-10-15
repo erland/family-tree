@@ -14,6 +14,7 @@ import { exportExcel, exportRelationshipsExcel } from "./exportExcel.js";   // ğ
 import { importExcel } from "./importExcel.js";
 import { generateGedcom } from "./exportGedcom.js";
 import { importGedcom } from "./importGedcom.js";
+import { resetDatabase } from "./db.js";
 import fs from "fs";
 
 export function registerIpcHandlers() {
@@ -125,5 +126,9 @@ export function registerIpcHandlers() {
     for (const rel of relationships) await addRelationship(rel);
   
     return { count: individuals.length, relCount: relationships.length };
+  });
+  ipcMain.handle("resetDatabase", async () => {
+    await resetDatabase();
+    return { success: true };
   });
 }

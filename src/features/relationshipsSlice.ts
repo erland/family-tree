@@ -35,7 +35,12 @@ export const deleteRelationship = createAsyncThunk("relationships/delete", async
 const relationshipsSlice = createSlice({
   name: "relationships",
   initialState,
-  reducers: {},
+  reducers: {
+    clearRelationships: (state) => { 
+      state.items = []; 
+      state.status = "idle";
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchRelationships.fulfilled, (state, action: PayloadAction<Relationship[]>) => {
@@ -55,3 +60,4 @@ const relationshipsSlice = createSlice({
 });
 
 export default relationshipsSlice.reducer;
+export const { clearRelationships } = relationshipsSlice.actions;

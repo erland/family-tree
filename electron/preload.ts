@@ -19,6 +19,7 @@ const api: GenealogyAPI = {
 
   exportGedcom: () => ipcRenderer.invoke("individuals:exportGedcom"),
   importGedcom: (filePath: string) => ipcRenderer.invoke("importGedcom", filePath),
+  resetDatabase: () => ipcRenderer.invoke("resetDatabase"),
 };
 contextBridge.exposeInMainWorld("electronAPI", {
   showOpenDialog: (options: Electron.OpenDialogOptions) =>

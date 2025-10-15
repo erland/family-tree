@@ -39,7 +39,12 @@ export const deleteIndividual = createAsyncThunk("individuals/delete", async (id
 const individualsSlice = createSlice({
   name: "individuals",
   initialState,
-  reducers: {},
+  reducers: {
+    clearIndividuals: (state) => {
+      state.items = [];
+      state.status = "idle";
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchIndividuals.fulfilled, (state, action: PayloadAction<Individual[]>) => {
@@ -60,3 +65,5 @@ const individualsSlice = createSlice({
 });
 
 export default individualsSlice.reducer;
+// Export the clear action for UI use (e.g. ResetDatabaseButton)
+export const { clearIndividuals } = individualsSlice.actions;
