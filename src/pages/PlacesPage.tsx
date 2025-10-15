@@ -143,18 +143,27 @@ export default function PlacesPage() {
         {selectedPlace ? (() => {
           const baseName = selectedPlace.name;
           const isNumbered = /\d+$/.test(baseName);
+          const endsWithQuestion = baseName.endsWith("?");
 
+          // 🧠 Determine related places for event display
           const relatedPlaces =
-            !isNumbered
+            !isNumbered && !endsWithQuestion
               ? places.filter(
-                  (p) => p.name === baseName || p.name.startsWith(baseName + " ")
+                  (p) =>
+                    // exact match
+                    p.name === baseName ||
+                    // uncertain version, e.g. "Brändön?"
+                    p.name === baseName + "?" ||
+                    // numbered variants, e.g. "Brändön 1", "Brändön 5"
+                    p.name.startsWith(baseName + " ")
                 )
-              : [selectedPlace];
+              : // otherwise (numbered or uncertain) → exact match only
+                places.filter((p) => p.name === baseName);
 
-          const combinedIndividuals = relatedPlaces.flatMap(
-            (p) => p.individuals
-          );
+          // Merge all individuals from related places
+          const combinedIndividuals = relatedPlaces.flatMap((p) => p.individuals);
 
+          // Sort by date
           combinedIndividuals.sort((a, b) =>
             (a.date || "").localeCompare(b.date || "")
           );
@@ -174,7 +183,7 @@ export default function PlacesPage() {
                     {date ? `${date}: ` : ""}
                     <Typography
                       component="span"
-                      onClick={() => setSelectedPerson(ind)} // 👈 open details drawer
+                      onClick={() => setSelectedPerson(ind)}
                       sx={{
                         fontWeight: "bold",
                         color: "primary.main",
