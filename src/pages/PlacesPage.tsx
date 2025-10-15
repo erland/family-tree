@@ -13,7 +13,8 @@ import { Individual } from "../types/individual";
 import Fuse from "fuse.js";
 import { fullName } from "../utils/nameUtils";
 import { calculateAgeAtEvent } from "../utils/dateUtils";
-import IndividualDetails from "../components/IndividualDetails"; // 👈 same as IndividualsPage
+import IndividualDetails from "../components/IndividualDetails";
+import IndividualFormDialog from "../components/IndividualFormDialog"; // 👈 for editing
 
 type PlaceInfo = {
   name: string;
@@ -24,7 +25,21 @@ export default function PlacesPage() {
   const individuals = useAppSelector((s) => s.individuals.items) as Individual[];
   const [query, setQuery] = useState("");
   const [selectedPlace, setSelectedPlace] = useState<PlaceInfo | null>(null);
-  const [selectedPerson, setSelectedPerson] = useState<Individual | null>(null); // 👈 new
+  const [selectedPerson, setSelectedPerson] = useState<Individual | null>(null);
+
+  // 🧩 Form dialog state
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Individual | null>(null);
+
+  const handleOpen = (ind?: Individual) => {
+    setEditing(ind || null);
+    setFormOpen(true);
+  };
+
+  const handleClose = () => {
+    setFormOpen(false);
+    setEditing(null);
+  };
 
   // 🧮 Build places map
   const places = useMemo(() => {
@@ -159,7 +174,7 @@ export default function PlacesPage() {
                     {date ? `${date}: ` : ""}
                     <Typography
                       component="span"
-                      onClick={() => setSelectedPerson(ind)} // 👈 opens the drawer
+                      onClick={() => setSelectedPerson(ind)} // 👈 open details drawer
                       sx={{
                         fontWeight: "bold",
                         color: "primary.main",
@@ -201,13 +216,18 @@ export default function PlacesPage() {
             <IndividualDetails
               individualId={selectedPerson.id}
               onClose={() => setSelectedPerson(null)}
-              onEdit={(ind) => {
-                // optional edit logic if you want inline editing
-              }}
+              onEdit={(ind) => handleOpen(ind)} // 👈 triggers edit dialog
             />
           </Box>
         )}
       </Box>
+
+      {/* 🧩 Reusable Form Dialog for editing */}
+      <IndividualFormDialog
+        open={formOpen}
+        onClose={handleClose}
+        individual={editing}
+      />
     </Box>
   );
 }
