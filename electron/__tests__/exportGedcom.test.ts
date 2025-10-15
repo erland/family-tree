@@ -356,4 +356,54 @@ describe("generateGedcom", () => {
     expect(gedcom).toContain("1 CHIL @I2@"); // child linked properly
     expect(gedcom).toContain("0 TRLR"); // terminator
   });
+  it("exports both married and birth names when they differ", () => {
+    const individuals: Individual[] = [
+      {
+        id: "1",
+        givenName: "Anna",
+        familyName: "Johansson",
+        birthFamilyName: "Svensson",
+        gender: "female",
+      } as any,
+    ];
+
+    const ged = generateGedcom(individuals, []);
+    const lines = ged.split("\n");
+
+    // Should include two NAME entries with TYPE tags
+    const nameLines = lines.filter(l => l.startsWith("1 NAME"));
+    const typeLines = lines.filter(l => l.startsWith("2 TYPE"));
+
+    expect(nameLines.length).toBe(2);
+    expect(typeLines).toContain("2 TYPE married");
+    expect(typeLines).toContain("2 TYPE birth");
+
+    // Ensure correct name ordering and content
+    const marriedIdx = lines.findIndex(l => l.includes("/Johansson/"));
+    const birthIdx = lines.findIndex(l => l.includes("/Svensson/"));
+    expect(marriedIdx).toBeLessThan(birthIdx);
+  });
+
+  it("exports only one NAME when birth and married names are identical", () => {
+    const individuals: Individual[] = [
+      {
+        id: "1",
+        givenName: "Karin",
+        familyName: "Lindberg",
+        birthFamilyName: "Lindberg",
+        gender: "female",
+      } as any,
+    ];
+
+    const ged = generateGedcom(individuals, []);
+    const lines = ged.split("\n");
+
+    // Should have only one NAME and no TYPE lines
+    const nameLines = lines.filter(l => l.startsWith("1 NAME"));
+    const typeLines = lines.filter(l => l.startsWith("2 TYPE"));
+
+    expect(nameLines.length).toBe(1);
+    expect(nameLines[0]).toContain("/Lindberg/");
+    expect(typeLines.length).toBe(0);
+  });
 });

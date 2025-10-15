@@ -68,10 +68,34 @@ export function parseGedcomContent(content: string): ImportResult {
     }
 
     if (currentInd) {
+      // --- Handle NAME (including multiple NAME entries with TYPE birth/married)
       if (level === "1" && tag === "NAME") {
         const [given, famRaw] = data.split("/");
-        currentInd.givenName = given.trim();
-        currentInd.familyName = famRaw?.trim() ?? "";
+        const givenName = given?.trim() ?? "";
+        const familyName = famRaw?.trim() ?? "";
+    
+        // Look ahead to see if this NAME has a TYPE
+        let nameType: string | undefined;
+        for (let j = idx + 1; j < lines.length; j++) {
+          const sub = lines[j].trim();
+          if (sub.startsWith("1 ")) break;
+          if (sub.startsWith("2 TYPE")) {
+            nameType = sub.split("2 TYPE")[1]?.trim().toLowerCase();
+            break;
+          }
+        }
+    
+        if (nameType === "birth") {
+          currentInd.birthFamilyName = familyName;
+          if (!currentInd.givenName) currentInd.givenName = givenName;
+        } else if (nameType === "married") {
+          currentInd.familyName = familyName;
+          if (!currentInd.givenName) currentInd.givenName = givenName;
+        } else {
+          // No TYPE tag — fallback (older GEDCOMs)
+          currentInd.givenName ||= givenName;
+          currentInd.familyName ||= familyName;
+        }
       } else if (level === "1" && tag === "SEX") {
         currentInd.gender =
           data === "M" ? "male" : data === "F" ? "female" : "unknown";

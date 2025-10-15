@@ -118,10 +118,37 @@ export function generateGedcom(
   // --- Individuals
   for (const ind of individuals) {
     const tag = indiMap[ind.id];
-    const familyName = ind.familyName || ind.birthFamilyName || "";
     lines.push(`0 ${tag} INDI`);
-    lines.push(`1 NAME ${ind.givenName || ""} /${familyName}/`);
-    lines.push(`1 SEX ${ind.gender === "male" ? "M" : ind.gender === "female" ? "F" : "U"}`);
+
+    const hasBothNames =
+      ind.birthFamilyName &&
+      ind.familyName &&
+      ind.birthFamilyName.trim() !== ind.familyName.trim();
+
+    // --- Names
+    if (hasBothNames) {
+      // Married/current name first
+      lines.push(`1 NAME ${ind.givenName || ""} /${ind.familyName || ""}/`);
+      lines.push(`2 TYPE married`);
+
+      // Birth name second
+      lines.push(`1 NAME ${ind.givenName || ""} /${ind.birthFamilyName || ""}/`);
+      lines.push(`2 TYPE birth`);
+    } else {
+      const familyName = ind.familyName || ind.birthFamilyName || "";
+      lines.push(`1 NAME ${ind.givenName || ""} /${familyName}/`);
+    }
+
+    // --- Gender
+    lines.push(
+      `1 SEX ${
+        ind.gender === "male"
+          ? "M"
+          : ind.gender === "female"
+          ? "F"
+          : "U"
+      }`
+    );
 
     // --- Birth
     if (ind.dateOfBirth || ind.birthCity || ind.birthRegion || ind.birthCongregation) {
@@ -169,7 +196,7 @@ export function generateGedcom(
     spouseFamilies[tag]?.forEach((fid) => lines.push(`1 FAMS ${fid}`));
     childFamilies[tag]?.forEach((fid) => lines.push(`1 FAMC ${fid}`));
   }
-
+  
   // --- Families section
   for (const [famId, fam] of Object.entries(families)) {
     lines.push(`0 ${famId} FAM`);

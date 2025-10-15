@@ -314,6 +314,44 @@ describe("parseGedcomContent", () => {
     // incomplete family with only child should not crash
     expect(Array.isArray(relationships)).toBe(true);
   });
+  it("imports both married and birth family names when TYPE lines are present", () => {
+    const gedcom = `
+0 HEAD
+0 @I1@ INDI
+1 NAME Anna /Johansson/
+2 TYPE married
+1 NAME Anna /Svensson/
+2 TYPE birth
+1 SEX F
+0 TRLR
+`;
+
+    const { individuals } = parseGedcomContent(gedcom);
+    const anna = individuals[0];
+
+    expect(anna.givenName).toBe("Anna");
+    expect(anna.familyName).toBe("Johansson");
+    expect(anna.birthFamilyName).toBe("Svensson");
+    expect(anna.gender).toBe("female");
+  });
+
+  it("imports single NAME without TYPE as normal familyName only", () => {
+    const gedcom = `
+0 HEAD
+0 @I1@ INDI
+1 NAME Erik /Karlsson/
+1 SEX M
+0 TRLR
+`;
+
+    const { individuals } = parseGedcomContent(gedcom);
+    const erik = individuals[0];
+
+    expect(erik.givenName).toBe("Erik");
+    expect(erik.familyName).toBe("Karlsson");
+    expect(erik.birthFamilyName).toBeUndefined();
+    expect(erik.gender).toBe("male");
+  });
 });
 
 describe("importGedcom (file reading wrapper)", () => {
