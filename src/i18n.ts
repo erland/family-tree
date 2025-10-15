@@ -14,6 +14,7 @@ const resources = {
       individuals: "Personer",
       relationships: "Relationer",
       places: "Platser",
+      ages: "Ålder",
       importGedcom: "Importera GEDCOM",
       exportGedcom: "Exportera GEDCOM",
       importExcel: "Importera Excel",

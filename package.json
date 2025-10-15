@@ -23,7 +23,7 @@
     "dist:all": "npm run build && electron-builder -m --arm64 -w --x64",
     "test": "jest --passWithNoTests",
     "test:coverage": "jest --coverage"
-    },
+  },
   "dependencies": {
     "@electron/remote": "^2.1.3",
     "@emotion/react": "^11.11.4",
@@ -46,6 +46,7 @@
     "react-redux": "^8.1.3",
     "react-router-dom": "^6.26.2",
     "reactflow": "^11.10.0",
+    "recharts": "^3.2.1",
     "uuid": "^9.0.1",
     "zod": "^3.23.8"
   },

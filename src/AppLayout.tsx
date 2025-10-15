@@ -18,7 +18,8 @@ import AccountTreeIcon from "@mui/icons-material/AccountTree";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import TimelineIcon from "@mui/icons-material/Timeline";
 import FavoriteIcon from "@mui/icons-material/Favorite";
-import LocationOnIcon from "@mui/icons-material/LocationOn"; // 🆕 NEW for Platser
+import LocationOnIcon from "@mui/icons-material/LocationOn";
+import BarChartIcon from "@mui/icons-material/BarChart"; // 🧩 NEW for Ålder view
 
 import { useAppDispatch } from "./store";
 import { fetchIndividuals } from "./features/individualsSlice";
@@ -38,14 +39,15 @@ export default function AppLayout() {
     dispatch(fetchRelationships());
   }, [dispatch]);
 
-  // 🧭 Updated navigation items with Platser
+  // 🧭 Navigation items (with Ålder added)
   const navItems = [
     { to: "/", labelKey: "dashboard", icon: <DashboardIcon /> },
     { to: "/tree", labelKey: "tree", icon: <AccountTreeIcon /> },
     { to: "/timeline", labelKey: "timeline", icon: <TimelineIcon /> },
     { to: "/individuals", labelKey: "individuals", icon: <PersonAddIcon /> },
     { to: "/relationships", labelKey: "relationships", icon: <FavoriteIcon /> },
-    { to: "/places", labelKey: "places", icon: <LocationOnIcon /> }, // 🆕 Platser
+    { to: "/places", labelKey: "places", icon: <LocationOnIcon /> },
+    { to: "/ages", labelKey: "ages", icon: <BarChartIcon /> }, // 🆕 Ålder
   ];
 
   return (
