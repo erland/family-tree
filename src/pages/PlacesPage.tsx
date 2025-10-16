@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+// src/pages/PlacesPage.tsx
+import React, { useState } from "react";
 import {
   Box,
   List,
@@ -10,25 +11,18 @@ import {
 } from "@mui/material";
 import { useAppSelector } from "../store";
 import { Individual } from "../types/individual";
-import { Relationship } from "../types/relationship";
-import Fuse from "fuse.js";
-import { fullName } from "../utils/nameUtils";
-import { calculateAgeAtEvent } from "../utils/dateUtils";
 import IndividualDetails from "../components/IndividualDetails";
-import IndividualFormDialog from "../components/IndividualFormDialog"; // 👈 for editing
-import {
-  buildPlacesIndex,
-  expandRelatedPlaces,
-  PlaceInfo,
-} from "../utils/places";
+import IndividualFormDialog from "../components/IndividualFormDialog";
+
+import { usePlacesViewModel } from "../hooks/usePlacesViewModel";
+import { PlaceEventsList } from "../components/presentational/PlaceEventsList";
 
 export default function PlacesPage() {
   const individuals = useAppSelector((s) => s.individuals.items) as Individual[];
-  const relationships = useAppSelector((s) => s.relationships.items) as Relationship[];
 
-  const [query, setQuery] = useState("");
-  const [selectedPlace, setSelectedPlace] = useState<PlaceInfo | null>(null);
-  const [selectedPerson, setSelectedPerson] = useState<Individual | null>(null);
+  const [query, setQuery] = useState<string>("");
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
   // 🧩 Form dialog state
   const [formOpen, setFormOpen] = useState(false);
@@ -38,29 +32,19 @@ export default function PlacesPage() {
     setEditing(ind || null);
     setFormOpen(true);
   };
-
   const handleClose = () => {
     setFormOpen(false);
     setEditing(null);
   };
 
-  // 🧮 Build places index (birth/death/moves + weddings from relationships)
-  const places = useMemo(
-    () => buildPlacesIndex(individuals, relationships),
-    [individuals, relationships]
-  );
+  // 🔎 Build places view-model (no expansion here)
+  const { places, totalEvents, expandById } = usePlacesViewModel({
+    sort: "alpha",
+    query: query || null,
+  });
 
-  // 🔎 Fuzzy search
-  const fuse = useMemo(
-    () =>
-      new Fuse(places, {
-        keys: ["name"],
-        threshold: 0.3,
-      }),
-    [places]
-  );
-
-  const filtered = query ? fuse.search(query).map((r) => r.item) : places;
+  // Expand the selected place (right panel) using your original merge rules
+  const expandedPlace = selectedPlaceId ? expandById(selectedPlaceId) : null;
 
   return (
     <Box sx={{ display: "flex", height: "100%", gap: 2, p: 2, position: "relative" }}>
@@ -84,7 +68,6 @@ export default function PlacesPage() {
         />
         <Divider />
 
-        {/* Scrollable list (fills window height below search) */}
         <Box
           sx={{
             mt: 1,
@@ -94,15 +77,15 @@ export default function PlacesPage() {
           }}
         >
           <List dense>
-            {filtered.map((p) => (
+            {places.map((p) => (
               <ListItemButton
-                key={p.name}
-                selected={selectedPlace?.name === p.name}
-                onClick={() => setSelectedPlace(p)}
+                key={p.id}
+                selected={selectedPlaceId === p.id}
+                onClick={() => setSelectedPlaceId(p.id)}
               >
                 <ListItemText
-                  primary={p.name}
-                  secondary={`${p.individuals.length} personer`}
+                  primary={p.title}
+                  secondary={p.subtitle ?? `${p.events.length} händelser`}
                 />
               </ListItemButton>
             ))}
@@ -110,57 +93,33 @@ export default function PlacesPage() {
         </Box>
       </Box>
 
-      {/* Right column: events */}
+      {/* Right column: events for the selected place (expanded/merged) */}
       <Box sx={{ flex: 1, overflow: "hidden", p: 1, position: "relative" }}>
-        {selectedPlace ? (() => {
-          const baseName = selectedPlace.name;
-
-          // 🧠 Determine related places for event display (exact + '?' + numbered siblings)
-          const relatedPlaces = expandRelatedPlaces(places, baseName);
-
-          // Merge all individuals from related places and sort by date
-          const combinedIndividuals = relatedPlaces
-            .flatMap((p) => p.individuals)
-            .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-
-          return (
-            <>
-              <Typography variant="h6" gutterBottom>
-                {baseName}
-              </Typography>
-              {combinedIndividuals.map(({ ind, event, date }, idx) => {
-                const age =
-                  event === "Födelse" ? undefined : calculateAgeAtEvent(ind.dateOfBirth, date);
-                return (
-                  <Typography key={idx} sx={{ mb: 0.5 }}>
-                    {date ? `${date}: ` : ""}
-                    <Typography
-                      component="span"
-                      onClick={() => setSelectedPerson(ind)}
-                      sx={{
-                        fontWeight: "bold",
-                        color: "primary.main",
-                        cursor: "pointer",
-                        "&:hover": { textDecoration: "underline" },
-                      }}
-                    >
-                      {fullName(ind)}
-                    </Typography>{" "}
-                    ({event}
-                    {age ? `, ${age}` : ""})
-                  </Typography>
-                );
-              })}
-            </>
-          );
-        })() : (
-          <Typography variant="body1" color="text.secondary">
-            Välj en plats för att visa personer.
-          </Typography>
+        {expandedPlace ? (
+          <>
+            <Typography variant="h6" gutterBottom>
+              {expandedPlace.title}
+            </Typography>
+            <PlaceEventsList
+              places={[expandedPlace]}
+              onPersonClick={(id) => setSelectedPersonId(id)}
+              showPlaceTitle={false}
+            />
+          </>
+        ) : (
+          <>
+            <Typography variant="body1" color="text.secondary">
+              Välj en plats för att visa personer.
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 1, color: "text.secondary" }}>
+              {places.length} plats{places.length === 1 ? "" : "er"} • {totalEvents} händelse
+              {totalEvents === 1 ? "" : "r"}
+            </Typography>
+          </>
         )}
 
-        {/* 🧩 Right-side details panel (same as in IndividualsPage) */}
-        {selectedPerson && (
+        {/* 🧩 Right-side details panel */}
+        {selectedPersonId && (
           <Box
             sx={{
               position: "absolute",
@@ -176,20 +135,16 @@ export default function PlacesPage() {
             }}
           >
             <IndividualDetails
-              individualId={selectedPerson.id}
-              onClose={() => setSelectedPerson(null)}
-              onEdit={(ind) => handleOpen(ind)} // 👈 triggers edit dialog
+              individualId={selectedPersonId}
+              onClose={() => setSelectedPersonId(null)}
+              onEdit={(ind) => handleOpen(ind)}
             />
           </Box>
         )}
       </Box>
 
       {/* 🧩 Reusable Form Dialog for editing */}
-      <IndividualFormDialog
-        open={formOpen}
-        onClose={handleClose}
-        individual={editing}
-      />
+      <IndividualFormDialog open={formOpen} onClose={handleClose} individual={editing} />
     </Box>
   );
 }
