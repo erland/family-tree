@@ -13,15 +13,12 @@ import {
   Typography,
   Chip,
 } from "@mui/material";
-import { v4 as uuidv4 } from "uuid";
-import { useAppDispatch, useAppSelector } from "../store";
-import { addIndividual } from "../features/individualsSlice";
-import { addRelationship } from "../features/relationshipsSlice";
-import { Individual, IndividualSchema } from "../types/individual";
+import { useAppSelector } from "../store";
+import { Individual } from "../types/individual";
 import { Relationship } from "../types/relationship";
 import { fullName } from "../utils/nameUtils";
-import { canAddParentChild } from "../utils/relationshipUtils";
 import IndividualFormFields from "./IndividualFormFields";
+import { useAddParentFlow } from "../hooks/useAddParentFlow";
 
 type Props = {
   open: boolean;
@@ -30,11 +27,15 @@ type Props = {
 };
 
 export default function AddParentDialog({ open, onClose, childId }: Props) {
-  const dispatch = useAppDispatch();
+  const { loading, error, linkExisting, createAndLink } = useAddParentFlow();
+
   const individuals = useAppSelector((s) => s.individuals.items);
   const relationships = useAppSelector((s) => s.relationships.items);
 
-  const child = useMemo(() => individuals.find((i) => i.id === childId) || null, [individuals, childId]);
+  const child = useMemo(
+    () => individuals.find((i) => i.id === childId) || null,
+    [individuals, childId]
+  );
 
   const existingParents = useMemo(() => {
     const rels = relationships.filter(
@@ -48,14 +49,12 @@ export default function AddParentDialog({ open, onClose, childId }: Props) {
   const [mode, setMode] = useState<"new" | "existing">("new");
   const [existingParentId, setExistingParentId] = useState<string | null>(null);
 
-  // Optional: if you want to create a combined relation with an already-known parent
+  // optional: preselect a known parent to merge with when creating/linking another
   const [withOtherParentId, setWithOtherParentId] = useState<string | null>(
     existingParents[0]?.id ?? null
   );
 
-  const [form, setForm] = useState<Partial<Individual>>({
-    gender: "unknown",
-  });
+  const [form, setForm] = useState<Partial<Individual>>({ gender: "unknown" });
 
   const reset = () => {
     setMode("new");
@@ -64,73 +63,46 @@ export default function AddParentDialog({ open, onClose, childId }: Props) {
     setForm({ gender: "unknown" });
   };
 
-  const handleSave = async () => {
-    let parentId: string | null = null;
-
-    if (mode === "existing") {
-      if (!existingParentId) {
-        alert("Välj en befintlig förälder.");
-        return;
-      }
-      parentId = existingParentId;
-    } else {
-      const candidate: Individual = {
-        id: uuidv4(),
-        givenName: form.givenName ?? "",
-        birthFamilyName: form.birthFamilyName ?? "",
-        familyName: form.familyName ?? "",
-        dateOfBirth: form.dateOfBirth ?? "",
-        birthRegion: form.birthRegion ?? "",
-        birthCongregation: form.birthCongregation ?? "",
-        birthCity: form.birthCity ?? "",
-        dateOfDeath: form.dateOfDeath ?? "",
-        deathRegion: form.deathRegion ?? "",
-        deathCongregation: form.deathCongregation ?? "",
-        deathCity: form.deathCity ?? "",
-        gender: (form.gender as any) ?? "unknown",
-        story: form.story ?? "",
-      };
-
-      const parsed = IndividualSchema.safeParse(candidate);
-      if (!parsed.success) {
-        alert("Kontrollera förälderns uppgifter.");
-        return;
-      }
-
-      const created = await dispatch(addIndividual(parsed.data)).unwrap();
-      parentId = (created as Individual).id;
-    }
-
-    const parentIds = Array.from(
-      new Set([parentId!, withOtherParentId || undefined].filter(Boolean) as string[])
-    );
-
-    // Validate against cycles
-    const valid = parentIds.every((pid) => canAddParentChild(relationships, pid, childId).ok);
-    if (!valid) {
-      alert("Det här skulle skapa en cykel i släktträdet eller är ogiltigt.");
-      return;
-    }
-
-    await dispatch(
-      addRelationship({
-        type: "parent-child",
-        parentIds,
-        childId,
-      })
-    );
-
-    reset();
-    onClose();
-  };
-
   const selectableExistingParents = useMemo(
     () => individuals.filter((i) => i.id !== childId),
     [individuals, childId]
   );
 
+  const handleSave = async () => {
+    try {
+      if (mode === "existing") {
+        if (!existingParentId) {
+          alert("Välj en befintlig förälder.");
+          return;
+        }
+        const parentIds = Array.from(
+          new Set([existingParentId, withOtherParentId || undefined].filter(Boolean) as string[])
+        );
+        await linkExisting({ childId, parentIds });
+      } else {
+        await createAndLink({
+          childId,
+          withOtherParentId,
+          form,
+        });
+      }
+      reset();
+      onClose();
+    } catch (e: any) {
+      if (e?.message) alert(e.message); // flow already validates and throws nice messages
+    }
+  };
+
   return (
-    <Dialog open={open} onClose={() => { reset(); onClose(); }} fullWidth maxWidth="sm">
+    <Dialog
+      open={open}
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      fullWidth
+      maxWidth="sm"
+    >
       <DialogTitle>Lägg till förälder</DialogTitle>
       <DialogContent>
         {child && (
@@ -148,6 +120,12 @@ export default function AddParentDialog({ open, onClose, childId }: Props) {
               <Chip key={p.id} label={fullName(p)} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
             ))}
           </Box>
+        )}
+
+        {error && (
+          <Typography color="error" sx={{ mb: 1 }}>
+            {error}
+          </Typography>
         )}
 
         <ToggleButtonGroup
@@ -188,8 +166,18 @@ export default function AddParentDialog({ open, onClose, childId }: Props) {
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => { reset(); onClose(); }}>Avbryt</Button>
-        <Button variant="contained" onClick={handleSave}>Spara</Button>
+        <Button
+          onClick={() => {
+            reset();
+            onClose();
+          }}
+          disabled={loading}
+        >
+          Avbryt
+        </Button>
+        <Button variant="contained" onClick={handleSave} disabled={loading}>
+          {mode === "new" ? "Skapa & länka" : "Länka"}
+        </Button>
       </DialogActions>
     </Dialog>
   );

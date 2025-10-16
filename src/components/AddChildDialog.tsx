@@ -12,14 +12,11 @@ import {
   Autocomplete,
   Typography,
 } from "@mui/material";
-import { v4 as uuidv4 } from "uuid";
-import { useAppDispatch, useAppSelector } from "../store";
-import { addIndividual } from "../features/individualsSlice";
-import { addRelationship } from "../features/relationshipsSlice";
-import { Individual, IndividualSchema } from "../types/individual";
+import { useAppSelector } from "../store";
+import { Individual } from "../types/individual";
 import { fullName } from "../utils/nameUtils";
-import { canAddParentChild } from "../utils/relationshipUtils";
 import IndividualFormFields from "./IndividualFormFields";
+import { useAddChildFlow } from "../hooks/useAddChildFlow";
 
 type Props = {
   open: boolean;
@@ -28,19 +25,24 @@ type Props = {
 };
 
 export default function AddChildDialog({ open, onClose, parentId }: Props) {
-  const dispatch = useAppDispatch();
-  const individuals = useAppSelector((s) => s.individuals.items);
-  const relationships = useAppSelector((s) => s.relationships.items);
+  const { loading, error, linkExisting, createAndLink } = useAddChildFlow();
 
-  const parent = useMemo(() => individuals.find((i) => i.id === parentId) || null, [individuals, parentId]);
+  const individuals = useAppSelector((s) => s.individuals.items);
+  const parent = useMemo(
+    () => individuals.find((i) => i.id === parentId) || null,
+    [individuals, parentId]
+  );
 
   const [mode, setMode] = useState<"new" | "existing">("new");
   const [existingChildId, setExistingChildId] = useState<string | null>(null);
   const [otherParentId, setOtherParentId] = useState<string | null>(null);
 
-  const [form, setForm] = useState<Partial<Individual>>({
-    gender: "unknown",
-  });
+  const [form, setForm] = useState<Partial<Individual>>({ gender: "unknown" });
+
+  const selectableOthers = useMemo(
+    () => individuals.filter((i) => i.id !== parentId),
+    [individuals, parentId]
+  );
 
   const reset = () => {
     setMode("new");
@@ -50,80 +52,52 @@ export default function AddChildDialog({ open, onClose, parentId }: Props) {
   };
 
   const handleSave = async () => {
-    const finalParentIds = Array.from(
-      new Set([parentId, otherParentId || undefined].filter(Boolean) as string[])
-    );
-
-    let childId: string | null = null;
-
-    if (mode === "existing") {
-      if (!existingChildId) {
-        alert("Välj ett befintligt barn.");
-        return;
+    try {
+      if (mode === "existing") {
+        if (!existingChildId) {
+          alert("Välj ett befintligt barn.");
+          return;
+        }
+        const parentIds = Array.from(
+          new Set([parentId, otherParentId || undefined].filter(Boolean) as string[])
+        );
+        await linkExisting({ parentIds, childId: existingChildId });
+      } else {
+        await createAndLink({
+          primaryParentId: parentId,
+          otherParentId,
+          form,
+        });
       }
-      childId = existingChildId;
-    } else {
-      // Create new child via schema (same pattern as IndividualFormDialog)
-      const candidate: Individual = {
-        id: uuidv4(),
-        givenName: form.givenName ?? "",
-        birthFamilyName: form.birthFamilyName ?? "",
-        familyName: form.familyName ?? "",
-        dateOfBirth: form.dateOfBirth ?? "",
-        birthRegion: form.birthRegion ?? "",
-        birthCongregation: form.birthCongregation ?? "",
-        birthCity: form.birthCity ?? "",
-        dateOfDeath: form.dateOfDeath ?? "",
-        deathRegion: form.deathRegion ?? "",
-        deathCongregation: form.deathCongregation ?? "",
-        deathCity: form.deathCity ?? "",
-        gender: (form.gender as any) ?? "unknown",
-        story: form.story ?? "",
-      };
-
-      const parsed = IndividualSchema.safeParse(candidate);
-      if (!parsed.success) {
-        alert("Kontrollera barnets uppgifter.");
-        return;
-      }
-
-      const created = await dispatch(addIndividual(parsed.data)).unwrap();
-      childId = (created as Individual).id;
+      reset();
+      onClose();
+    } catch (e: any) {
+      // The flow hook already does validation and throws with a friendly message
+      if (e?.message) alert(e.message);
     }
-
-    // Validate against cycles (for each parent)
-    for (const pid of finalParentIds) {
-      const ok = canAddParentChild(relationships, pid, childId!).ok;
-      if (!ok) {
-        alert("Det här skulle skapa en cykel i släktträdet eller är ogiltigt.");
-        return;
-      }
-    }
-
-    await dispatch(
-      addRelationship({
-        type: "parent-child",
-        parentIds: finalParentIds,
-        childId: childId!,
-      })
-    );
-
-    reset();
-    onClose();
   };
 
-  const selectableOthers = useMemo(
-    () => individuals.filter((i) => i.id !== parentId),
-    [individuals, parentId]
-  );
-
   return (
-    <Dialog open={open} onClose={() => { reset(); onClose(); }} fullWidth maxWidth="sm">
+    <Dialog
+      open={open}
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      fullWidth
+      maxWidth="sm"
+    >
       <DialogTitle>Lägg till barn</DialogTitle>
       <DialogContent>
         {parent && (
           <Typography variant="body2" sx={{ mb: 2 }}>
             Förälder: <strong>{fullName(parent)}</strong>
+          </Typography>
+        )}
+
+        {error && (
+          <Typography color="error" sx={{ mb: 1 }}>
+            {error}
           </Typography>
         )}
 
@@ -165,8 +139,18 @@ export default function AddChildDialog({ open, onClose, parentId }: Props) {
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => { reset(); onClose(); }}>Avbryt</Button>
-        <Button variant="contained" onClick={handleSave}>Spara</Button>
+        <Button
+          onClick={() => {
+            reset();
+            onClose();
+          }}
+          disabled={loading}
+        >
+          Avbryt
+        </Button>
+        <Button variant="contained" onClick={handleSave} disabled={loading}>
+          {mode === "new" ? "Skapa & länka" : "Länka"}
+        </Button>
       </DialogActions>
     </Dialog>
   );
