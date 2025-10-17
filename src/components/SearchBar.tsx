@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// src/components/SearchBar.tsx
+import React, { useRef, useState } from "react";
 import {
   TextField,
   Paper,
@@ -7,187 +8,89 @@ import {
   ListItemText,
   Portal,
 } from "@mui/material";
-import Fuse from "fuse.js";
 import { useAppSelector } from "../store";
-import { Individual } from "../types/individual";
-import { Relationship } from "../types/relationship";
+import type { Individual } from "../types/individual";
 import { fullName } from "../utils/nameUtils";
+import { useSearch } from "../hooks/useSearch";
 
-type SearchEntry = {
-  id: string;
-  givenName: string;
-  familyName?: string;
-  story?: string;
-  dateOfBirth?: string;
-  birthRegion?: string;
-  birthCongregation?: string;
-  birthCity?: string;
-  dateOfDeath?: string;
-  deathRegion?: string;
-  deathCongregation?: string;
-  deathCity?: string;
-  weddingRegion?: string;
-  weddingCongregation?: string;
-  weddingCity?: string;
-};
+interface SearchBarProps {
+  onSelect?: (id: string) => void;
+  onResults?: (ids: string[]) => void;
+  onQueryChange?: (value: string) => void;
+  showDropdown?: boolean;
+}
 
 export default function SearchBar({
   onSelect,
   onResults,
   onQueryChange,
   showDropdown = true,
-}: {
-  onSelect?: (id: string) => void;
-  onResults?: (ids: string[]) => void;
-  onQueryChange?: (value: string) => void;
-  showDropdown?: boolean;
-}) {
-  const individuals = useAppSelector((s) => s.individuals.items);
-  const relationships = useAppSelector((s) => s.relationships.items);
+}: SearchBarProps) {
+  const individuals = useAppSelector(
+    (s) => s.individuals.items
+  ) as Individual[];
 
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Fuse.FuseResult<SearchEntry>[]>([]);
   const anchorRef = useRef<HTMLInputElement | null>(null);
 
-  const entries: SearchEntry[] = useMemo(() => {
-    const base = individuals.map((i) => {
-      const givenName = i.givenName?.trim() ?? "";
-      const familyName = (i.familyName ?? i.birthFamilyName ?? "").trim();
-      const birthFamilyName = (i.birthFamilyName ?? i.familyName ?? "").trim();
-      const fullName = `${givenName} ${familyName}`.trim().toLowerCase();
-      const fullBirthName = `${givenName} ${birthFamilyName}`.trim().toLowerCase();
-      
-      return {
-        ...i,
-        // 👇 Add normalized searchable fields
-        fullBirthName: fullBirthName,
-        fullName: fullName,
-      };
-    });
+  const { results } = useSearch(query, {
+    limit: 10,
+    debounceMs: 200,
+    onResults,
+  });
 
-    const spouseExtras: SearchEntry[] = relationships
-      .filter((r): r is Relationship & { type: "spouse" } => r.type === "spouse")
-      .flatMap((r) => {
-        const person1 = individuals.find((i) => i.id === r.person1Id);
-        const person2 = individuals.find((i) => i.id === r.person2Id);
-        const res: SearchEntry[] = [];
-        if (person1) {
-          res.push({
-            ...person1,
-            weddingRegion: r.weddingRegion,
-            weddingCongregation: r.weddingCongregation,
-            weddingCity: r.weddingCity,
-          });
-        }
-        if (person2) {
-          res.push({
-            ...person2,
-            weddingRegion: r.weddingRegion,
-            weddingCongregation: r.weddingCongregation,
-            weddingCity: r.weddingCity,
-          });
-        }
-        return res;
-      });
-
-    return [...base, ...spouseExtras];
-  }, [individuals, relationships]);
-
-  const fuse = useMemo(
-    () =>
-      new Fuse(entries, {
-        keys: [
-          { name: "fullName", weight: 0.6 },
-          { name: "fullBirthName", weight: 0.6 },
-          { name: "givenName", weight: 0.3 },
-          { name: "familyName", weight: 0.3 },
-          { name: "birthFamilyName", weight: 0.3 },
-          { name: "story", weight: 0.1 },
-          "dateOfBirth",
-          "birthRegion",
-          "birthCongregation",
-          "birthCity",
-          "dateOfDeath",
-          "deathRegion",
-          "deathCongregation",
-          "deathCity",
-          "weddingRegion",
-          "weddingCongregation",
-          "weddingCity",
-        ],
-        threshold: 0.3,
-        ignoreLocation: true,
-        minMatchCharLength: 1,
-        includeScore: true,
-      }),
-    [entries]
-  );
-
-  useEffect(() => {
-    if (!query) {
-      setResults([]);
-      onResults?.([]);
-      return;
-    }
-    const t = setTimeout(() => {
-      const res = fuse.search(query).slice(0, 10);
-      setResults(res);
-      onResults?.(res.map((r) => r.item.id));
-    }, 200);
-    return () => clearTimeout(t);
-  }, [query, fuse, onResults]);
-
-  // Compute dropdown position
-  const anchorEl = anchorRef.current;
-  const rect = anchorEl?.getBoundingClientRect();
+  const rect = anchorRef.current?.getBoundingClientRect();
 
   return (
     <>
       <TextField
-        fullWidth
-        size="small"
-        label="Sök person eller plats"
+        inputRef={anchorRef}
         value={query}
         onChange={(e) => {
-          const val = e.target.value;
-          setQuery(val);
-          onQueryChange?.(val);
+          const v = e.target.value;
+          setQuery(v);
+          onQueryChange?.(v);
         }}
-        inputRef={anchorRef}
+        label="Sök (namn, datum, plats …)"
+        fullWidth
+        autoComplete="off"
       />
-      {showDropdown && results.length > 0 && rect && (
+
+      {showDropdown && query.length > 0 && results.length > 0 && rect && (
         <Portal>
           <Paper
-            style={{
-              position: "absolute",
-              top: rect.bottom + window.scrollY,
-              left: rect.left + window.scrollX,
+            elevation={6}
+            sx={{
+              position: "fixed",
+              left: rect.left,
+              top: rect.bottom + 4,
               width: rect.width,
-              zIndex: 1300, // above MUI dialog
-              maxHeight: 300,
-              overflowY: "auto",
+              maxHeight: 360,
+              overflow: "auto",
+              zIndex: 1300,
             }}
           >
             <List dense>
               {results.map((r) => {
-                const { dateOfBirth, birthCity, birthRegion } = r.item;
-                const secondary = [dateOfBirth, birthCity, birthRegion]
-                  .filter(Boolean)
-                  .join(" • ");
+                // Prefer the live individual (for latest name formatting).
+                const person = individuals.find((i) => i.id === r.item.id);
+
+                // Fallback if the person isn't in store right now.
+                const primary =
+                  person?.id ? fullName(person) : `${r.item.givenName ?? ""} ${r.item.familyName ?? r.item.birthFamilyName ?? ""}`.trim();
+
+                const secondary =
+                  person?.birthCity ||
+                  person?.deathCity ||
+                  r.item.weddingCity ||
+                  undefined;
 
                 return (
                   <ListItemButton
                     key={r.item.id}
-                    onClick={() => {
-                      onSelect?.(r.item.id);
-                      setQuery("");
-                      setResults([]);
-                    }}
+                    onClick={() => onSelect?.(r.item.id)}
                   >
-                    <ListItemText
-                      primary={fullName(r.item as Individual)}
-                      secondary={secondary}
-                    />
+                    <ListItemText primary={primary} secondary={secondary} />
                   </ListItemButton>
                 );
               })}
