@@ -1,5 +1,5 @@
-import { Individual } from "./individual";
-import { Relationship } from "./relationship";
+import { Individual } from "@core";
+import { Relationship } from "@core";
 
 export interface GenealogyAPI {
   // Individuals

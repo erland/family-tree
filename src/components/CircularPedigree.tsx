@@ -1,9 +1,9 @@
 // src/components/CircularPedigree.tsx
 import React, { useMemo, useState, useEffect } from "react";
 import { useAppSelector } from "../store";
-import { buildAncestorMatrix } from "../utils/ancestors";
-import { Individual } from "../types/individual";
-import { Relationship } from "../types/relationship";
+import { buildAncestorMatrix } from "@core";
+import { Individual } from "@core";
+import { Relationship } from "@core";
 
 type Props = {
   rootId: string;

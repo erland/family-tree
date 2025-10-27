@@ -26,8 +26,8 @@ import {
 import { exportFullTreeSVG } from "../utils/exportTreeSvg";
 import { exportFullTreePDF } from "../utils/exportTreePdf";
 import { useAppSelector } from "../store";
-import { Individual } from "../types/individual";
-import { buildGraph } from "../utils/treeLayout";
+import { Individual } from "@core";
+import { buildGraph } from "@core";
 import FamilyNode from "./FamilyNode";
 import MarriageNode from "./MarriageNode";
 import SearchBar from "../components/SearchBar";

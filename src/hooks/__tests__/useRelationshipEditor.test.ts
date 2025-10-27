@@ -1,40 +1,68 @@
 import { renderHook, act } from "@testing-library/react";
 import { useRelationshipEditor } from "../useRelationshipEditor";
-import type { Relationship } from "../../types/relationship";
+import type { Relationship } from "@core";
 
 // --- Mocks ------------------------------------------------------------------
 
-// Make uuid deterministic
+// deterministic uuid
 jest.mock("uuid", () => ({ v4: jest.fn(() => "uuid-1") }));
 
-// Action creators return plain FSA-style actions so we can assert dispatch calls
+// plain action creators so we can assert dispatch payloads
 jest.mock("../../features/relationshipsSlice", () => ({
-  addRelationship: (payload: any) => ({ type: "relationships/addRelationship", payload }),
-  updateRelationship: (payload: any) => ({ type: "relationships/updateRelationship", payload }),
+  addRelationship: (payload: any) => ({
+    type: "relationships/addRelationship",
+    payload,
+  }),
+  updateRelationship: (payload: any) => ({
+    type: "relationships/updateRelationship",
+    payload,
+  }),
 }));
 
-// We’ll swap this dynamically per-test by changing `selectorState`
+// we'll mutate this per test so useAppSelector returns different states
 const mockDispatch = jest.fn();
 let selectorState: any = { relationships: { items: [] } };
 
+// mock the store hooks
 jest.mock("../../store", () => ({
   useAppDispatch: () => mockDispatch,
   useAppSelector: (sel: any) => sel(selectorState),
 }));
 
-// wouldCreateCycle can be toggled per test
-const wouldCreateCycleMock = jest.fn((..._args: any[]) => false);
-jest.mock("../../utils/relationshipUtils", () => ({
-  // Avoid TS error on spreads by using explicit params
-  wouldCreateCycle: (rels: any, pid: string, cid: string) =>
-    wouldCreateCycleMock(rels, pid, cid),
-}));
+/**
+ * 🔁 Jest hoisting/TDZ workaround for @core
+ *
+ * We can't safely do:
+ *   const wouldCreateCycleMock = jest.fn();
+ *   jest.mock("@core", () => ({ ...actual, wouldCreateCycle: wouldCreateCycleMock }));
+ *
+ * because jest.mock() is hoisted but the const isn't, so we'd hit TDZ.
+ *
+ * Instead we create a mutable holder object that exists (is initialized)
+ * before the factory runs, then we assign its .wouldCreateCycle AFTER.
+ */
+const coreMocks: { wouldCreateCycle?: jest.Mock } = {};
+
+jest.mock("@core", () => {
+  const actual = jest.requireActual("@core");
+  return {
+    ...actual,
+    wouldCreateCycle: (...args: any[]) =>
+      coreMocks.wouldCreateCycle?.(...args),
+  };
+});
+
+// now that the factory is defined, we can attach the actual mock fn
+coreMocks.wouldCreateCycle = jest.fn(() => false);
 
 // --- Helpers ----------------------------------------------------------------
 
 const resetMocks = () => {
   mockDispatch.mockClear();
-  wouldCreateCycleMock.mockReset().mockReturnValue(false);
+  // default: no cycle
+  coreMocks.wouldCreateCycle!.mockReset();
+  coreMocks.wouldCreateCycle!.mockReturnValue(false);
+
   selectorState = { relationships: { items: [] } };
 };
 
@@ -162,10 +190,17 @@ describe("useRelationshipEditor (new relationship)", () => {
     resetMocks();
     selectorState = {
       relationships: {
-        items: [{ id: "r", type: "parent-child", parentIds: ["p1"], childId: "c1" }],
+        items: [
+          {
+            id: "r",
+            type: "parent-child",
+            parentIds: ["p1"],
+            childId: "c1",
+          },
+        ],
       },
     };
-    wouldCreateCycleMock.mockReturnValue(true);
+    coreMocks.wouldCreateCycle!.mockReturnValue(true);
 
     const { result: result2 } = renderHook(() => useRelationshipEditor());
     act(() => result2.current.setType("parent-child"));

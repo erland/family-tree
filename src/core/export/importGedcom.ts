@@ -1,9 +1,8 @@
 // electron/importGedcom.ts
-import fs from "fs";
 import { v4 as uuidv4 } from "uuid";
-import { Individual } from "../src/types/individual";
-import { Relationship } from "../src/types/relationship";
-import { parseGedcomDate } from "../src/utils/dateUtils.js";
+import { Individual } from "@core";
+import { Relationship } from "@core";
+import { parseGedcomDate } from "@core";
 
 export interface ImportResult {
   individuals: Individual[];
@@ -22,12 +21,7 @@ interface FamilyBlock {
   weddingCongregation?: string;
 }
 
-export async function importGedcom(filePath: string): Promise<ImportResult> {
-  const content = fs.readFileSync(filePath, "utf-8");
-  return parseGedcomContent(content);
-}
-
-export function parseGedcomContent(content: string): ImportResult {
+export function parseGedcomToData(content: string): { individuals: Individual[]; relationships: Relationship[] } {
   const lines = content.split(/\r?\n/);
 
   const individuals: Individual[] = [];

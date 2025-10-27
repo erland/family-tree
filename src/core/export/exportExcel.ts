@@ -1,13 +1,15 @@
+// src/core/export/excelExportCore.ts
 import ExcelJS from "exceljs";
 import type { Column } from "exceljs";
-import { app, dialog } from "electron";
-import { getIndividuals, getRelationships } from "./db.js";
-import { Individual } from "../src/types/individual";
-import { Relationship } from "../src/types/relationship";
-import { fullName } from "../src/utils/nameUtils.js";
-import { splitIsoDate } from "../src/utils/dateUtils.js";
+import { splitIsoDate } from "..//utils/dateUtils"; // adjust path
+import { fullName } from "../utils/nameUtils";     // adjust path
+import type { Individual } from "../types";           // adjust path
+import type { Relationship } from "../types";
 
-// Compute Släktskap + Generation by traversing *upwards* from virtual probands
+/**
+ * Build quick relationship lookup and compute the ancestry "code" string
+ * and gen index for each individual.
+ */
 function computeCodes(
   individuals: Individual[],
   relationships: Relationship[]
@@ -15,30 +17,30 @@ function computeCodes(
   const idToInd: Record<string, Individual> = {};
   for (const ind of individuals) idToInd[ind.id] = ind;
 
-  // Build quick lookups
+  // Build child->parents, parent->children
   const childToParents: Record<string, string[]> = {};
   const parentToChildren: Record<string, string[]> = {};
 
   relationships
     .filter((r) => r.type === "parent-child")
-    .forEach((r) => {
-      childToParents[r.childId] = (childToParents[r.childId] || []).concat(r.parentIds || []);
-      (r.parentIds || []).forEach((pid) => {
+    .forEach((r: any) => {
+      const pids = r.parentIds || [];
+      childToParents[r.childId] = (childToParents[r.childId] || []).concat(pids);
+      pids.forEach((pid: string) => {
         parentToChildren[pid] = (parentToChildren[pid] || []).concat(r.childId);
       });
     });
 
-  // Gen-1 candidates (parents of a *virtual* proband): have parents, but no children
+  // Gen-1 start points: have parents but no children.
+  // fallback: anyone who has parents.
   let gen1Candidates = individuals.filter(
     (ind) => !!childToParents[ind.id] && !parentToChildren[ind.id]
   );
-
-  // Fallback: if none found, treat everyone who *has parents* as candidate
   if (gen1Candidates.length === 0) {
     gen1Candidates = individuals.filter((ind) => !!childToParents[ind.id]);
   }
 
-  // BFS upward from each candidate. Initial code is 'f' or 'm' by candidate's gender.
+  // For each start, BFS upward and assign shortest code to each ancestor
   const best: Record<string, { code: string; gen: number }> = {};
 
   const pushIfBetter = (id: string, code: string) => {
@@ -51,21 +53,21 @@ function computeCodes(
 
   for (const start of gen1Candidates) {
     const startSuffix =
-      start.gender === "male" ? "f" : start.gender === "female" ? "m" : "";
-    if (!startSuffix) {
-      // If we don't know the candidate's gender, we can't emit a valid f/m code for Gen-1.
-      // Skip this candidate; others may cover the line.
-      continue;
-    }
+      start.gender === "male"
+        ? "f"
+        : start.gender === "female"
+        ? "m"
+        : "";
+    if (!startSuffix) continue;
 
-    const queue: Array<{ id: string; code: string }> = [{ id: start.id, code: startSuffix }];
+    const queue: Array<{ id: string; code: string }> = [
+      { id: start.id, code: startSuffix },
+    ];
 
     while (queue.length) {
       const { id, code } = queue.shift()!;
-      // Record best (shortest) code
       pushIfBetter(id, code);
 
-      // Move to this person's parents, appending f/m based on *parent's* gender
       const parents = childToParents[id] || [];
       for (const pid of parents) {
         const p = idToInd[pid];
@@ -73,14 +75,10 @@ function computeCodes(
 
         const step =
           p.gender === "male" ? "f" : p.gender === "female" ? "m" : "";
-        if (!step) {
-          // If parent's gender unknown, we can't produce a canonical f/m step for Excel — skip
-          continue;
-        }
+        if (!step) continue;
 
         const nextCode = code + step;
 
-        // Only enqueue if we can potentially improve (shorter code) or this parent unvisited
         const cur = best[pid];
         if (!cur || nextCode.length < cur.gen) {
           queue.push({ id: pid, code: nextCode });
@@ -123,17 +121,17 @@ function formatSlaktskap(raw: string): string {
 }
 
 /**
- * Export individuals in "Hela_släkten" format
+ * Build an ExcelJS workbook for individuals in the "Hela_släkten" format.
+ * Caller will decide how/where to persist or download it.
  */
-export async function exportExcel(
+export function buildIndividualsWorkbook(
   individuals: Individual[],
-  relationships: Relationship[],
-  filePath: string
-) {
+  relationships: Relationship[]
+): ExcelJS.Workbook {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Hela_släkten");
 
-  // Headers
+  // Header row
   const headerRow = sheet.addRow([
     "LinjeId",
     "Rad",
@@ -147,8 +145,6 @@ export async function exportExcel(
     "Ddag", "Dmån", "Dår",
     "Dödsort", "Dödsförsamling", "Dödslän",
   ]);
-
-  // Make header bold
   headerRow.font = { bold: true };
 
   const indToCodeGen = computeCodes(individuals, relationships);
@@ -156,13 +152,13 @@ export async function exportExcel(
   individuals.forEach((ind, index) => {
     const b = splitIsoDate(ind.dateOfBirth);
     const d = splitIsoDate(ind.dateOfDeath);
-  
+
     const rawCode = indToCodeGen[ind.id]?.code ?? "";
     const gen = rawCode.length;
     const linjeId = rawCode ? computeLinjeId(rawCode) : 0;
-    const code = formatSlaktskap(rawCode); // "ff f", "ff ff", etc.
-    const rad = index + 2; // Excel row (header + 1)
-  
+    const code = formatSlaktskap(rawCode);
+    const rad = index + 2; // row number in Excel if header is row 1
+
     sheet.addRow([
       linjeId,
       rad,
@@ -171,47 +167,47 @@ export async function exportExcel(
       ind.givenName ?? "",
       ind.birthFamilyName ?? "",
       ind.familyName ?? "",
-      b.day, b.monthName, b.year,
+      b.day,
+      b.monthName,
+      b.year,
       ind.birthCity ?? "",
       ind.birthCongregation ?? "",
       ind.birthRegion ?? "",
-      d.day, d.monthName, d.year,
+      d.day,
+      d.monthName,
+      d.year,
       ind.deathCity ?? "",
       ind.deathCongregation ?? "",
       ind.deathRegion ?? "",
     ]);
   });
 
-  // Adjust column widths automatically (based on header text length)
+  // Autofit columns based on content
   sheet.columns.forEach((col) => {
-    const column = col as Column; // cast to suppress TS optional errors
+    const column = col as Column;
     let maxLength = 0;
     column.eachCell({ includeEmpty: true }, (cell) => {
       const val = cell.value ? cell.value.toString() : "";
-      if (val.length > maxLength) {
-        maxLength = val.length;
-      }
+      if (val.length > maxLength) maxLength = val.length;
     });
     column.width = maxLength + 2;
   });
 
-  await workbook.xlsx.writeFile(filePath);
+  return workbook;
 }
 
 /**
- * Export relationships to Excel with Swedish headers and names
+ * Build an ExcelJS workbook for relationships
+ * with Swedish headers and human-readable names.
  */
-export async function exportRelationshipsExcel() {
-  const relationships = await getRelationships();
-  const individuals = await getIndividuals();
-  const byId: Record<string, any> = Object.fromEntries(
-    individuals.map((i: any) => [i.id, i])
-  );
-
+export function buildRelationshipsWorkbook(
+  individuals: Individual[],
+  relationships: Relationship[]
+): ExcelJS.Workbook {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Relationer");
 
-  // Define headers
+  // header definitions
   sheet.columns = [
     { header: "ID", key: "id", width: 36 },
     { header: "Typ", key: "type", width: 15 },
@@ -229,29 +225,28 @@ export async function exportRelationshipsExcel() {
     { header: "Stad", key: "weddingCity", width: 20 },
   ];
 
-  // Add rows
-  relationships.forEach((r: any) => {
-    const person1Name = fullName(byId[r.person1Id]);
-    const person2Name = fullName(byId[r.person2Id]);
-    const childName = fullName(byId[r.childId]);
+  // index individuals by id for name lookup
+  const byId: Record<string, Individual> = Object.fromEntries(
+    individuals.map((ind) => [ind.id, ind])
+  );
 
+  relationships.forEach((r: any) => {
     const parentIds = Array.isArray(r.parentIds) ? r.parentIds : [];
-    const parentNames = parentIds
-      .map((pid: string) => fullName(byId[pid]))
-      .filter(Boolean)
-      .join(", ");
 
     sheet.addRow({
       id: r.id ?? "",
       type: r.type ?? "",
       person1Id: r.person1Id ?? "",
-      person1Name,
+      person1Name: fullName(byId[r.person1Id]),
       person2Id: r.person2Id ?? "",
-      person2Name,
+      person2Name: fullName(byId[r.person2Id]),
       childId: r.childId ?? "",
-      childName,
+      childName: fullName(byId[r.childId]),
       parentIds: parentIds.join(", "),
-      parentNames,
+      parentNames: parentIds
+        .map((pid: string) => fullName(byId[pid]))
+        .filter(Boolean)
+        .join(", "),
       weddingDate: r.weddingDate ?? "",
       weddingRegion: r.weddingRegion ?? "",
       weddingCongregation: r.weddingCongregation ?? "",
@@ -259,20 +254,7 @@ export async function exportRelationshipsExcel() {
     });
   });
 
-  // Style header row
   sheet.getRow(1).font = { bold: true };
 
-  // Save dialog
-  const { filePath, canceled } = await dialog.showSaveDialog({
-    title: "Exportera relationer till Excel",
-    defaultPath: "relationships.xlsx",
-    filters: [{ name: "Excel", extensions: ["xlsx"] }],
-  });
-
-  if (!canceled && filePath) {
-    await workbook.xlsx.writeFile(filePath);
-    return { success: true, path: filePath };
-  }
-
-  return { success: false };
+  return workbook;
 }

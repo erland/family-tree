@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Box,
   Button,
@@ -11,28 +11,41 @@ import {
   Paper,
   Grid,
 } from "@mui/material";
+
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import DescriptionIcon from "@mui/icons-material/Description";
-import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import PeopleIcon from "@mui/icons-material/People";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import FamilyRestroomIcon from "@mui/icons-material/FamilyRestroom";
+
 import { useTranslation } from "react-i18next";
 import { useAppSelector, useAppDispatch } from "../store";
-import { useState } from "react";
-import { Relationship } from "../types/relationship";
-import { clearIndividuals, fetchIndividuals } from "../features/individualsSlice";
-import { clearRelationships, fetchRelationships } from "../features/relationshipsSlice";
+
+import { Relationship } from "@core";
+import {
+  clearIndividuals,
+  fetchIndividuals,
+} from "../features/individualsSlice";
+import {
+  clearRelationships,
+  fetchRelationships,
+} from "../features/relationshipsSlice";
 
 export function ResetDatabaseButton() {
   const [open, setOpen] = useState(false);
   const dispatch = useAppDispatch();
 
   const handleConfirm = async () => {
-    await window.genealogyAPI.resetDatabase();
+    // unified: both web + electron impls should have resetDatabase()
+    await (window as any).api.resetDatabase?.();
+
+    // clear redux
     dispatch(clearIndividuals());
     dispatch(clearRelationships());
+
     setOpen(false);
+
+    // reload UI state after wipe
     window.location.reload();
   };
 
@@ -52,7 +65,9 @@ export function ResetDatabaseButton() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Avbryt</Button>
-          <Button color="error" onClick={handleConfirm}>Radera allt</Button>
+          <Button color="error" onClick={handleConfirm}>
+            Radera allt
+          </Button>
         </DialogActions>
       </Dialog>
     </>
@@ -61,67 +76,100 @@ export function ResetDatabaseButton() {
 
 export default function Dashboard() {
   const { t } = useTranslation();
-  const individuals = useAppSelector((s) => s.individuals.items);
-  const relationships = useAppSelector((s) => s.relationships.items) as Relationship[];
   const dispatch = useAppDispatch();
 
-  // 🧮 Compute summary counts
+  const individuals = useAppSelector((s) => s.individuals.items);
+  const relationships = useAppSelector(
+    (s) => s.relationships.items
+  ) as Relationship[];
+
   const individualCount = individuals.length;
   const marriageCount = relationships.filter((r) => r.type === "spouse").length;
 
+  // Count unique parent-child "families"
   const familySet = new Set<string>();
   for (const r of relationships) {
     if (r.type === "parent-child") {
-      const rel = r as any;
-      const key = [...(rel.parentIds || [])].sort().join(",") + "->" + rel.childId;
+      const key =
+        [...(r.parentIds || [])].sort().join(",") + "->" + (r as any).childId;
       familySet.add(key);
     }
   }
   const familyCount = familySet.size;
 
+  // ─────────────────────────────────
+  // Import Excel
+  // In Electron:
+  //   api.importExcel() should open dialog, parse file, persist to lowdb, return {count, relCount}
+  //
+  // In Web:
+  //   api.importExcel() should open a hidden <input type="file">, read ArrayBuffer,
+  //   call parseExcelData(...), persist to IndexedDB/localStorage, return {count, relCount}
+  // ─────────────────────────────────
   const handleImportExcel = async () => {
-    const [filePath] = await window.electronAPI.showOpenDialog({
-      title: "Importera från Excel",
-      filters: [{ name: "Excel", extensions: ["xlsx"] }],
-    });
-    if (filePath) {
-      const result = await window.genealogyAPI.importExcel(filePath);
-      alert(`Importerade ${result.count} personer och ${result.relCount} relationer.`);
-
-      await dispatch(fetchIndividuals());
-      await dispatch(fetchRelationships());
-    }
+      const result = await (window as any).api.importExcel();
+      if (result) {
+        alert(
+          `Importerade ${result.count} personer och ${result.relCount} relationer.`
+        );
+        await dispatch(fetchIndividuals());
+        await dispatch(fetchRelationships());
+      }
   };
 
+  // ─────────────────────────────────
+  // Import GEDCOM
+  // Same idea: api.importGedcom() abstracts file picking + parsing.
+  // ─────────────────────────────────
   const handleImportGedcom = async () => {
-    const [filePath] = await window.electronAPI.showOpenDialog({
-      title: "Importera från GEDCOM",
-      filters: [{ name: "GEDCOM", extensions: ["ged"] }],
-    });
-    if (filePath) {
-      const result = await window.genealogyAPI.importGedcom(filePath);
-      alert(`Importerade ${result.count} personer och ${result.relCount} relationer.`);
-
+    const result = await (window as any).api.importGedcom?.();
+    if (result) {
+      alert(
+        `Importerade ${result.count} personer och ${result.relCount} relationer.`
+      );
       await dispatch(fetchIndividuals());
       await dispatch(fetchRelationships());
     }
   };
 
+  // ─────────────────────────────────
+  // Export Excel
+  // In Electron:
+  //   api.exportIndividualsExcel() should show save dialog and write the file.
+  //
+  // In Web:
+  //   api.exportIndividualsExcel() should build the workbook with
+  //   buildIndividualsWorkbook/buildRelationshipsWorkbook,
+  //   turn that into a Blob, and trigger download. It can just return { success: true }.
+  // ─────────────────────────────────
   const handleExportExcel = async () => {
-    const res = await window.genealogyAPI.exportIndividualsExcel();
-    if (res?.success) alert("Excel-export klar!");
+    const res = await (window as any).api.exportIndividualsExcel?.();
+    if (res?.success) {
+      alert("Excel-export klar!");
+    }
   };
 
+  // ─────────────────────────────────
+  // Export GEDCOM
+  // In Electron:
+  //   api.exportGedcom() writes to disk via dialog/save.
+  //
+  // In Web:
+  //   api.exportGedcom() should call buildGedcom(...),
+  //   make a Blob, trigger .ged download, return {success:true}.
+  // ─────────────────────────────────
   const handleExportGedcom = async () => {
-    const res = await window.genealogyAPI.exportGedcom();
-    if (res?.success) alert("GEDCOM-export klar!");
+    const res = await (window as any).api.exportGedcom?.();
+    if (res?.success) {
+      alert("GEDCOM-export klar!");
+    }
   };
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
       <Typography variant="h6">{t("dashboard")}</Typography>
 
-      {/* ─────────────── Summary cards ─────────────── */}
+      {/* Summary cards */}
       <Grid container spacing={2}>
         <Grid item xs={12} sm={4}>
           <Paper
@@ -184,7 +232,7 @@ export default function Dashboard() {
         </Grid>
       </Grid>
 
-      {/* ─────────────── Import/Export buttons ─────────────── */}
+      {/* Import/Export actions */}
       <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mt: 2 }}>
         <Button
           variant="contained"
@@ -217,13 +265,14 @@ export default function Dashboard() {
         >
           Exportera GEDCOM
         </Button>
-        <ResetDatabaseButton/>
+
+        <ResetDatabaseButton />
       </Box>
 
       <Box sx={{ mt: 3 }}>
         <Typography variant="body2" color="text.secondary">
-          Databasen innehåller {individualCount} individer, {marriageCount} äktenskap och{" "}
-          {familyCount} familjer.
+          Databasen innehåller {individualCount} individer, {marriageCount}{" "}
+          äktenskap och {familyCount} familjer.
         </Typography>
       </Box>
     </Box>

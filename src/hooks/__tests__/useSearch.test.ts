@@ -2,21 +2,28 @@
 jest.mock("../../store", () => ({
   useAppSelector: jest.fn(),
 }));
-jest.mock("../../utils/searchIndex", () => ({
-  buildSearchEntries: jest.fn(),
-  createSearcher: jest.fn(),
-}));
+
+jest.mock("@core", () => {
+  // pull the real module so we don't break other imports like types
+  const actual = jest.requireActual("@core");
+
+  return {
+    ...actual,
+    buildSearchEntries: jest.fn(),
+    createSearcher: jest.fn(),
+  };
+});
 
 // --- Imports ---
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useSearch } from "../useSearch";
-import type { Individual } from "../../types/individual";
+import type { Individual } from "@core";
 
 const useAppSelector = require("../../store").useAppSelector as jest.Mock;
 const {
   buildSearchEntries,
   createSearcher,
-} = require("../../utils/searchIndex") as {
+} = require("@core") as {
   buildSearchEntries: jest.Mock;
   createSearcher: jest.Mock;
 };

@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../store";
 import { addIndividual } from "../features/individualsSlice";
 import { addRelationship, updateRelationship } from "../features/relationshipsSlice";
-import type { Individual } from "../types/individual";
-import type { Relationship } from "../types/relationship";
+import type { Individual } from "@core";
+import type { Relationship } from "@core";
 
 /** Narrow the union to the parent-child variant */
 type ParentChildRel = Extract<Relationship, { type: "parent-child" }>;

@@ -10,9 +10,9 @@ import {
   ToggleButtonGroup,
 } from "@mui/material";
 import { useAppSelector } from "../store";
-import { Individual } from "../types/individual";
-import { fullName } from "../utils/nameUtils";
-import { calculateAgeAtEvent } from "../utils/dateUtils";
+import { Individual } from "@core";
+import { fullName } from "@core";
+import { calculateAgeAtEvent } from "@core";
 import {
   BarChart,
   Bar,

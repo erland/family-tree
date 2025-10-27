@@ -3,7 +3,7 @@ import {
   Box, Typography, IconButton, TextField, Grid, Button, Divider, Tooltip,
 } from "@mui/material";
 import { Add, Delete } from "@mui/icons-material";
-import { Move } from "../types/individual";
+import { Move } from "@core";
 
 type Props = {
   value?: Move[];

@@ -25,12 +25,11 @@ import {
   fetchIndividuals,
   deleteIndividual,
 } from "../features/individualsSlice";
-import { Individual } from "../types/individual";
+import { Individual } from "@core";
 import SearchBar from "../components/SearchBar";
 import IndividualDetails from "../components/IndividualDetails";
 import IndividualFormDialog from "../components/IndividualFormDialog";
-import { fullName } from "../utils/nameUtils";
-import { dialog } from "@tauri-apps/api/dialog";
+import { fullName } from "@core";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import { exportAllIndividualsPdf } from "../utils/exportAllIndividualsPdf";
 
@@ -109,44 +108,6 @@ export default function IndividualsPage() {
         <Button variant="contained" startIcon={<Add />} onClick={() => handleOpen()}>
           Ny
         </Button>
-
-        <Tooltip title="Exportera Excel">
-          <IconButton
-            onClick={async () => {
-              const result = await window.genealogyAPI.exportIndividualsExcel();
-              if (result.success) {
-                alert(`Excel-fil exporterad till ${result.path}`);
-              }
-            }}
-          >
-            <FileDownload />
-          </IconButton>
-        </Tooltip>
-
-        <Tooltip title="Importera Excel">
-          <IconButton
-            onClick={async () => {
-              const filePath = await window.electronAPI.showOpenDialog({
-                filters: [{ name: "Excel", extensions: ["xls", "xlsx", "xlsm"] }],
-                properties: ["openFile"],
-              });
-              if (filePath) {
-                const result = await window.genealogyAPI.importExcel(filePath[0]);
-                alert(
-                  `Imported ${result.count} individuals and ${result.relCount} relationships`
-                );
-              }
-            }}
-          >
-            <FileUpload />
-          </IconButton>
-        </Tooltip>
-
-        <Tooltip title="Exportera GEDCOM">
-          <IconButton onClick={() => window.genealogyAPI.exportGedcom()}>
-            <FilePresent />
-          </IconButton>
-        </Tooltip>
 
         <Tooltip title="Exportera alla till PDF">
           <IconButton

@@ -2,8 +2,8 @@ import { useCallback, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useAppDispatch, useAppSelector } from "../store";
 import { addRelationship, updateRelationship } from "../features/relationshipsSlice";
-import { Relationship } from "../types/relationship";
-import { wouldCreateCycle } from "../utils/relationshipUtils";
+import { Relationship } from "@core";
+import { wouldCreateCycle } from "@core";
 
 export type RelType = "spouse" | "parent-child";
 

@@ -1,9 +1,9 @@
 // src/utils/exportTreeSvg.ts
-import { buildGraph } from "./treeLayout";
+import { buildGraph } from "@core";
 import FamilyNode from "../components/FamilyNode";
 import MarriageNode from "../components/MarriageNode";
-import { Individual } from "../types/individual";
-import { Relationship } from "../types/relationship";
+import { Individual } from "@core";
+import { Relationship } from "@core";
 import { computeViewportBBox, renderOffscreenGraph, captureAsSvg } from "./exportTreeBase";
 
 const nodeTypes = { family: FamilyNode, marriage: MarriageNode };

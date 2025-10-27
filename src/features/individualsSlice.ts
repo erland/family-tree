@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Individual } from "../types/individual";
+import { Individual } from "@core";
 
 interface IndividualsState {
   items: Individual[];
@@ -13,26 +13,26 @@ const initialState: IndividualsState = {
 
 // Async thunks via preload API
 export const fetchIndividuals = createAsyncThunk("individuals/fetchAll", async () => {
-  return await window.genealogyAPI.listIndividuals();
+  return await (window as any).api.listIndividuals();
 });
 
 export const addIndividual = createAsyncThunk(
   "individuals/add",
   async (ind: Omit<Individual, "id"> & { id?: string }) => {
     const finalInd: Individual = { id: ind.id ?? crypto.randomUUID(), ...ind };
-    return await window.genealogyAPI.addIndividual(finalInd);
+    return await (window as any).api.addIndividual(finalInd);
   }
 );
 
 export const updateIndividual = createAsyncThunk(
   "individuals/update",
   async ({ id, updates }: { id: string; updates: Partial<Individual> }) => {
-    return await window.genealogyAPI.updateIndividual(id, updates);
+    return await (window as any).api.updateIndividual(id, updates);
   }
 );
 
 export const deleteIndividual = createAsyncThunk("individuals/delete", async (id: string) => {
-  await window.genealogyAPI.deleteIndividual(id);
+  await (window as any).api.deleteIndividual(id);
   return id;
 });
 

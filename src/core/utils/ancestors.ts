@@ -87,6 +87,7 @@ export function buildAncestorMatrix(
 }
 
 // --- fullName ----------------------------------------------------------------
+/*
 export function fullName(i?: Individual | null): string {
   if (!i) return "";
 
@@ -101,3 +102,4 @@ export function fullName(i?: Individual | null): string {
 
   return `${parts.join(" ")}${years}`;
 }
+  */

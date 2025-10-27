@@ -6,7 +6,7 @@ import {
   DialogActions,
   Button,
 } from "@mui/material";
-import { Individual, IndividualSchema } from "../types/individual";
+import { Individual, IndividualSchema } from "@core";
 import { v4 as uuidv4 } from "uuid";
 import { useAppDispatch } from "../store";
 import { addIndividual, updateIndividual } from "../features/individualsSlice";

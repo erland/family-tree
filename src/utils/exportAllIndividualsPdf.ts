@@ -1,7 +1,7 @@
 // src/utils/exportAllIndividualsPdf.ts
 import jsPDF from "jspdf";
-import { Individual } from "../types/individual";
-import { Relationship } from "../types/relationship";
+import { Individual } from "@core";
+import { Relationship } from "@core";
 import { renderIndividualPage } from "./exportPersonPdf";
 
 export function exportAllIndividualsPdf(

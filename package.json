@@ -7,31 +7,20 @@
     "email": "erland@isaksson.info"
   },
   "type": "module",
-  "main": "dist-electron/electron/main.js",
+
   "scripts": {
-    "react:start": "vite",
-    "build:react": "vite build",
-    "build:electron:main": "tsc -p tsconfig.electron.json",
-    "build:electron:preload": "tsc -p tsconfig.preload.json",
-    "build:electron": "npm run build:electron:main && npm run build:electron:preload",
-    "watch:electron": "tsc -w -p tsconfig.electron.json",
-    "electron:start": "npm run build:electron && electronmon dist-electron/electron/main.js",
-    "start": "concurrently \"npm run react:start\" \"npm run electron:start\"",
-    "build": "npm run build:react && npm run build:electron",
-    "dist:mac": "npm run build && electron-builder --mac --arm64",
-    "dist:win": "npm run build && electron-builder --win --x64",
-    "dist:all": "npm run build && electron-builder -m --arm64 -w --x64",
+    "dev": "vite",
+    "build": "vite build",
     "test": "jest --passWithNoTests",
     "test:coverage": "jest --coverage"
   },
+
   "dependencies": {
-    "@electron/remote": "^2.1.3",
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
     "@mui/icons-material": "^6.0.0",
     "@mui/material": "^6.0.0",
     "@reduxjs/toolkit": "^2.2.3",
-    "concurrently": "^9.0.0",
     "dagre": "^0.8.5",
     "exceljs": "^4.4.0",
     "fuse.js": "^7.1.0",
@@ -39,7 +28,6 @@
     "i18next": "^23.12.2",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
-    "lowdb": "^7.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-i18next": "^14.1.3",
@@ -50,81 +38,20 @@
     "uuid": "^9.0.1",
     "zod": "^3.23.8"
   },
+
   "devDependencies": {
-    "@electron/notarize": "^3.1.0",
     "@testing-library/react": "^14.3.1",
-    "@types/electron": "^1.6.12",
+    "@types/dagre": "^0.7.53",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.12.12",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.2",
     "@types/uuid": "^9.0.7",
     "@vitejs/plugin-react": "^5.0.3",
-    "electron": "^30.0.0",
-    "electron-builder": "^24.13.3",
-    "electronmon": "^2.0.2",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
     "ts-jest": "^29.4.4",
     "typescript": "^5.5.4",
     "vite": "^5.4.2"
-  },
-  "build": {
-    "appId": "info.isaksson.erland.family-tree",
-    "asar": true,
-    "directories": {
-      "buildResources": "build",
-      "output": "dist-packaged"
-    },
-    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
-    "files": [
-      "dist/**",
-      "dist-electron/**",
-      "!**/*.map",
-      "!src/**",
-      "package.json"
-    ],
-    "extraMetadata": {
-      "main": "dist-electron/electron/main.js"
-    },
-    "mac": {
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "arm64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "arm64"
-          ]
-        }
-      ],
-      "category": "public.app-category.productivity",
-      "icon": "build/icons/icon.icns",
-      "hardenedRuntime": true,
-      "entitlements": "build/entitlements.plist",
-      "entitlementsInherit": "build/entitlements.inherit.plist"
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "build/icons/icon.ico",
-      "publisherName": "Your Company, Inc."
-    },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": false,
-      "deleteAppDataOnUninstall": false
-    }
   }
 }

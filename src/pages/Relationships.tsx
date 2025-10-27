@@ -18,8 +18,8 @@ import { Add, Delete, Edit, FileDownload } from "@mui/icons-material";
 import { useAppDispatch, useAppSelector } from "../store";
 import { fetchRelationships, deleteRelationship } from "../features/relationshipsSlice";
 import RelationshipEditor from "../components/RelationshipEditor";
-import { Relationship } from "../types/relationship";
-import { fullName } from "../utils/nameUtils";
+import { Relationship } from "@core";
+import { fullName } from "@core";
 import SearchBar from "../components/SearchBar";
 
 export default function RelationshipsPage() {
@@ -118,9 +118,9 @@ export default function RelationshipsPage() {
         <Tooltip title="Exportera Excel">
           <IconButton
             onClick={async () => {
-              const result = await window.genealogyAPI.exportRelationshipsExcel();
+              const result = await (window as any).api.exportRelationshipsExcel();
               if (result.success) {
-                alert(`Excel-fil exporterad till ${result.path}`);
+                alert(`Excel-fil exporterad`);
               }
             }}
           >

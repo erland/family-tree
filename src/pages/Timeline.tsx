@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { Box, Typography, Divider, Link } from "@mui/material";
 import SearchBar from "../components/SearchBar";
-import { fullName } from "../utils/nameUtils";
-import { formatLocation } from "../utils/location";
+import { fullName } from "@core";
+import { formatLocation } from "@core";
 import { useTimelineViewModel } from "../hooks/useTimelineViewModel";
 import { EventsTable, type EventRow } from "../components/presentational/EventsTable";
 

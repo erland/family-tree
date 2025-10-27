@@ -1,13 +1,13 @@
 // src/hooks/useSearch.ts
 import { useEffect, useMemo, useState } from "react";
 import { useAppSelector } from "../store";
-import type { Individual } from "../types/individual";
-import type { Relationship } from "../types/relationship";
+import type { Individual } from "@core";
+import type { Relationship } from "@core";
 import {
   buildSearchEntries,
   createSearcher,
   type SearchResult,
-} from "../utils/searchIndex";
+} from "@core";
 
 /**
  * Encapsulates all search logic (index building, Fuse config, debouncing).

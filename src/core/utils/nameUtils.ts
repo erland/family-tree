@@ -1,4 +1,4 @@
-import { Individual } from "../core/types/individual";
+import { Individual } from "../types/individual";
 
 export function fullName(ind?: Individual | null): string {
   if (!ind) return "";

@@ -1,32 +1,56 @@
 // Mocks must come before imports of the module under test
+
+// 1. Mock store hooks so we can control selector output
 jest.mock("../../store", () => ({
   useAppSelector: jest.fn(),
 }));
 
-jest.mock("../../utils/relationshipUtils", () => ({
-  canAddParentChild: jest.fn(),
-}));
-
+// 2. Mock the lower-level hook that useAddChildFlow composes
 jest.mock("../useAddChild", () => ({
   useAddChild: jest.fn(),
 }));
 
-jest.mock("../../types/individual", () => ({
-  // We only need a runtime value for IndividualSchema; types evaporate
-  IndividualSchema: { safeParse: jest.fn() },
-}));
+// 3. Partially mock @core so we can:
+//    - control canAddParentChild (cycle detection / validity)
+//    - control IndividualSchema.safeParse (form validation)
+//    We keep the rest of @core's real exports intact.
+jest.mock("@core", () => {
+  const actual = jest.requireActual("@core");
 
+  return {
+    ...actual,
+
+    // mockable relationship rule used in useAddChildFlow.validateNoCycles
+    canAddParentChild: jest.fn(),
+
+    // mockable zod schema
+    IndividualSchema: {
+      safeParse: jest.fn(),
+    },
+  };
+});
+
+// Now import test utilities and the hook under test
 import { renderHook, act } from "@testing-library/react";
 import { useAddChildFlow } from "../useAddChildFlow";
 
-const { useAppSelector } = require("../../store") as { useAppSelector: jest.Mock };
-const { canAddParentChild } = require("../../utils/relationshipUtils") as {
-  canAddParentChild: jest.Mock;
+// Grab the mocks we declared above
+const { useAppSelector } = require("../../store") as {
+  useAppSelector: jest.Mock;
 };
-const { useAddChild } = require("../useAddChild") as { useAddChild: jest.Mock };
-const { IndividualSchema } = require("../../types/individual") as {
+
+const { useAddChild } = require("../useAddChild") as {
+  useAddChild: jest.Mock;
+};
+
+const {
+  canAddParentChild,
+  IndividualSchema,
+} = require("@core") as {
+  canAddParentChild: jest.Mock;
   IndividualSchema: { safeParse: jest.Mock };
 };
+
 
 describe("useAddChildFlow", () => {
   let addExistingChild: jest.Mock;

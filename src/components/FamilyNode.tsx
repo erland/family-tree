@@ -1,6 +1,6 @@
 import React from "react";
 import { Handle, Position } from "reactflow";
-import { fullName } from "../utils/nameUtils";
+import { fullName } from "@core";
 
 export default function FamilyNode({ data }: any) {
   return (

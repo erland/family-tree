@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Relationship } from "../types/relationship";
+import { Relationship } from "@core";
 
 interface RelationshipsState {
   items: Relationship[];
@@ -9,26 +9,26 @@ interface RelationshipsState {
 const initialState: RelationshipsState = { items: [], status: "idle" };
 
 export const fetchRelationships = createAsyncThunk("relationships/fetchAll", async () => {
-  return await window.genealogyAPI.listRelationships();
+  return await (window as any).api.listRelationships();
 });
 
 export const addRelationship = createAsyncThunk(
   "relationships/add",
   async (rel: Omit<Relationship, "id"> & { id?: string }) => {
     const finalRel: Relationship = { id: rel.id ?? crypto.randomUUID(), ...rel };
-    return await window.genealogyAPI.addRelationship(finalRel);
+    return await (window as any).api.addRelationship(finalRel);
   }
 );
 
 export const updateRelationship = createAsyncThunk(
   "relationships/update",
   async (rel: Relationship) => {
-    return await window.genealogyAPI.updateRelationship(rel.id, rel);
+    return await (window as any).api.updateRelationship(rel.id, rel);
   }
 );
 
 export const deleteRelationship = createAsyncThunk("relationships/delete", async (id: string) => {
-  await window.genealogyAPI.deleteRelationship(id);
+  await (window as any).api.deleteRelationship(id);
   return id;
 });
 

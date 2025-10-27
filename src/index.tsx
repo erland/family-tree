@@ -18,6 +18,10 @@ import "./i18n";
 import { CssBaseline } from "@mui/material";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
+// 🔁 NEW imports
+import { initDB } from "./storage";            // your web storage module (localStorage-backed)
+import { genealogyWebAPI } from "./api/genealogy-web"; // the browser impl of GenealogyAPI
+
 const theme = createTheme({
   palette: {
     mode: "light",
@@ -26,6 +30,7 @@ const theme = createTheme({
   },
 });
 
+// Your existing route config stays the same
 const router = createHashRouter([
   {
     path: "/",
@@ -42,11 +47,25 @@ const router = createHashRouter([
   },
 ]);
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <Provider store={store}>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <RouterProvider router={router} />
-    </ThemeProvider>
-  </Provider>
-);
+// ⬇⬇⬇ BOOTSTRAP WRAPPER ⬇⬇⬇
+(async function bootstrap() {
+  // 1. Init browser DB (creates localStorage buckets if missing)
+  await initDB();
+
+  // 2. Expose a GenealogyAPI-compatible surface on window
+  //    so slices/thunks can keep doing window.api.listIndividuals(), etc.
+  (window as any).api = genealogyWebAPI;
+
+  // 3. Now that storage + api are ready, render the actual app
+  const rootEl = document.getElementById("root") as HTMLElement;
+  const root = ReactDOM.createRoot(rootEl);
+
+  root.render(
+    <Provider store={store}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <RouterProvider router={router} />
+      </ThemeProvider>
+    </Provider>
+  );
+})();

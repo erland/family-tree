@@ -1,13 +1,13 @@
 // src/utils/gedcom/exportGedcom.ts
-import { Individual } from "../src/types/individual";
-import { Relationship } from "../src/types/relationship";
-import { formatDate } from "../src/utils/dateUtils.js";
+import { Individual } from "@core";
+import { Relationship } from "@core";
+import { formatDate } from "@core";
 
 /**
  * Pure GEDCOM string generator — no Electron or file system dependencies.
  * Suitable for unit tests.
  */
-export function generateGedcom(
+export function buildGedcom(
   individuals: Individual[],
   relationships: Relationship[]
 ): string {

@@ -4,7 +4,6 @@
     "types": ["jest", "node"]
   },
   "include": [
-    "electron/**/*.test.ts",
     "src/**/__tests__/**/*.ts",
     "src/**/*.test.ts",
     "src/**/*.test.tsx",

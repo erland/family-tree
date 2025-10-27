@@ -12,9 +12,14 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "allowSyntheticDefaultImports": true,
-    "types": ["node", "electron"],
-    "outDir": "dist"
+    "types": ["node"],
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@core": ["src/core/index.ts"],
+      "@core/*": ["src/core/*"]
+    }
   },
-  "include": ["src", "electron"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }

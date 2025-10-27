@@ -1,30 +1,52 @@
-// Mocks must come before imports of the module under test
+// --- Mocks must come first ---
+
+// Mock selector hook so useAddParentFlow can read relationships from state
 jest.mock("../../store", () => ({
   useAppSelector: jest.fn(),
 }));
 
-jest.mock("../../utils/relationshipUtils", () => ({
-  canAddParentChild: jest.fn(),
-}));
-
+// Mock the inner hook that the flow hook uses
 jest.mock("../useAddParent", () => ({
   useAddParent: jest.fn(),
 }));
 
-jest.mock("../../types/individual", () => ({
-  IndividualSchema: { safeParse: jest.fn() },
-}));
+// We'll mock @core because useAddParentFlow imports these at runtime:
+const coreMocks: {
+  canAddParentChild: jest.Mock<{ ok: boolean }, [any, string, string]>;
+  IndividualSchema: {
+    safeParse: jest.Mock<any, any>;
+  };
+} = {
+  canAddParentChild: jest.fn(),
+  IndividualSchema: {
+    safeParse: jest.fn(),
+  },
+};
 
+// We must not use ...args spreads with ts-jest complaining, so explicit params:
+jest.mock("@core", () => {
+  const actual = jest.requireActual("@core");
+  return {
+    ...actual,
+    canAddParentChild: (rels: any, pid: string, cid: string) =>
+      coreMocks.canAddParentChild(rels, pid, cid),
+    IndividualSchema: {
+      safeParse: (candidate: any) =>
+        coreMocks.IndividualSchema.safeParse(candidate),
+    },
+  };
+});
+
+// --- Imports AFTER mocks ---
 import { renderHook, act } from "@testing-library/react";
 import { useAddParentFlow } from "../useAddParentFlow";
 
-const { useAppSelector } = require("../../store") as { useAppSelector: jest.Mock };
-const { canAddParentChild } = require("../../utils/relationshipUtils") as {
-  canAddParentChild: jest.Mock;
+const { useAppSelector } = require("../../store") as {
+  useAppSelector: jest.Mock;
 };
-const { useAddParent } = require("../useAddParent") as { useAddParent: jest.Mock };
-const { IndividualSchema } = require("../../types/individual") as {
-  IndividualSchema: { safeParse: jest.Mock };
+
+const { useAddParent } = require("../useAddParent") as {
+  useAddParent: jest.Mock;
 };
 
 describe("useAddParentFlow", () => {
@@ -35,9 +57,11 @@ describe("useAddParentFlow", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
+    // Pretend this is what's in Redux
     const relationships = [
-      { id: "r1", type: "parent-child", parentIds: ["pX"], childId: "cX" },
+      { id: "rel1", type: "parent-child", parentIds: ["p1"], childId: "c1" },
     ];
+
     useAppSelector.mockImplementation((selector: any) =>
       selector({
         relationships: { items: relationships },
@@ -45,21 +69,15 @@ describe("useAddParentFlow", () => {
       })
     );
 
-    canAddParentChild.mockReturnValue({ ok: true });
+    // Default: cycle check passes for any pid/cid
+    coreMocks.canAddParentChild.mockReset();
+    coreMocks.canAddParentChild.mockImplementation(
+      (_rels: any, _pid: string, _cid: string) => ({ ok: true })
+    );
 
-    addExistingParent = jest.fn().mockResolvedValue(undefined);
-    addNewParent = jest.fn().mockResolvedValue("parent-1");
-    canLink = jest.fn().mockReturnValue(true);
-
-    useAddParent.mockReturnValue({
-      loading: false,
-      error: null,
-      canLink,
-      addExistingParent,
-      addNewParent,
-    });
-
-    IndividualSchema.safeParse.mockReturnValue({
+    // Default schema validation succeeds
+    coreMocks.IndividualSchema.safeParse.mockReset();
+    coreMocks.IndividualSchema.safeParse.mockReturnValue({
       success: true,
       data: {
         givenName: "New",
@@ -77,59 +95,102 @@ describe("useAddParentFlow", () => {
         story: "",
       },
     });
+
+    // mock inner hook API
+    addExistingParent = jest.fn().mockResolvedValue(undefined);
+    addNewParent = jest.fn().mockResolvedValue("parent-1");
+    canLink = jest
+      .fn()
+      .mockImplementation((_childId: string, _parentId: string) => true);
+
+    useAddParent.mockReturnValue({
+      loading: false,
+      error: null,
+      canLink,
+      addExistingParent,
+      addNewParent,
+    });
   });
 
-  test("linkExisting links only parents that pass canLink and cycle check", async () => {
-    canLink.mockImplementation((childId: string, pid: string) => pid === "p1");
+  test("linkExisting links only allowed parents", async () => {
+    // block p2, allow p1
+    canLink.mockImplementation((childId: string, parentId: string) => {
+      return childId === "c1" && parentId === "p1";
+    });
 
     const { result } = renderHook(() => useAddParentFlow());
 
     await act(async () => {
-      await result.current.linkExisting({ childId: "c1", parentIds: ["p1", "p2"] });
+      await result.current.linkExisting({
+        childId: "c1",
+        parentIds: ["p1", "p2"],
+      });
     });
 
     expect(addExistingParent).toHaveBeenCalledTimes(1);
     expect(addExistingParent).toHaveBeenCalledWith("c1", "p1");
   });
 
+  //
+  // ⬇️ UPDATED: reject case #1
+  //
   test("linkExisting throws when any parent would create a cycle", async () => {
-    canAddParentChild.mockImplementation((_, pid: string) =>
-      pid === "bad" ? { ok: false } : { ok: true }
+    // make parent 'bad' fail the cycle check
+    coreMocks.canAddParentChild.mockImplementation(
+      (_rels: any, pid: string, _cid: string) =>
+        pid === "bad" ? { ok: false } : { ok: true }
     );
 
     const { result } = renderHook(() => useAddParentFlow());
 
-    await act(async () => {
-      await expect(
-        result.current.linkExisting({ childId: "c1", parentIds: ["p1", "bad"] })
-      ).rejects.toThrow(/cykel/i);
+    // Call the hook and grab the returned promise
+    const prom = result.current.linkExisting({
+      childId: "c1",
+      parentIds: ["p1", "bad"],
     });
 
+    // Immediately assert on that promise. No wrapping in act, no delayed await.
+    await expect(prom).rejects.toThrow(/cykel/i);
+
+    // and we never tried to actually link anything
     expect(addExistingParent).not.toHaveBeenCalled();
   });
 
   test("createAndLink creates parent and links to child; no other parent", async () => {
     const { result } = renderHook(() => useAddParentFlow());
 
-    let pid = "";
+    let newParentId = "";
     await act(async () => {
-      pid = await result.current.createAndLink({
+      newParentId = await result.current.createAndLink({
         childId: "c1",
+        withOtherParentId: null,
         form: { givenName: "New", familyName: "Parent" },
       });
     });
 
-    expect(pid).toBe("parent-1");
-    expect(IndividualSchema.safeParse).toHaveBeenCalled();
+    expect(newParentId).toBe("parent-1");
+
+    // schema was consulted
+    expect(coreMocks.IndividualSchema.safeParse).toHaveBeenCalled();
+
+    // first parent created+linked via addNewParent
     expect(addNewParent).toHaveBeenCalledWith(
       "c1",
-      expect.objectContaining({ givenName: "New", familyName: "Parent" })
+      expect.objectContaining({
+        givenName: "New",
+        familyName: "Parent",
+      })
     );
+
+    // no secondary link attempt
     expect(addExistingParent).not.toHaveBeenCalled();
   });
 
-  test("createAndLink links otherParentId when cycle check passes and canLink is true", async () => {
-    canLink.mockImplementation((childId: string, pid: string) => pid !== "skip");
+  test("createAndLink links second parent if allowed", async () => {
+    // allow all except "skip"
+    canLink.mockImplementation(
+      (_childId: string, parentId: string) => parentId !== "skip"
+    );
 
     const { result } = renderHook(() => useAddParentFlow());
 
@@ -137,50 +198,68 @@ describe("useAddParentFlow", () => {
       await result.current.createAndLink({
         childId: "c1",
         withOtherParentId: "p2",
-        form: { givenName: "New" },
+        form: { givenName: "Kid" },
       });
     });
 
-    expect(addNewParent).toHaveBeenCalled();
+    // we created the first parent…
+    expect(addNewParent).toHaveBeenCalledTimes(1);
+    // …and then linked the provided second parent
     expect(addExistingParent).toHaveBeenCalledWith("c1", "p2");
   });
 
-  test("createAndLink throws when schema fails before any creation", async () => {
-    IndividualSchema.safeParse.mockReturnValueOnce({ success: false });
+  //
+  // ⬇️ UPDATED: reject case #2 (schema invalid)
+  //
+  test("createAndLink throws if form fails schema BEFORE creating anything", async () => {
+    // next validation fails
+    coreMocks.IndividualSchema.safeParse.mockReturnValueOnce({
+      success: false,
+    });
 
     const { result } = renderHook(() => useAddParentFlow());
 
-    await act(async () => {
-      await expect(
-        result.current.createAndLink({
-          childId: "c1",
-          form: {},
-        })
-      ).rejects.toThrow(/uppgifter/i);
+    // capture the promise
+    const prom = result.current.createAndLink({
+      childId: "c1",
+      withOtherParentId: null,
+      form: {}, // invalid form
     });
 
+    // assert the promise rejects with the validation error
+    await expect(prom).rejects.toThrow(/uppgifter/i);
+
+    // nothing should have been dispatched to add/link parents
     expect(addNewParent).not.toHaveBeenCalled();
     expect(addExistingParent).not.toHaveBeenCalled();
   });
 
+  //
+  // ⬇️ UPDATED: reject case #3 (second parent causes cycle)
+  //
   test("createAndLink throws if other parent would create cycle (no second link)", async () => {
-    canAddParentChild.mockImplementation((_, pid: string) =>
-      pid === "pBad" ? { ok: false } : { ok: true }
+    // ban pBad: cycle risk
+    coreMocks.canAddParentChild.mockImplementation(
+      (_rels: any, pid: string, _cid: string) =>
+        pid === "pBad" ? { ok: false } : { ok: true }
     );
 
     const { result } = renderHook(() => useAddParentFlow());
 
-    await act(async () => {
-      await expect(
-        result.current.createAndLink({
-          childId: "c1",
-          withOtherParentId: "pBad",
-          form: { givenName: "New" },
-        })
-      ).rejects.toThrow(/cykel/i);
+    // call and capture promise
+    const prom = result.current.createAndLink({
+      childId: "c1",
+      withOtherParentId: "pBad",
+      form: { givenName: "New" },
     });
 
+    // check rejection directly
+    await expect(prom).rejects.toThrow(/cykel/i);
+
+    // we DID create the first parent via addNewParent()
     expect(addNewParent).toHaveBeenCalledTimes(1);
+
+    // but we never tried to link the bad second parent
     expect(addExistingParent).not.toHaveBeenCalled();
   });
 });
