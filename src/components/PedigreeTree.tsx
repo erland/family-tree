@@ -1,19 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import ReactFlow, {
-  Background,
-  Controls,
-  MiniMap,
-  useEdgesState,
-  useNodesState,
-  SelectionMode,
-  Node,
-  Edge,
-  FitViewOptions,
-  ReactFlowProvider,
-  useReactFlow,
-} from "reactflow";
-import "reactflow/dist/style.css";
-
+// src/components/PedigreeTree.tsx
+import React from "react";
 import {
   Box,
   ToggleButton,
@@ -21,147 +7,26 @@ import {
   Button,
   Select,
   MenuItem,
+  Typography,
 } from "@mui/material";
+import { ReactFlowProvider } from "reactflow";
 
-import { exportFullTreeSVG } from "../utils/exportTreeSvg";
-import { exportFullTreePDF } from "../utils/exportTreePdf";
-import { useAppSelector } from "../store";
-import { Individual } from "@core/domain";
-import { buildGraph } from "@core/graph";
-import FamilyNode from "./FamilyNode";
-import MarriageNode from "./MarriageNode";
 import SearchBar from "../components/SearchBar";
 import IndividualDetails from "../components/IndividualDetails";
 import IndividualFormDialog from "../components/IndividualFormDialog";
-import CircularPedigree from "./CircularPedigree"; // 👈 NEW
+import CircularPedigree from "./CircularPedigree";
+import { PedigreeCanvas } from "./PedigreeCanvas";
 
-const fitViewOptions: FitViewOptions = { padding: 0.2, includeHiddenNodes: true };
-const nodeTypes = {
-  family: FamilyNode,
-  marriage: MarriageNode,
-};
-
-function PedigreeInner({
-  rootId,
-  mode,
-  maxGenerations,
-  onSelectIndividual,
-  setMaxGenerations, // pass setter down
-}: {
-  rootId?: string;
-  mode: "descendants" | "ancestors";
-  maxGenerations: number;
-  onSelectIndividual?: (ind: Individual) => void;
-  setMaxGenerations: (g: number) => void;
-}) {
-  const individuals = useAppSelector((s) => s.individuals.items);
-  const relationships = useAppSelector((s) => s.relationships.items);
-  const { fitView } = useReactFlow();
-
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
-    return buildGraph(individuals, relationships, {
-      rootId,
-      mode,
-      maxGenerations,
-    });
-  }, [individuals, relationships, rootId, mode, maxGenerations]);
-
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initialEdges);
-
-  useEffect(() => {
-    setNodes(initialNodes);
-    setEdges(initialEdges);
-  }, [initialNodes, initialEdges, setNodes, setEdges]);
-
-  useEffect(() => {
-    if (!nodes.length) return;
-    let cancelled = false;
-    const raf1 = requestAnimationFrame(() => {
-      const raf2 = requestAnimationFrame(() => {
-        if (!cancelled) {
-          try {
-            fitView(fitViewOptions);
-          } catch {
-            /* ignore */
-          }
-        }
-      });
-      (window as any).__rfFitRaf2 = raf2;
-    });
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(raf1);
-      if ((window as any).__rfFitRaf2) {
-        cancelAnimationFrame((window as any).__rfFitRaf2);
-      }
-    };
-  }, [nodes, edges, rootId, mode, maxGenerations, fitView]);
-
-  return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onNodeClick={(_, node) => {
-        if (node.type === "family" && node.data?.individual) {
-          onSelectIndividual?.(node.data.individual);
-        }
-      }}
-      fitView
-      fitViewOptions={fitViewOptions}
-      nodesDraggable
-      nodesConnectable={false}
-      elementsSelectable
-      zoomOnScroll
-      zoomOnPinch
-      panOnScroll
-      selectionOnDrag
-      selectionMode={SelectionMode.Full}
-      nodeTypes={nodeTypes}
-    >
-      <Background />
-      <MiniMap pannable zoomable />
-      <Controls showInteractive>
-        {/* 👇 Max depth select stays with the ReactFlow controls */}
-        <Select
-          size="small"
-          value={maxGenerations}
-          onChange={(e) => setMaxGenerations(Number(e.target.value))}
-          sx={{
-            ml: 1,
-            background: "white",
-            ".MuiSelect-select": { py: 0.5, px: 1, fontSize: "0.75rem" },
-          }}
-        >
-          {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
-            <MenuItem key={g} value={g}>
-              {g}
-            </MenuItem>
-          ))}
-        </Select>
-      </Controls>
-    </ReactFlow>
-  );
-}
+import { usePedigreeTreeViewModel } from "../hooks/usePedigreeTreeViewModel";
 
 export default function PedigreeTree() {
-  const individuals = useAppSelector((s) => s.individuals.items);
-  const relationships = useAppSelector((s) => s.relationships.items);
-  const [root, setRoot] = useState<Individual | null>(null);
-  const [mode, setMode] = useState<"descendants" | "ancestors">("descendants");
-  const [selected, setSelected] = useState<Individual | null>(null);
-  const [maxGenerations, setMaxGenerations] = useState(3);
-  const [layoutKind, setLayoutKind] = useState<"orthogonal" | "circular">("orthogonal");
-
-  const [editing, setEditing] = useState<Individual | null>(null);
+  const vm = usePedigreeTreeViewModel();
 
   return (
     <Box sx={{ width: "100%", height: "calc(100vh - 120px)", display: "flex" }}>
-      {/* Left side: toolbar + tree */}
+      {/* LEFT: toolbars + tree */}
       <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Toolbar - row 1 */}
+        {/* Toolbar row 1 */}
         <Box
           sx={{
             p: 1,
@@ -171,42 +36,44 @@ export default function PedigreeTree() {
             alignItems: "center",
           }}
         >
+          {/* Search selects root individual */}
           <SearchBar
             onSelect={(id) => {
-              const ind = individuals.find((i) => i.id === id) || null;
-              setRoot(ind);
-              setSelected(ind);
+              vm.handlePickRoot(id);
             }}
           />
+
+          {/* descendants / ancestors toggle */}
           <ToggleButtonGroup
-            value={mode}
+            value={vm.mode}
             exclusive
-            onChange={(_e, val) => val && setMode(val)}
+            onChange={(_e, val) => val && vm.setMode(val)}
             size="small"
           >
             <ToggleButton value="descendants">Efterkommande</ToggleButton>
             <ToggleButton value="ancestors">Förfäder</ToggleButton>
           </ToggleButtonGroup>
 
-          {/* Layout toggle */}
+          {/* layout toggle */}
           <ToggleButtonGroup
-            value={layoutKind}
+            value={vm.layoutKind}
             exclusive
-            onChange={(_e, val) => val && setLayoutKind(val)}
+            onChange={(_e, val) => val && vm.setLayoutKind(val)}
             size="small"
           >
             <ToggleButton value="orthogonal">Ortogonal</ToggleButton>
-            <ToggleButton value="circular" disabled={!root}>
+            <ToggleButton value="circular" disabled={!vm.root}>
               Cirkulär
             </ToggleButton>
           </ToggleButtonGroup>
 
-          {/* When in circular mode, expose generations here (since RF Controls are hidden) */}
-          {layoutKind === "circular" && (
+          {/* If circular layout is active, expose generations here
+             (the PedigreeCanvas has its own dropdown in Controls for orthogonal) */}
+          {vm.layoutKind === "circular" && (
             <Select
               size="small"
-              value={maxGenerations}
-              onChange={(e) => setMaxGenerations(Number(e.target.value))}
+              value={vm.maxGenerations}
+              onChange={(e) => vm.setMaxGenerations(Number(e.target.value))}
               sx={{
                 ml: 1,
                 background: "white",
@@ -222,8 +89,8 @@ export default function PedigreeTree() {
           )}
         </Box>
 
-        {/* Toolbar - row 2 (only visible if root selected) */}
-        {root && (
+        {/* Toolbar row 2: root info + export buttons (only if we have a root) */}
+        {vm.root && (
           <Box
             sx={{
               p: 1,
@@ -233,64 +100,60 @@ export default function PedigreeTree() {
               alignItems: "center",
             }}
           >
-            <Button variant="outlined" size="small" onClick={() => setRoot(null)}>
+            <Typography variant="body2">
+              Rot: {vm.root.firstName} {vm.root.lastName}
+            </Typography>
+
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => vm.setRoot(null)}
+            >
               Rensa
             </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() =>
-                root &&
-                exportFullTreeSVG(
-                  individuals,
-                  relationships,
-                  root.id,
-                  mode,
-                  maxGenerations
-                )
-              }
-            >
-              SVG
-            </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() =>
-                root &&
-                exportFullTreePDF(
-                  individuals,
-                  relationships,
-                  root.id,
-                  mode,
-                  maxGenerations
-                )
-              }
-            >
-              PDF
-            </Button>
+
+            <Box sx={{ ml: "auto", display: "flex", gap: 1 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={vm.handleExportSvg}
+              >
+                SVG
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={vm.handleExportPdf}
+              >
+                PDF
+              </Button>
+            </Box>
           </Box>
         )}
 
         {/* Tree area */}
         <Box sx={{ flexGrow: 1 }}>
-          {layoutKind === "circular" && root ? (
-            <CircularPedigree rootId={root.id} generations={maxGenerations} />
+          {vm.layoutKind === "circular" && vm.root ? (
+            <CircularPedigree
+              rootId={vm.root.id}
+              generations={vm.maxGenerations}
+            />
           ) : (
             <ReactFlowProvider>
-              <PedigreeInner
-                rootId={root?.id ?? undefined}
-                mode={mode}
-                maxGenerations={maxGenerations}
-                onSelectIndividual={setSelected}
-                setMaxGenerations={setMaxGenerations}
+              <PedigreeCanvas
+                rootId={vm.rootId}
+                mode={vm.mode}
+                maxGenerations={vm.maxGenerations}
+                setMaxGenerations={vm.setMaxGenerations}
+                onSelectIndividual={vm.setSelected}
               />
             </ReactFlowProvider>
           )}
         </Box>
       </Box>
 
-      {/* Right side: details panel */}
-      {selected && (
+      {/* RIGHT SIDE: details / editing */}
+      {vm.selected && (
         <Box
           sx={{
             width: 300,
@@ -301,16 +164,17 @@ export default function PedigreeTree() {
           }}
         >
           <IndividualDetails
-            individualId={selected.id}
-            onClose={() => setSelected(null)}
-            onEdit={(ind) => setEditing(ind)}
+            individualId={vm.selected.id}
+            onClose={() => vm.setSelected(null)}
+            onEdit={(ind) => vm.setEditing(ind)}
           />
         </Box>
       )}
+
       <IndividualFormDialog
-        open={!!editing}
-        individual={editing}
-        onClose={() => setEditing(null)}
+        open={!!vm.editing}
+        individual={vm.editing}
+        onClose={() => vm.setEditing(null)}
       />
     </Box>
   );
