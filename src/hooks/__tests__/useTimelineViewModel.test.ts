@@ -1,118 +1,102 @@
-// --- Mocks must come first ---
-
-// Mock store selector to feed individuals/relationships
+// 1. Mock store selector before importing the hook
 jest.mock("../../store", () => ({
   useAppSelector: jest.fn(),
 }));
 
-/**
- * We'll mock @core because the hook imports buildTimelineEvents from "@core/domain".
- * We use the same hoist-safe "coreMocks" trick as in the other tests.
- */
-const coreMocks: {
-  buildTimelineEvents?: jest.Mock;
-} = {};
+// 2. Mock the pure builder that the hook delegates to
+jest.mock("@core/viewModelBuilders/timeline", () => ({
+  buildTimelineViewModel: jest.fn(),
+}));
 
-jest.mock("@core/domain", () => {
-  const actual = jest.requireActual("@core/domain");
-  return {
-    ...actual,
-    buildTimelineEvents: (...args: any[]) =>
-      coreMocks.buildTimelineEvents?.(...args),
-  };
-});
-
-// now attach the concrete mock function (after the factory is defined)
-coreMocks.buildTimelineEvents = jest.fn();
-
-// --- Imports ---
 import { renderHook } from "@testing-library/react";
 import { useTimelineViewModel } from "../useTimelineViewModel";
-import type { Individual } from "@core/domain";
 
-const useAppSelector = require("../../store")
-  .useAppSelector as jest.Mock;
+import { buildTimelineViewModel } from "@core/viewModelBuilders/timeline";
+const mockBuildTimelineViewModel = buildTimelineViewModel as jest.Mock;
+
+const { useAppSelector } = require("../../store") as {
+  useAppSelector: jest.Mock;
+};
 
 describe("useTimelineViewModel", () => {
-  const individuals: Individual[] = [
-    { id: "i1", givenName: "Anna", familyName: "Andersson" } as Individual,
-    { id: "i2", givenName: "Bertil", familyName: "Berg" } as Individual,
+  const individuals = [
+    { id: "i1", givenName: "Anna" },
+    { id: "i2", givenName: "Bertil" },
   ];
 
-  const relationships = [{ id: "r1", parentId: "i2", childId: "i1" }];
+  const relationships = [
+    { id: "r1", type: "parent-child", parentIds: ["i2"], childId: "i1" },
+  ];
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // wire selectors
-    useAppSelector.mockImplementation((selector: any) => {
-      const selStr = String(selector);
-      if (selStr.includes("individuals")) return individuals;
-      if (selStr.includes("relationships")) return relationships;
-      return [];
+    // Make the selector return our fake slices.
+    // We don't have to be fancy. We'll just detect which slice the selector
+    // is trying to read based on its stringified source.
+    useAppSelector.mockImplementation((selectorFn: any) => {
+      const src = String(selectorFn);
+      if (src.includes("individuals")) return individuals;
+      if (src.includes("relationships")) return relationships;
+      return undefined;
     });
-
-    // reset our mock timeline builder for each test
-    coreMocks.buildTimelineEvents!.mockReset();
   });
 
-  // ---------------------------------------------------------------------
-  test("returns null selected and empty groups when no ID provided", () => {
-    const { result } = renderHook(() => useTimelineViewModel(null));
-
-    expect(result.current.selected).toBeNull();
-    expect(result.current.groups).toEqual({
-      beforeBirth: [],
-      lifeEvents: [],
-      afterDeath: [],
-      undated: [],
-    });
-
-    // hook should NOT call buildTimelineEvents if nothing selected
-    expect(coreMocks.buildTimelineEvents).not.toHaveBeenCalled();
-  });
-
-  // ---------------------------------------------------------------------
-  test("selects correct individual and calls buildTimelineEvents", () => {
-    const fakeGroups = {
-      beforeBirth: [{ label: "Pre" }],
-      lifeEvents: [{ label: "Born" }],
-      afterDeath: [],
-      undated: [],
+  it("passes store data + selectedId into buildTimelineViewModel and returns its result", () => {
+    // Arrange: what our pure builder should pretend to return
+    const fakeVM = {
+      selected: { id: "i1", givenName: "Anna" },
+      groups: {
+        beforeBirth: [],
+        lifeEvents: [{ label: "Anna was born" }],
+        afterDeath: [],
+        undated: [],
+      },
+      // the builder in our code also spreads groups and includes individuals/relationships,
+      // but for the purpose of this test we don't actually care about shape fidelity —
+      // we just care that the hook returns exactly what the builder gave it.
+      whateverElse: 123,
     };
 
-    // what buildTimelineEvents should return for this test
-    coreMocks.buildTimelineEvents!.mockReturnValue(fakeGroups);
+    mockBuildTimelineViewModel.mockReturnValue(fakeVM);
 
+    // Act: render hook with some selectedId
     const { result } = renderHook(() => useTimelineViewModel("i1"));
 
-    // selected person is correct
-    expect(result.current.selected?.id).toBe("i1");
-
-    // our mock was called with (selected, relationships, individuals)
-    expect(coreMocks.buildTimelineEvents).toHaveBeenCalledWith(
-      individuals[0],
+    // Assert: the hook called the builder with data from redux + the param
+    expect(mockBuildTimelineViewModel).toHaveBeenCalledTimes(1);
+    expect(mockBuildTimelineViewModel).toHaveBeenCalledWith(
+      individuals,
       relationships,
-      individuals
+      "i1"
     );
 
-    // and that same object bubbles out of the hook
-    expect(result.current.groups).toBe(fakeGroups);
+    // And whatever the builder returned is exactly what the hook returns
+    expect(result.current).toBe(fakeVM);
   });
 
-  // ---------------------------------------------------------------------
-  test("returns null selected if ID not found", () => {
-    const { result } = renderHook(() =>
-      useTimelineViewModel("does-not-exist")
+  it("still calls builder even if selectedId is null, and returns its result", () => {
+    const fakeVM = {
+      selected: null,
+      groups: {
+        beforeBirth: [],
+        lifeEvents: [],
+        afterDeath: [],
+        undated: [],
+      },
+    };
+
+    mockBuildTimelineViewModel.mockReturnValue(fakeVM);
+
+    const { result } = renderHook(() => useTimelineViewModel(null));
+
+    expect(mockBuildTimelineViewModel).toHaveBeenCalledTimes(1);
+    expect(mockBuildTimelineViewModel).toHaveBeenCalledWith(
+      individuals,
+      relationships,
+      null
     );
 
-    expect(result.current.selected).toBeNull();
-    expect(result.current.groups.beforeBirth).toEqual([]);
-    expect(result.current.groups.lifeEvents).toEqual([]);
-    expect(result.current.groups.afterDeath).toEqual([]);
-    expect(result.current.groups.undated).toEqual([]);
-
-    // still shouldn't try to build timeline
-    expect(coreMocks.buildTimelineEvents).not.toHaveBeenCalled();
+    expect(result.current).toBe(fakeVM);
   });
 });

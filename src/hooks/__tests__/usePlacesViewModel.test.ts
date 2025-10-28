@@ -1,269 +1,154 @@
-// --- Mocks must come first ---
-
-// Mock the store selector to feed individuals/relationships
+// 1. Mock the Redux selector hook before importing the hook under test
 jest.mock("../../store", () => ({
   useAppSelector: jest.fn(),
 }));
 
-// We'll create jest.fn() versions of the @core helpers we need.
-// Then we'll partially mock @core so the hook uses these instead of the real ones.
-const buildPlacesIndexMock = jest.fn();
-const expandRelatedPlacesMock = jest.fn();
-const fullNameMock = jest.fn(
-  (ind: any) => `${ind?.givenName ?? "Förnamn"} ${ind?.familyName ?? "Efternamn"}`
-);
+// 2. Mock the viewModelBuilders functions that usePlacesViewModel delegates to
+jest.mock("@core/viewModelBuilders/places", () => ({
+  buildPlacesBaseIndex: jest.fn(),
+  buildPlacesList: jest.fn(),
+  countTotalEvents: jest.fn(),
+  expandPlacesById: jest.fn(),
+  // we also need to export the types so TS is happy when importing from the hook
+  PlacesSortMode: undefined,
+}));
 
-// IMPORTANT: mock @core, not ../../utils/places or ../../utils/nameUtils
-jest.mock("@core/domain", () => {
-  const actual = jest.requireActual("@core/domain");
-  return {
-    ...actual,
-    buildPlacesIndex: buildPlacesIndexMock,
-    expandRelatedPlaces: expandRelatedPlacesMock,
-    fullName: fullNameMock,
-  };
-});
+import { renderHook, act } from "@testing-library/react";
+import { usePlacesViewModel } from "../usePlacesViewModel";
 
-// --- Imports ---
-import React from "react";
-import { renderHook } from "@testing-library/react";
 import {
-  usePlacesViewModel,
-  type PlaceVM,
-  type PlaceEventVM,
-} from "../usePlacesViewModel";
+  buildPlacesBaseIndex,
+  buildPlacesList,
+  countTotalEvents,
+  expandPlacesById,
+} from "@core/viewModelBuilders/places";
 
-const useAppSelector = require("../../store").useAppSelector as jest.Mock;
+const mockBuildPlacesBaseIndex = buildPlacesBaseIndex as jest.Mock;
+const mockBuildPlacesList = buildPlacesList as jest.Mock;
+const mockCountTotalEvents = countTotalEvents as jest.Mock;
+const mockExpandPlacesById = expandPlacesById as jest.Mock;
 
-describe("usePlacesViewModel", () => {
-  const mockIndividuals = [
-    { id: "i1", givenName: "Anna", familyName: "Andersson" },
-    { id: "i2", givenName: "Bertil", familyName: "Berg" },
+const { useAppSelector } = require("../../store") as {
+  useAppSelector: jest.Mock;
+};
+
+describe("usePlacesViewModel (thin hook adapter)", () => {
+  const fakeIndividuals = [
+    { id: "i1", givenName: "Anna" },
+    { id: "i2", givenName: "Bertil" },
+  ];
+  const fakeRelationships = [
+    { id: "rel1", type: "spouse", person1Id: "i1", person2Id: "i2" },
   ];
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    // Make selectors deterministic
-    useAppSelector.mockImplementation((selector: any) => {
+    // Make Redux selectors return our fake slices.
+    // We don't need to get fancy here: we just pass a fake store object
+    // to the provided selector fn.
+    useAppSelector.mockImplementation((selectorFn: any) => {
       const fakeState = {
-        individuals: { items: mockIndividuals },
-        relationships: { items: [] },
+        individuals: { items: fakeIndividuals },
+        relationships: { items: fakeRelationships },
       };
-      return selector(fakeState);
+      return selectorFn(fakeState);
     });
 
-    // default implementations for the core mocks
-    buildPlacesIndexMock.mockReset();
-    expandRelatedPlacesMock.mockReset();
-    fullNameMock.mockReset().mockImplementation(
-      (ind: any) => `${ind?.givenName ?? "Förnamn"} ${ind?.familyName ?? "Efternamn"}`
-    );
+    // Default mocked return values for the builder functions
+    mockBuildPlacesBaseIndex.mockReturnValue([{ name: "MockPlace" }]);
 
-    // default safe values so tests that don't override still work
-    buildPlacesIndexMock.mockReturnValue([]);
-    expandRelatedPlacesMock.mockReturnValue([]);
+    mockBuildPlacesList.mockReturnValue([
+      {
+        id: "MockPlace",
+        title: "MockPlace",
+        subtitle: "2 personer",
+        events: [],
+        raw: { foo: "bar" },
+      },
+    ]);
+
+    mockCountTotalEvents.mockReturnValue(99);
+
+    mockExpandPlacesById.mockImplementation((baseIndexArg: any[], name: string) => {
+      return {
+        id: name,
+        title: name,
+        subtitle: "3 händelser",
+        events: [{ id: "evt1" }, { id: "evt2" }, { id: "evt3" }],
+        raw: baseIndexArg,
+      };
+    });
   });
 
-  // ---------------------------------------------------------------------
-  test("maps and filters places correctly", () => {
-    const base = [
-      {
-        name: "Uppsala, Domkyrko",
-        individuals: [
-          {
-            id: "e1",
-            date: "1900-05-01",
-            event: "Födelse",
-            ind: mockIndividuals[0],
-          },
-        ],
-      },
-      {
-        name: "Stockholm",
-        individuals: [
-          {
-            id: "e2",
-            date: "1920-01-01",
-            event: "Flytt",
-            ind: mockIndividuals[1],
-          },
-        ],
-      },
-    ];
-
-    buildPlacesIndexMock.mockReturnValue(base);
-
-    // --- No query ---
+  it("builds places, totalEvents, and expandById using builder functions", () => {
+    // Act: call hook with explicit options
     const { result } = renderHook(() =>
-      usePlacesViewModel({ sort: "alpha", query: null })
-    );
-
-    expect(result.current.places.map((p: PlaceVM) => p.title)).toEqual([
-      "Stockholm",
-      "Uppsala, Domkyrko",
-    ]);
-    expect(result.current.totalEvents).toBe(2);
-
-    // --- Filter by title ---
-    buildPlacesIndexMock.mockReturnValue(base);
-    const { result: resultStock } = renderHook(() =>
       usePlacesViewModel({ sort: "alpha", query: "Stock" })
     );
-    expect(resultStock.current.places.map((p: PlaceVM) => p.title)).toEqual([
-      "Stockholm",
-    ]);
 
-    // --- Filter by person name ---
-    buildPlacesIndexMock.mockReturnValue(base);
-    const { result: resultAnna } = renderHook(() =>
-      usePlacesViewModel({ sort: "alpha", query: "Anna" })
-    );
-    expect(
-      resultAnna.current.places.map((p: PlaceVM) => p.title)
-    ).toContain("Uppsala, Domkyrko");
-  });
-
-  // ---------------------------------------------------------------------
-  test("sorts by events count (desc)", () => {
-    const base = [
-      {
-        name: "Fewville",
-        individuals: [
-          {
-            id: "e1",
-            date: "1900-01-01",
-            event: "Födelse",
-            ind: mockIndividuals[0],
-          },
-        ],
-      },
-      {
-        name: "Manytown",
-        individuals: [
-          {
-            id: "e2",
-            date: "1901-01-01",
-            event: "Födelse",
-            ind: mockIndividuals[1],
-          },
-          {
-            id: "e3",
-            date: "1902-01-01",
-            event: "Flytt",
-            ind: mockIndividuals[1],
-          },
-          {
-            id: "e4",
-            date: "1903-01-01",
-            event: "Död",
-            ind: mockIndividuals[1],
-          },
-        ],
-      },
-    ];
-
-    buildPlacesIndexMock.mockReturnValue(base);
-
-    const { result } = renderHook(() =>
-      usePlacesViewModel({ sort: "events-desc", query: null })
+    // Assert: base index was built using data from Redux
+    expect(mockBuildPlacesBaseIndex).toHaveBeenCalledWith(
+      fakeIndividuals,
+      fakeRelationships
     );
 
-    expect(result.current.places.map((p: PlaceVM) => p.title)).toEqual([
-      "Manytown",
-      "Fewville",
-    ]);
-  });
-
-  test("sorts by events count (asc)", () => {
-    const base = [
-      { name: "X", individuals: new Array(3).fill({}) },
-      { name: "Y", individuals: [{}] },
-    ];
-
-    buildPlacesIndexMock.mockReturnValue(base);
-
-    const { result } = renderHook(() =>
-      usePlacesViewModel({ sort: "events-asc", query: null })
+    // Assert: buildPlacesList got the base index + query + sort mode
+    expect(mockBuildPlacesList).toHaveBeenCalledWith(
+      [{ name: "MockPlace" }],
+      "Stock",
+      "alpha"
     );
 
-    expect(result.current.places.map((p: PlaceVM) => p.title)).toEqual([
-      "Y",
-      "X",
-    ]);
-  });
+    // Assert: countTotalEvents got the same base index
+    expect(mockCountTotalEvents).toHaveBeenCalledWith([{ name: "MockPlace" }]);
 
-  // ---------------------------------------------------------------------
-  test("expands and merges related places correctly", () => {
-    const base = [
+    // The hook should expose the data the builders returned
+    expect(result.current.places).toEqual([
       {
-        name: "Base",
-        individuals: [
-          {
-            id: "e1",
-            date: "1910-05-02",
-            event: "Födelse",
-            ind: mockIndividuals[0],
-          },
-        ],
-      },
-      { name: "Other", individuals: [] },
-    ];
-
-    buildPlacesIndexMock.mockReturnValue(base);
-
-    expandRelatedPlacesMock.mockReturnValue([
-      base[0],
-      {
-        name: "Base (variant)",
-        individuals: [
-          {
-            id: "e3",
-            date: "1909-03-10",
-            event: "Flytt",
-            ind: mockIndividuals[0],
-          },
-        ],
+        id: "MockPlace",
+        title: "MockPlace",
+        subtitle: "2 personer",
+        events: [],
+        raw: { foo: "bar" },
       },
     ]);
 
-    const { result } = renderHook(() => usePlacesViewModel());
-    const expanded = result.current.expandById("Base");
-
-    expect(expandRelatedPlacesMock).toHaveBeenCalledWith(base, "Base");
-    expect(expanded).not.toBeNull();
-    expect(
-      expanded!.events.map((e: PlaceEventVM) => e.id).sort()
-    ).toEqual(["e1", "e3"]);
-    expect(expanded!.subtitle).toBe("2 händelser");
-    expect(expanded!.title).toBe("Base");
+    expect(result.current.totalEvents).toBe(99);
   });
 
-  // ---------------------------------------------------------------------
-  test("returns unchanged list when no query filter applied", () => {
-    const base = [{ name: "Place A", individuals: [] }];
-    buildPlacesIndexMock.mockReturnValue(base);
-
-    const { result } = renderHook(() =>
-      usePlacesViewModel({ sort: "alpha", query: null })
-    );
-
-    expect(result.current.places).toHaveLength(1);
-    expect(result.current.places[0].title).toBe("Place A");
-  });
-
-  test("handles empty places gracefully", () => {
-    const base = [{ name: "EmptyPlace", individuals: [] }];
-    buildPlacesIndexMock.mockReturnValue(base);
-
+  it("exposes expandById that wraps expandPlacesById with the memoized baseIndex", () => {
     const { result } = renderHook(() => usePlacesViewModel());
 
-    expect(result.current.places[0].events).toEqual([]);
-    expect(result.current.places[0].subtitle).toBe("0 personer");
+    // When calling expandById("Gotham"), it should delegate to expandPlacesById
+    // using the same baseIndex that was memoized earlier.
+    let expanded;
+    act(() => {
+      expanded = result.current.expandById("Gotham");
+    });
+
+    expect(mockExpandPlacesById).toHaveBeenCalledWith(
+      [{ name: "MockPlace" }],
+      "Gotham"
+    );
+
+    // And we propagate whatever expandPlacesById returns
+    expect(expanded).toEqual({
+      id: "Gotham",
+      title: "Gotham",
+      subtitle: "3 händelser",
+      events: [{ id: "evt1" }, { id: "evt2" }, { id: "evt3" }],
+      raw: [{ name: "MockPlace" }],
+    });
   });
 
-  test("expandById returns null for falsy baseName", () => {
-    const { result } = renderHook(() => usePlacesViewModel());
-    expect(result.current.expandById("")).toBeNull();
+  it("defaults options.sort='alpha' and options.query=null if not provided", () => {
+    renderHook(() => usePlacesViewModel());
+
+    expect(mockBuildPlacesList).toHaveBeenCalledWith(
+      [{ name: "MockPlace" }],
+      null,
+      "alpha"
+    );
   });
 });

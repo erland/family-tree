@@ -1,9 +1,13 @@
 // src/hooks/usePedigreeTreeViewModel.ts
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useAppSelector } from "../store";
 import { Individual } from "@core/domain";
 import { exportFullTreeSVG } from "../utils/exportTreeSvg";
 import { exportFullTreePDF } from "../utils/exportTreePdf";
+import {
+  pickRootById,
+  derivePedigreeTreeState,
+} from "@core/viewModelBuilders/pedigreeTree";
 
 export function usePedigreeTreeViewModel() {
   const individuals = useAppSelector((s) => s.individuals.items);
@@ -20,15 +24,18 @@ export function usePedigreeTreeViewModel() {
   const [selected, setSelected] = useState<Individual | null>(null);
   const [editing, setEditing] = useState<Individual | null>(null);
 
-  // Derived for convenience
-  const rootId = root?.id ?? undefined;
+  // Derived for convenience (used by UI / exports)
+  const { rootId } = useMemo(() => derivePedigreeTreeState(root), [root]);
 
   // Called when user picks a person in SearchBar
   const handlePickRoot = useCallback(
     (id: string) => {
-      const person = individuals.find((i) => i.id === id) || null;
-      setRoot(person);
-      setSelected(person);
+      const { root: newRoot, selected: newSelected } = pickRootById(
+        individuals,
+        id
+      );
+      setRoot(newRoot);
+      setSelected(newSelected);
     },
     [individuals]
   );
@@ -67,7 +74,7 @@ export function usePedigreeTreeViewModel() {
     // derived
     rootId,
 
-    // state setters
+    // state setters (API stays the same for callers)
     setRoot,
     setMode,
     setLayoutKind,

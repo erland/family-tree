@@ -9,40 +9,24 @@ import {
   fetchRelationships,
   clearRelationships,
 } from "../features/relationshipsSlice";
-import { Relationship } from "@core/domain";
+import type { Individual, Relationship } from "@core/domain";
+import { buildDashboardStats } from "@core/viewModelBuilders/dashboard";
 
 export function useDashboardViewModel() {
   const dispatch = useAppDispatch();
 
   // Raw data from store
-  const individuals = useAppSelector((s) => s.individuals.items);
+  const individuals = useAppSelector(
+    (s) => s.individuals.items
+  ) as Individual[];
+
   const relationships = useAppSelector(
     (s) => s.relationships.items
   ) as Relationship[];
 
-  // Derived counts
+  // Derived counts (pure domain -> UI stats, now moved to builder)
   const { individualCount, marriageCount, familyCount } = useMemo(() => {
-    const individualCountLocal = individuals.length;
-
-    const marriageCountLocal = relationships.filter(
-      (r) => r.type === "spouse"
-    ).length;
-
-    // Count unique parent-child "families"
-    const familySet = new Set<string>();
-    for (const r of relationships) {
-      if (r.type === "parent-child") {
-        const key =
-          [...(r.parentIds || [])].sort().join(",") + "->" + (r as any).childId;
-        familySet.add(key);
-      }
-    }
-
-    return {
-      individualCount: individualCountLocal,
-      marriageCount: marriageCountLocal,
-      familyCount: familySet.size,
-    };
+    return buildDashboardStats(individuals, relationships);
   }, [individuals, relationships]);
 
   // IMPORT: Excel

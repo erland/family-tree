@@ -1,44 +1,36 @@
 import { useMemo } from "react";
 import { useAppSelector } from "../store";
-import { buildTimelineEvents } from "@core/domain";
-import type { Individual } from "@core/domain";
-import type { Relationship } from "@core/domain";
-
-type Groups = ReturnType<typeof buildTimelineEvents>;
+import type { Individual, Relationship } from "@core/domain";
+import { buildTimelineViewModel } from "@core/viewModelBuilders/timeline";
 
 /**
- * Pure view-model for the Timeline page.
- * - Takes a selected individual id (controlled by the page/route/UI).
- * - Pulls individuals + relationships from state.
- * - Returns the selected person and prebuilt event groups for rendering.
+ * React-facing hook for the Timeline page.
+ *
+ * After refactor, this hook is now just an adapter:
+ * - reads data from Redux
+ * - calls the pure builder
+ * - memoizes the result
+ *
+ * All the actual "what does the timeline look like?" logic
+ * lives in buildTimelineViewModel (which is easy to unit test
+ * without mocking React/Redux).
  */
 export function useTimelineViewModel(selectedId: string | null) {
-  const individuals = useAppSelector((s) => s.individuals.items as Individual[]);
-  const relationships = useAppSelector((s) => s.relationships.items as Relationship[]);
-
-  const selected = useMemo(
-    () => (selectedId ? individuals.find((i) => i.id === selectedId) ?? null : null),
-    [individuals, selectedId]
+  const individuals = useAppSelector(
+    (s) => s.individuals.items as Individual[]
+  );
+  const relationships = useAppSelector(
+    (s) => s.relationships.items as Relationship[]
   );
 
-  const groups: Groups = useMemo(() => {
-    if (!selected) {
-      return {
-        beforeBirth: [],
-        lifeEvents: [],
-        afterDeath: [],
-        undated: [],
-      };
-    }
-    return buildTimelineEvents(selected, relationships, individuals);
-  }, [selected, relationships, individuals]);
-
-  return {
-    individuals,
-    relationships,
-    selected,
-    groups,
-    // For convenience if you prefer destructuring:
-    ...groups,
-  };
+  // buildTimelineViewModel is pure, so this memo is safe.
+  return useMemo(
+    () =>
+      buildTimelineViewModel(
+        individuals,
+        relationships,
+        selectedId
+      ),
+    [individuals, relationships, selectedId]
+  );
 }
