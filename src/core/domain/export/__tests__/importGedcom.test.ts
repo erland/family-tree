@@ -1,6 +1,6 @@
 import { parseGedcomToData } from "../importGedcom";
 import { v4 as uuidv4 } from "uuid";
-import type { Individual, Relationship } from "@core";
+import type { Individual, Relationship } from "@core/domain";
 
 jest.mock("uuid", () => ({
   v4: jest.fn(() => "uuid"),

@@ -18,8 +18,8 @@ import { Add, Delete, Edit, FileDownload } from "@mui/icons-material";
 import { useAppDispatch, useAppSelector } from "../store";
 import { fetchRelationships, deleteRelationship } from "../features/relationshipsSlice";
 import RelationshipEditor from "../components/RelationshipEditor";
-import { Relationship } from "@core";
-import { fullName } from "@core";
+import { Relationship } from "@core/domain";
+import { fullName } from "@core/domain";
 import SearchBar from "../components/SearchBar";
 
 export default function RelationshipsPage() {

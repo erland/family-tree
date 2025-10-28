@@ -1,8 +1,8 @@
 // electron/importGedcom.ts
 import { v4 as uuidv4 } from "uuid";
-import { Individual } from "@core";
-import { Relationship } from "@core";
-import { parseGedcomDate } from "@core";
+import { Individual } from "../types/individual";
+import { Relationship } from "../types/relationship";
+import { parseGedcomDate } from "../utils/dateUtils";
 
 export interface ImportResult {
   individuals: Individual[];

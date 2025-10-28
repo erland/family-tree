@@ -13,7 +13,7 @@ import {
   resetDatabase as resetDatabaseWeb,
 } from "../storage";
 
-import type { Individual, Relationship } from "@core";
+import type { Individual, Relationship } from "@core/domain";
 
 // Core import/export helpers (these must be re-exported from @core/index.ts)
 import {
@@ -22,7 +22,7 @@ import {
   buildIndividualsWorkbook,
   buildRelationshipsWorkbook,
   parseExcelData,
-} from "@core";
+} from "@core/domain";
 
 //
 // Small DOM helpers

@@ -9,8 +9,8 @@ import {
   Portal,
 } from "@mui/material";
 import { useAppSelector } from "../store";
-import type { Individual } from "@core";
-import { fullName } from "@core";
+import type { Individual } from "@core/domain";
+import { fullName } from "@core/domain";
 import { useSearch } from "../hooks/useSearch";
 
 interface SearchBarProps {

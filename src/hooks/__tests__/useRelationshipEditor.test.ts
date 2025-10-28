@@ -1,6 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
 import { useRelationshipEditor } from "../useRelationshipEditor";
-import type { Relationship } from "@core";
+import type { Relationship } from "@core/domain";
 
 // --- Mocks ------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ jest.mock("../../store", () => ({
  *
  * We can't safely do:
  *   const wouldCreateCycleMock = jest.fn();
- *   jest.mock("@core", () => ({ ...actual, wouldCreateCycle: wouldCreateCycleMock }));
+ *   jest.mock("@core/domain", () => ({ ...actual, wouldCreateCycle: wouldCreateCycleMock }));
  *
  * because jest.mock() is hoisted but the const isn't, so we'd hit TDZ.
  *
@@ -43,8 +43,8 @@ jest.mock("../../store", () => ({
  */
 const coreMocks: { wouldCreateCycle?: jest.Mock } = {};
 
-jest.mock("@core", () => {
-  const actual = jest.requireActual("@core");
+jest.mock("@core/domain", () => {
+  const actual = jest.requireActual("@core/domain");
   return {
     ...actual,
     wouldCreateCycle: (...args: any[]) =>

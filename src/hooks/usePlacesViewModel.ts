@@ -1,8 +1,8 @@
 // src/hooks/usePlacesViewModel.ts
 import { useCallback, useMemo } from "react";
 import { useAppSelector } from "../store";
-import { fullName } from "@core";
-import { buildPlacesIndex, expandRelatedPlaces } from "@core";
+import { fullName } from "@core/domain";
+import { buildPlacesIndex, expandRelatedPlaces } from "@core/domain";
 
 export type PlaceEventVM = {
   id?: string;

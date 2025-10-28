@@ -1,7 +1,7 @@
 // src/utils/treeModel.ts
 import { Node, Edge } from "reactflow";
-import { Individual } from "../types/individual";
-import { Relationship } from "../types/relationship";
+import { Individual } from "../domain/types/individual";
+import { Relationship } from "../domain/types/relationship";
 
 /** Internal shape to help radial/orthogonal layouts */
 export type TreeModel = {

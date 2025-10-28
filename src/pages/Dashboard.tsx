@@ -21,7 +21,7 @@ import FamilyRestroomIcon from "@mui/icons-material/FamilyRestroom";
 import { useTranslation } from "react-i18next";
 import { useAppSelector, useAppDispatch } from "../store";
 
-import { Relationship } from "@core";
+import { Relationship } from "@core/domain";
 import {
   clearIndividuals,
   fetchIndividuals,

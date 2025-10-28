@@ -1,7 +1,7 @@
 // src/core/export/excelExportCore.ts
 import ExcelJS from "exceljs";
 import type { Column } from "exceljs";
-import { splitIsoDate } from "..//utils/dateUtils"; // adjust path
+import { splitIsoDate } from "../utils/dateUtils"; // adjust path
 import { fullName } from "../utils/nameUtils";     // adjust path
 import type { Individual } from "../types";           // adjust path
 import type { Relationship } from "../types";

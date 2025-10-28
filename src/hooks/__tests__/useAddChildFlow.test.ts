@@ -14,8 +14,8 @@ jest.mock("../useAddChild", () => ({
 //    - control canAddParentChild (cycle detection / validity)
 //    - control IndividualSchema.safeParse (form validation)
 //    We keep the rest of @core's real exports intact.
-jest.mock("@core", () => {
-  const actual = jest.requireActual("@core");
+jest.mock("@core/domain", () => {
+  const actual = jest.requireActual("@core/domain");
 
   return {
     ...actual,
@@ -46,7 +46,7 @@ const { useAddChild } = require("../useAddChild") as {
 const {
   canAddParentChild,
   IndividualSchema,
-} = require("@core") as {
+} = require("@core/domain") as {
   canAddParentChild: jest.Mock;
   IndividualSchema: { safeParse: jest.Mock };
 };

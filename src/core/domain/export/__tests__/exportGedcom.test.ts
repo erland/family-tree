@@ -3,7 +3,7 @@ import {
   formatDate,
   type Individual,
   type Relationship,
-} from "@core";
+} from "@core/domain";
 
 // Helper to find lines quickly
 function hasLine(lines: string[], text: string): boolean {

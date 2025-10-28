@@ -24,8 +24,8 @@ const coreMocks: {
 };
 
 // We must not use ...args spreads with ts-jest complaining, so explicit params:
-jest.mock("@core", () => {
-  const actual = jest.requireActual("@core");
+jest.mock("@core/domain", () => {
+  const actual = jest.requireActual("@core/domain");
   return {
     ...actual,
     canAddParentChild: (rels: any, pid: string, cid: string) =>

@@ -12,17 +12,17 @@ import { Edit, Close } from "@mui/icons-material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import { useState } from "react";
 import { useAppSelector } from "../store";
-import { Individual } from "@core";
-import { Relationship } from "@core";
-import { fullName } from "@core";
+import { Individual } from "@core/domain";
+import { Relationship } from "@core/domain";
+import { fullName } from "@core/domain";
 import { exportPersonPdf } from "../utils/exportPersonPdf";
 import {
   getParentsOf,
   getSpousesOf,
   groupChildrenByOtherParent,
-} from "@core";
-import { getAllLocationEvents } from "@core";
-import { formatLocation } from "@core"; // ✅ NEW import
+} from "@core/domain";
+import { getAllLocationEvents } from "@core/domain";
+import { formatLocation } from "@core/domain"; // ✅ NEW import
 
 import AddChildDialog from "./AddChildDialog";
 import AddParentDialog from "./AddParentDialog";

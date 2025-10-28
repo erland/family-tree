@@ -1,5 +1,5 @@
 // src/utils/__tests__/timelineUtils.test.ts
-import { buildTimelineEvents, getAllLocationEvents } from "../timelineUtils";
+import { buildTimelineEvents, getAllLocationEvents } from "..//timelineUtils";
 import type { Individual } from "../../types/individual";
 import type { Relationship } from "../../types/relationship";
 

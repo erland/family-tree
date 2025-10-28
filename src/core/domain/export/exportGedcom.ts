@@ -1,7 +1,7 @@
 // src/utils/gedcom/exportGedcom.ts
-import { Individual } from "@core";
-import { Relationship } from "@core";
-import { formatDate } from "@core";
+import { Individual } from "../types/individual";
+import { Relationship } from "../types/relationship";
+import { formatDate } from "../utils/dateUtils";
 
 /**
  * Pure GEDCOM string generator — no Electron or file system dependencies.

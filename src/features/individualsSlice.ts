@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Individual } from "@core";
+import { Individual } from "@core/domain";
 
 interface IndividualsState {
   items: Individual[];

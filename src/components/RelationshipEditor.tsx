@@ -10,7 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useAppSelector } from "../store";
-import { Relationship } from "@core";
+import { Relationship } from "@core/domain";
 import RelationshipEditorSpouseForm from "./RelationshipEditorSpouseForm";
 import RelationshipEditorParentChildForm from "./RelationshipEditorParentChildForm";
 import { useRelationshipEditor } from "../hooks/useRelationshipEditor";

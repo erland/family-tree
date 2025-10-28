@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { useAppSelector } from "../store";
-import { buildTimelineEvents } from "@core";
-import type { Individual } from "@core";
-import type { Relationship } from "@core";
+import { buildTimelineEvents } from "@core/domain";
+import type { Individual } from "@core/domain";
+import type { Relationship } from "@core/domain";
 
 type Groups = ReturnType<typeof buildTimelineEvents>;
 

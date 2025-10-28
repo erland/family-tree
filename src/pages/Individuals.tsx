@@ -25,11 +25,11 @@ import {
   fetchIndividuals,
   deleteIndividual,
 } from "../features/individualsSlice";
-import { Individual } from "@core";
+import { Individual } from "@core/domain";
 import SearchBar from "../components/SearchBar";
 import IndividualDetails from "../components/IndividualDetails";
 import IndividualFormDialog from "../components/IndividualFormDialog";
-import { fullName } from "@core";
+import { fullName } from "@core/domain";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import { exportAllIndividualsPdf } from "../utils/exportAllIndividualsPdf";
 

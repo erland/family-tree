@@ -18,7 +18,6 @@ export default {
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov", "html"], // CLI summary + LCOV + HTML report
   moduleNameMapper: {
-    "^@core$": "<rootDir>/src/core/index.ts",
     "^@core/(.*)$": "<rootDir>/src/core/$1",
     "^(\\.{1,2}/.*)\\.js$": "$1",
   },

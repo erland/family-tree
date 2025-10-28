@@ -1,7 +1,7 @@
 // src/utils/treeLayout.ts
 import { Node, Edge } from "reactflow";
-import { Individual } from "../types/individual";
-import { Relationship } from "../types/relationship";
+import { Individual } from "../domain/types/individual";
+import { Relationship } from "../domain/types/relationship";
 import { buildTreeModel } from "./treeModel";
 import { applyOrthogonalLayout } from "./layoutOrthogonal";
 

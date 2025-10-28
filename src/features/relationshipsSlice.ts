@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Relationship } from "@core";
+import { Relationship } from "@core/domain";
 
 interface RelationshipsState {
   items: Relationship[];

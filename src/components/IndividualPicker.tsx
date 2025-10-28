@@ -1,8 +1,8 @@
 import React from "react";
 import { Autocomplete, TextField } from "@mui/material";
 import { useAppSelector } from "../store";
-import { Individual } from "@core"
-import { fullName } from "@core";
+import { Individual } from "@core/domain"
+import { fullName } from "@core/domain";
 
 interface Props {
   label: string;

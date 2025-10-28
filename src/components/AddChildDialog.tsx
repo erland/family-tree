@@ -13,8 +13,8 @@ import {
   Typography,
 } from "@mui/material";
 import { useAppSelector } from "../store";
-import { Individual } from "@core";
-import { fullName } from "@core";
+import { Individual } from "@core/domain";
+import { fullName } from "@core/domain";
 import IndividualFormFields from "./IndividualFormFields";
 import { useAddChildFlow } from "../hooks/useAddChildFlow";
 

@@ -10,7 +10,7 @@ import {
   TextField,
 } from "@mui/material";
 import { useAppSelector } from "../store";
-import { Individual } from "@core";
+import { Individual } from "@core/domain";
 import IndividualDetails from "../components/IndividualDetails";
 import IndividualFormDialog from "../components/IndividualFormDialog";
 

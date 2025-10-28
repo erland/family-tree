@@ -6,15 +6,15 @@ jest.mock("../../store", () => ({
 }));
 
 /**
- * We'll mock @core because the hook imports buildTimelineEvents from "@core".
+ * We'll mock @core because the hook imports buildTimelineEvents from "@core/domain".
  * We use the same hoist-safe "coreMocks" trick as in the other tests.
  */
 const coreMocks: {
   buildTimelineEvents?: jest.Mock;
 } = {};
 
-jest.mock("@core", () => {
-  const actual = jest.requireActual("@core");
+jest.mock("@core/domain", () => {
+  const actual = jest.requireActual("@core/domain");
   return {
     ...actual,
     buildTimelineEvents: (...args: any[]) =>
@@ -28,7 +28,7 @@ coreMocks.buildTimelineEvents = jest.fn();
 // --- Imports ---
 import { renderHook } from "@testing-library/react";
 import { useTimelineViewModel } from "../useTimelineViewModel";
-import type { Individual } from "@core";
+import type { Individual } from "@core/domain";
 
 const useAppSelector = require("../../store")
   .useAppSelector as jest.Mock;

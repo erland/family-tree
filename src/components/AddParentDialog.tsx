@@ -14,9 +14,9 @@ import {
   Chip,
 } from "@mui/material";
 import { useAppSelector } from "../store";
-import { Individual } from "@core";
-import { Relationship } from "@core";
-import { fullName } from "@core";
+import { Individual } from "@core/domain";
+import { Relationship } from "@core/domain";
+import { fullName } from "@core/domain";
 import IndividualFormFields from "./IndividualFormFields";
 import { useAddParentFlow } from "../hooks/useAddParentFlow";
 

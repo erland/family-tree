@@ -4,7 +4,7 @@ import {
   getDescendants,
   canAddParentChild,
   canAddSpouse,
-} from "../relationshipUtils";
+} from "..//relationshipUtils";
 import type { Relationship } from "../../types/relationship";
 
 describe("relationshipUtils", () => {

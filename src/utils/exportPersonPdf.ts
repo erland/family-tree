@@ -1,12 +1,12 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { Individual } from "@core";
-import { Relationship } from "@core";
-import { fullName } from "@core";
-import { buildTimelineEvents } from "@core";
-import { calculateAgeAtEvent } from "@core";
-import { getParentsOf, getSpousesOf, groupChildrenByOtherParent } from "@core";
-import { formatLocation } from "@core"; // ✅ NEW import
+import { Individual } from "@core/domain";
+import { Relationship } from "@core/domain";
+import { fullName } from "@core/domain";
+import { buildTimelineEvents } from "@core/domain";
+import { calculateAgeAtEvent } from "@core/domain";
+import { getParentsOf, getSpousesOf, groupChildrenByOtherParent } from "@core/domain";
+import { formatLocation } from "@core/domain"; // ✅ NEW import
 
 /**
  * Render one individual onto a jsPDF instance (on the current page).

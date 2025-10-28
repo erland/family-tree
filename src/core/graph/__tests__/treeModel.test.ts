@@ -1,6 +1,6 @@
 import { buildTreeModel } from "../treeModel";
-import type { Individual } from "../../types/individual";
-import type { Relationship } from "../../types/relationship";
+import type { Individual } from "../../domain/types/individual";
+import type { Relationship } from "../../domain/types/relationship";
 
 const I = (id: string, gender?: "M" | "F"): Individual =>
   ({

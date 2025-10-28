@@ -1,7 +1,7 @@
 import React from "react";
 import { Autocomplete, TextField } from "@mui/material";
-import { Individual } from "@core";
-import { fullName } from "@core";
+import { Individual } from "@core/domain";
+import { fullName } from "@core/domain";
 
 type Props = {
   individuals: Individual[];

@@ -1,10 +1,10 @@
 // src/utils/exportTreePdf.ts
-import { buildGraph } from "@core";
+import { buildGraph } from "@core/graph";
 import jsPDF from "jspdf";
 import FamilyNode from "../components/FamilyNode";
 import MarriageNode from "../components/MarriageNode";
-import { Individual } from "@core";
-import { Relationship } from "@core";
+import { Individual } from "@core/domain";
+import { Relationship } from "@core/domain";
 import { computeViewportBBox, renderOffscreenGraph, captureAsPng } from "./exportTreeBase";
 
 const nodeTypes = { family: FamilyNode, marriage: MarriageNode };

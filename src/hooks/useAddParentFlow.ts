@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useAppSelector } from "../store";
-import { Individual, IndividualSchema } from "@core";
-import { canAddParentChild } from "@core";
+import { Individual, IndividualSchema } from "@core/domain";
+import { canAddParentChild } from "@core/domain";
 import { useAddParent } from "./useAddParent";
 
 /** create-new + link (with optional second parent) */
