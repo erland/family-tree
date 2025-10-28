@@ -2,12 +2,35 @@
 <html lang="sv">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+
     <title>Family Tree</title>
+
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Theme color for address bar / OS chrome -->
+    <meta name="theme-color" content="#1976d2" />
+
+    <!-- iOS / iPadOS standalone mode support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <!-- Home screen icon for iOS -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Favicon (should exist in /public/favicon.ico) -->
+    <link rel="icon" href="/favicon.ico" />
   </head>
   <body>
     <!-- React will mount here -->
     <div id="root"></div>
+
     <!-- Entry script for Vite -->
     <script type="module" src="/src/index.tsx"></script>
   </body>

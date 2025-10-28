@@ -18,9 +18,12 @@ import "./i18n";
 import { CssBaseline } from "@mui/material";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 
-// 🔁 NEW imports
-import { initDB } from "./storage";            // your web storage module (localStorage-backed)
-import { genealogyWebAPI } from "./api/genealogy-web"; // the browser impl of GenealogyAPI
+import { initDB } from "./storage"; // localStorage-backed init + migrations
+import { genealogyWebAPI } from "./api/genealogy-web"; // browser impl of the API surface
+
+// ⬇ NEW: vite-plugin-pwa registration helper.
+// This will register the generated service worker so we get offline caching and installability.
+import { registerSW } from "virtual:pwa-register";
 
 const theme = createTheme({
   palette: {
@@ -30,7 +33,7 @@ const theme = createTheme({
   },
 });
 
-// Your existing route config stays the same
+// Route config stays the same (hash-based routing works well for offline PWAs)
 const router = createHashRouter([
   {
     path: "/",
@@ -49,14 +52,25 @@ const router = createHashRouter([
 
 // ⬇⬇⬇ BOOTSTRAP WRAPPER ⬇⬇⬇
 (async function bootstrap() {
-  // 1. Init browser DB (creates localStorage buckets if missing)
+  // 1. Init browser DB (creates localStorage buckets if missing, runs migrations)
   await initDB();
 
   // 2. Expose a GenealogyAPI-compatible surface on window
-  //    so slices/thunks can keep doing window.api.listIndividuals(), etc.
+  //    so slices/thunks can continue to call window.api.*
   (window as any).api = genealogyWebAPI;
 
-  // 3. Now that storage + api are ready, render the actual app
+  // 3. Register PWA service worker for offline/app-shell caching.
+  //    immediate: true = register right now
+  //    onOfflineReady = hook for telling the user "ready to use offline"
+  registerSW({
+    immediate: true,
+    onOfflineReady() {
+      // You can replace this with a Snackbar/Toast later
+      console.log("App is ready to work offline.");
+    },
+  });
+
+  // 4. Now that storage + api + SW are ready, render the actual app
   const rootEl = document.getElementById("root") as HTMLElement;
   const root = ReactDOM.createRoot(rootEl);
 
