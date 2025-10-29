@@ -21,7 +21,7 @@ import {
   getSpousesOf,
   groupChildrenByOtherParent,
 } from "@core/domain";
-import { getAllLocationEvents } from "@core/domain";
+import { getAllLocationEvents } from "@core/viewModelBuilders/personHistory";
 import { formatLocation } from "@core/domain"; // ✅ NEW import
 
 import AddChildDialog from "./AddChildDialog";

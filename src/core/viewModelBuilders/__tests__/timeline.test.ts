@@ -1,11 +1,20 @@
-import { buildTimelineViewModel } from "../timeline";
-import { buildTimelineEvents } from "@core/domain";
+import { buildTimelineViewModel } from "../timeline/buildTimelineViewModel";
+import { buildLifeEvents } from "@core/viewModelBuilders/personHistory";
+import { groupTimelineEvents } from "../timeline/groupTimelineEvents";
 import type { Individual, Relationship } from "@core/domain";
 
-// Mock the @core/domain module so we control buildTimelineEvents behavior
-jest.mock("@core/domain", () => {
+// We are now mocking the two collaborators that
+// buildTimelineViewModel uses internally.
+jest.mock("@core/viewModelBuilders/personHistory", () => {
   return {
-    buildTimelineEvents: jest.fn(),
+    // Only mock the function we care about
+    buildLifeEvents: jest.fn(),
+  };
+});
+
+jest.mock("../timeline/groupTimelineEvents", () => {
+  return {
+    groupTimelineEvents: jest.fn(),
   };
 });
 
@@ -13,32 +22,37 @@ describe("buildTimelineViewModel", () => {
   const makeIndividual = (id: string, givenName = "Test"): Individual => ({
     id,
     givenName,
-    // minimally valid shape; other fields optional in IndividualSchema
   } as any);
 
-  const makeSpouseRel = (id: string, person1Id: string, person2Id: string): Relationship => ({
-    id,
-    type: "spouse",
-    person1Id,
-    person2Id,
-  } as any);
+  const makeSpouseRel = (
+    id: string,
+    person1Id: string,
+    person2Id: string
+  ): Relationship =>
+    ({
+      id,
+      type: "spouse",
+      person1Id,
+      person2Id,
+    } as any);
 
   const makeParentChildRel = (
     id: string,
     parents: string[],
     childId: string
-  ): Relationship => ({
-    id,
-    type: "parent-child",
-    parentIds: parents,
-    childId,
-  } as any);
+  ): Relationship =>
+    ({
+      id,
+      type: "parent-child",
+      parentIds: parents,
+      childId,
+    } as any);
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  test("returns empty groups and null selected when no selectedId is provided", () => {
+  test("returns empty buckets and null selected when no selectedId is provided", () => {
     const individuals: Individual[] = [
       makeIndividual("p1", "Alice"),
       makeIndividual("p2", "Bob"),
@@ -49,81 +63,86 @@ describe("buildTimelineViewModel", () => {
       makeParentChildRel("r2", ["p1", "p2"], "c1"),
     ];
 
-    // We expect that when there's no selectedId,
-    // buildTimelineEvents should NOT even be called.
+    // Call with no selectedId
     const vm = buildTimelineViewModel(individuals, relationships, null);
 
-    expect(buildTimelineEvents).not.toHaveBeenCalled();
+    // Because no one is selected, we should NOT even try to build events.
+    expect(buildLifeEvents).not.toHaveBeenCalled();
+    expect(groupTimelineEvents).not.toHaveBeenCalled();
 
-    // selected should be null
+    // New return shape:
     expect(vm.selected).toBeNull();
+    expect(vm.beforeBirth).toEqual([]);
+    expect(vm.lifeEvents).toEqual([]);
+    expect(vm.afterDeath).toEqual([]);
+    expect(vm.undated).toEqual([]);
 
-    // individuals / relationships should be passed through
-    expect(vm.individuals).toBe(individuals);
-    expect(vm.relationships).toBe(relationships);
-
-    // groups should exist and be empty buckets
-    expect(vm.groups).toBeDefined();
-    expect(vm.groups.beforeBirth).toEqual([]);
-    expect(vm.groups.lifeEvents).toEqual([]);
-    expect(vm.groups.afterDeath).toEqual([]);
-    expect(vm.groups.undated).toEqual([]);
-
-    // also flattened onto root (backwards compatibility)
-    expect(vm.beforeBirth).toBe(vm.groups.beforeBirth);
-    expect(vm.lifeEvents).toBe(vm.groups.lifeEvents);
-    expect(vm.afterDeath).toBe(vm.groups.afterDeath);
-    expect(vm.undated).toBe(vm.groups.undated);
+    // We no longer expose vm.groups, vm.individuals, vm.relationships
+    expect((vm as any).groups).toBeUndefined();
+    expect((vm as any).individuals).toBeUndefined();
+    expect((vm as any).relationships).toBeUndefined();
   });
 
-  test("returns populated groups and selected individual when selectedId matches", () => {
+  test("returns buckets from groupTimelineEvents when selectedId matches", () => {
     const alice = makeIndividual("p1", "Alice");
     const bob = makeIndividual("p2", "Bob");
 
     const individuals: Individual[] = [alice, bob];
-
     const relationships: Relationship[] = [
       makeSpouseRel("r1", "p1", "p2"),
     ];
 
-    // Stub timeline groups that buildTimelineEvents should return
-    const stubGroups = {
+    // 1. We stub buildLifeEvents to return the "raw" per-person events array
+    const stubRawEvents = [
+      { type: "birth", label: "Alice was born", date: "1900-01-01" },
+      { type: "marriage", label: "Married Bob", date: "1920-06-06" },
+    ];
+    (buildLifeEvents as jest.Mock).mockReturnValue(stubRawEvents);
+
+    // 2. We stub groupTimelineEvents to bucket those events into beforeBirth / lifeEvents / etc.
+    const stubBuckets = {
       beforeBirth: [{ type: "ancestorBirth", label: "Ancestor born" }],
       lifeEvents: [{ type: "birth", label: "Alice was born" }],
       afterDeath: [{ type: "afterDeathExample", label: "Legacy" }],
       undated: [{ type: "custom", label: "Some note" }],
     };
+    (groupTimelineEvents as jest.Mock).mockReturnValue(stubBuckets);
 
-    // Make our mock implementation return those groups
-    (buildTimelineEvents as jest.Mock).mockReturnValue(stubGroups);
-
+    // Act
     const vm = buildTimelineViewModel(individuals, relationships, "p1");
 
-    // Verify buildTimelineEvents was called correctly:
-    // - first arg: the selected individual object (alice)
-    // - second arg: relationships from state
-    // - third arg: all individuals
-    expect(buildTimelineEvents).toHaveBeenCalledTimes(1);
-    expect(buildTimelineEvents).toHaveBeenCalledWith(
+    // Verify we resolved the selected person correctly
+    expect(vm.selected).toBe(alice);
+
+    // Verify buildLifeEvents was called correctly:
+    // - individual (alice)
+    // - all relationships
+    // - all individuals
+    expect(buildLifeEvents).toHaveBeenCalledTimes(1);
+    expect(buildLifeEvents).toHaveBeenCalledWith(
       alice,
       relationships,
       individuals
     );
 
-    // selected should be Alice
-    expect(vm.selected).toBe(alice);
+    // Verify groupTimelineEvents was called with:
+    // - the selected person
+    // - the raw events returned from buildLifeEvents
+    expect(groupTimelineEvents).toHaveBeenCalledTimes(1);
+    expect(groupTimelineEvents).toHaveBeenCalledWith(
+      alice,
+      stubRawEvents
+    );
 
-    // individuals / relationships should be passed through
-    expect(vm.individuals).toBe(individuals);
-    expect(vm.relationships).toBe(relationships);
+    // And finally, the view model returns those buckets directly at top level
+    expect(vm.beforeBirth).toBe(stubBuckets.beforeBirth);
+    expect(vm.lifeEvents).toBe(stubBuckets.lifeEvents);
+    expect(vm.afterDeath).toBe(stubBuckets.afterDeath);
+    expect(vm.undated).toBe(stubBuckets.undated);
 
-    // groups should match stubGroups exactly
-    expect(vm.groups).toBe(stubGroups);
-
-    // top-level shortcuts should reference the same arrays
-    expect(vm.beforeBirth).toBe(stubGroups.beforeBirth);
-    expect(vm.lifeEvents).toBe(stubGroups.lifeEvents);
-    expect(vm.afterDeath).toBe(stubGroups.afterDeath);
-    expect(vm.undated).toBe(stubGroups.undated);
+    // It should NOT expose older compatibility props:
+    expect((vm as any).groups).toBeUndefined();
+    expect((vm as any).individuals).toBeUndefined();
+    expect((vm as any).relationships).toBeUndefined();
   });
 });

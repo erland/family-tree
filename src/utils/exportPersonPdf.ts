@@ -1,12 +1,21 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+
 import { Individual } from "@core/domain";
 import { Relationship } from "@core/domain";
 import { fullName } from "@core/domain";
-import { buildTimelineEvents } from "@core/domain";
 import { calculateAgeAtEvent } from "@core/domain";
-import { getParentsOf, getSpousesOf, groupChildrenByOtherParent } from "@core/domain";
-import { formatLocation } from "@core/domain"; // ✅ NEW import
+import {
+  getParentsOf,
+  getSpousesOf,
+  groupChildrenByOtherParent,
+} from "@core/domain";
+
+import { formatLocation } from "@core/domain";
+
+// ⬇️ NEW: pull from our refactored view-model layers
+import { buildLifeEvents } from "@core/viewModelBuilders/personHistory"; // ✅
+import { groupTimelineEvents } from "@core/viewModelBuilders/timeline";  // ✅
 
 /**
  * Render one individual onto a jsPDF instance (on the current page).
@@ -18,7 +27,6 @@ export function renderIndividualPage(
   individuals: Individual[],
   relationships: Relationship[]
 ): number {
-
   // === Header ===
   doc.setFontSize(18);
   doc.text(
@@ -35,19 +43,21 @@ export function renderIndividualPage(
 
   doc.setFontSize(12);
 
-  // 🧩 Birth info with formatted location
+  // 🧩 Birth info (now with pretty location)
   const birthLoc = formatLocation({
     city: individual.birthCity,
     congregation: individual.birthCongregation,
     region: individual.birthRegion,
   });
   doc.text(
-    `Född: ${individual.dateOfBirth || "-"}${birthLoc ? " " + birthLoc : ""}`,
+    `Född: ${individual.dateOfBirth || "-"}${
+      birthLoc ? " " + birthLoc : ""
+    }`,
     14,
     30
   );
 
-  // 🪦 Death info with formatted location
+  // 🪦 Death info (also pretty)
   if (individual.dateOfDeath) {
     const deathLoc = formatLocation({
       city: individual.deathCity,
@@ -55,12 +65,17 @@ export function renderIndividualPage(
       region: individual.deathRegion,
     });
     doc.text(
-      `Död: ${individual.dateOfDeath}${deathLoc ? " " + deathLoc : ""}`,
+      `Död: ${individual.dateOfDeath}${
+        deathLoc ? " " + deathLoc : ""
+      }`,
       14,
       38
     );
     doc.text(
-      `Ålder: ${calculateAgeAtEvent(individual.dateOfBirth, individual.dateOfDeath)}`,
+      `Ålder: ${calculateAgeAtEvent(
+        individual.dateOfBirth,
+        individual.dateOfDeath
+      )}`,
       14,
       46
     );
@@ -96,7 +111,10 @@ export function renderIndividualPage(
               fullName(partner),
               partner.dateOfBirth || "",
               partner.dateOfDeath || "",
-              calculateAgeAtEvent(partner.dateOfBirth, partner.dateOfDeath),
+              calculateAgeAtEvent(
+                partner.dateOfBirth,
+                partner.dateOfDeath
+              ),
             ]
           : ["Okänd", "", "", ""]
       ),
@@ -104,8 +122,12 @@ export function renderIndividualPage(
     cursorY = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // === Children (grouped by other parent when available) ===
-  const grouped = groupChildrenByOtherParent(individual.id, relationships, individuals);
+  // === Children (grouped by other parent) ===
+  const grouped = groupChildrenByOtherParent(
+    individual.id,
+    relationships,
+    individuals
+  );
   const flatChildren = grouped.flatMap(({ partner, children }) =>
     children.map((child) => ({ child, otherParent: partner }))
   );
@@ -120,7 +142,10 @@ export function renderIndividualPage(
               fullName(child),
               child.dateOfBirth || "",
               child.dateOfDeath || "",
-              calculateAgeAtEvent(child.dateOfBirth, child.dateOfDeath),
+              calculateAgeAtEvent(
+                child.dateOfBirth,
+                child.dateOfDeath
+              ),
               otherParent ? fullName(otherParent) : "-",
             ]
           : ["", "", "", "", ""]
@@ -129,16 +154,28 @@ export function renderIndividualPage(
     cursorY = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // === Timeline ===
-  const { lifeEvents } = buildTimelineEvents(individual, relationships, individuals);
-  if (lifeEvents.length > 0) {
+  // === Timeline / Life story ===
+  // OLD: you called buildTimelineEvents() and used .lifeEvents
+  // NEW: we build raw events, then bucket them like the Timeline page does
+  const rawEvents = buildLifeEvents(
+    individual,
+    relationships,
+    individuals
+  ); // ✅ returns LifeEvent[]
+
+  const buckets = groupTimelineEvents(
+    individual,
+    rawEvents
+  ); // ✅ returns { beforeBirth, lifeEvents, afterDeath, undated }
+
+  if (buckets.lifeEvents.length > 0) {
     autoTable(doc, {
       startY: cursorY,
       head: [["Datum", "Händelse", "Ålder", "Plats"]],
-      body: lifeEvents.map((ev) => [
+      body: buckets.lifeEvents.map((ev) => [
         ev.date ?? "",
         ev.label,
-        ev.ageAtEvent,
+        ev.ageAtEvent ?? "",
         formatLocation({
           city: ev.location?.city,
           congregation: ev.location?.congregation,
@@ -149,12 +186,14 @@ export function renderIndividualPage(
     cursorY = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  // === Story ===
+  // === Story / Narrative ===
   if (individual.story) {
     doc.setFontSize(14);
     doc.text("Berättelse", 14, cursorY);
     doc.setFontSize(11);
-    doc.text(individual.story, 14, cursorY + 8, { maxWidth: 180 });
+    doc.text(individual.story, 14, cursorY + 8, {
+      maxWidth: 180,
+    });
   }
 
   return cursorY;

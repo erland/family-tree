@@ -1,7 +1,6 @@
 export * from "./dateUtils";
 export * from "./nameUtils";
 export * from "./relationshipUtils";
-export * from "./timelineUtils";
 export * from "./places";
 export * from "./searchIndex";
 export * from "./location";
