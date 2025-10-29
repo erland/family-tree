@@ -98,7 +98,7 @@ export default function TimelinePage() {
         Tidslinje
       </Typography>
 
-      <SearchBar onSelect={(id) => setSelectedId(id)} />
+      <SearchBar clearOnSelect onSelect={(id) => setSelectedId(id)} />
       <Divider sx={{ my: 2 }} />
 
       {selected ? (

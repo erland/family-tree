@@ -1,5 +1,5 @@
 // src/components/SearchBar.tsx
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   TextField,
   Paper,
@@ -18,6 +18,15 @@ interface SearchBarProps {
   onResults?: (ids: string[]) => void;
   onQueryChange?: (value: string) => void;
   showDropdown?: boolean;
+
+  /**
+   * When true (e.g. in Pedigree usage):
+   * - after selecting a result we clear the query
+   * - and we close the dropdown.
+   *
+   * Default false to preserve current navbar/global behavior.
+   */
+  clearOnSelect?: boolean;
 }
 
 export default function SearchBar({
@@ -25,12 +34,15 @@ export default function SearchBar({
   onResults,
   onQueryChange,
   showDropdown = true,
+  clearOnSelect = false,
 }: SearchBarProps) {
   const individuals = useAppSelector(
     (s) => s.individuals.items
   ) as Individual[];
 
   const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+
   const anchorRef = useRef<HTMLInputElement | null>(null);
 
   const { results } = useSearch(query, {
@@ -39,7 +51,28 @@ export default function SearchBar({
     onResults,
   });
 
+  // Keep dropdown open/closed in sync with current query/results.
+  useEffect(() => {
+    if (showDropdown && query.length > 0 && results.length > 0) {
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+    }
+  }, [showDropdown, query, results]);
+
   const rect = anchorRef.current?.getBoundingClientRect();
+
+  // Handle clicking one of the search results.
+  const handleSelectClick = (id: string) => {
+    // Notify parent first so pedigree/etc. can act on it.
+    onSelect?.(id);
+
+    if (clearOnSelect) {
+      // Clear query and explicitly close dropdown.
+      setQuery("");
+      setIsOpen(false);
+    }
+  };
 
   return (
     <>
@@ -50,13 +83,15 @@ export default function SearchBar({
           const v = e.target.value;
           setQuery(v);
           onQueryChange?.(v);
+          // We don't force-open here; the effect above will
+          // decide isOpen based on query+results.
         }}
         label="Sök (namn, datum, plats …)"
         fullWidth
         autoComplete="off"
       />
 
-      {showDropdown && query.length > 0 && results.length > 0 && rect && (
+      {showDropdown && isOpen && rect && (
         <Portal>
           <Paper
             elevation={6}
@@ -76,8 +111,11 @@ export default function SearchBar({
                 const person = individuals.find((i) => i.id === r.item.id);
 
                 // Fallback if the person isn't in store right now.
-                const primary =
-                  person?.id ? fullName(person) : `${r.item.givenName ?? ""} ${r.item.familyName ?? r.item.birthFamilyName ?? ""}`.trim();
+                const primary = person?.id
+                  ? fullName(person)
+                  : `${r.item.givenName ?? ""} ${
+                      r.item.familyName ?? r.item.birthFamilyName ?? ""
+                    }`.trim();
 
                 const secondary =
                   person?.birthCity ||
@@ -88,7 +126,7 @@ export default function SearchBar({
                 return (
                   <ListItemButton
                     key={r.item.id}
-                    onClick={() => onSelect?.(r.item.id)}
+                    onClick={() => handleSelectClick(r.item.id)}
                   >
                     <ListItemText primary={primary} secondary={secondary} />
                   </ListItemButton>

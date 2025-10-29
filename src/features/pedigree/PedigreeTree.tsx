@@ -38,6 +38,7 @@ export default function PedigreeTree() {
         >
           {/* Search selects root individual */}
           <SearchBar
+            clearOnSelect
             onSelect={(id) => {
               vm.handlePickRoot(id);
             }}
