@@ -197,7 +197,7 @@ export const genealogyWebAPI = {
     triggerDownload(
       gedText,
       "text/plain;charset=utf-8",
-      "family.ged"
+      "AllIndividuals.ged"
     );
 
     return { success: true };
@@ -209,7 +209,7 @@ export const genealogyWebAPI = {
   async importGedcom(): Promise<{ count: number; relCount: number } | null> {
     // Let user choose a .ged file
     const text = await pickTextFile(
-      ".ged,.GED,.gedcom,.GEDCOM,text/plain"
+      ".ged,.GED,.gedcom,.GEDCOM,text/plain,application/octet-stream"
     );
     if (!text) return null; // user cancelled
 
@@ -240,7 +240,7 @@ export const genealogyWebAPI = {
     triggerDownload(
       buffer,
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Hela_släkten.xlsx"
+      "AllIndividuals.xlsx"
     );
 
     return { success: true };
@@ -263,7 +263,7 @@ export const genealogyWebAPI = {
     triggerDownload(
       buffer,
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Relationer.xlsx"
+      "relationships.xlsx"
     );
 
     return { success: true };
@@ -275,7 +275,7 @@ export const genealogyWebAPI = {
   async importExcel(): Promise<{ count: number; relCount: number } | null> {
     // user picks .xlsx
     const arrayBuffer = await pickBinaryFile(
-      ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      ".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
     if (!arrayBuffer) return null; // cancelled
 
