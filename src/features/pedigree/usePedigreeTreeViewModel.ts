@@ -1,9 +1,9 @@
 // src/hooks/usePedigreeTreeViewModel.ts
 import { useCallback, useMemo, useState } from "react";
-import { useAppSelector } from "../store";
+import { useAppSelector } from "../../store";
 import { Individual } from "@core/domain";
-import { exportFullTreeSVG } from "../utils/exportTreeSvg";
-import { exportFullTreePDF } from "../utils/exportTreePdf";
+import { exportFullTreeSVG } from "../../utils/exportTreeSvg";
+import { exportFullTreePDF } from "../../utils/exportTreePdf";
 import {
   pickRootById,
   derivePedigreeTreeState,

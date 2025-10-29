@@ -11,7 +11,7 @@ import { Select, MenuItem } from "@mui/material";
 
 import FamilyNode from "./FamilyNode";
 import MarriageNode from "./MarriageNode";
-import { usePedigreeGraph } from "../hooks/usePedigreeGraph";
+import { usePedigreeGraph } from "./usePedigreeGraph";
 import { Individual } from "@core/domain";
 
 const nodeTypes = {

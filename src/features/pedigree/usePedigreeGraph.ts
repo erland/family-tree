@@ -8,7 +8,7 @@ import {
   Edge,
   FitViewOptions,
 } from "reactflow";
-import { useAppSelector } from "../store";
+import { useAppSelector } from "../../store";
 import { buildGraph } from "@core/graph";
 
 const FIT_VIEW_OPTIONS: FitViewOptions = {

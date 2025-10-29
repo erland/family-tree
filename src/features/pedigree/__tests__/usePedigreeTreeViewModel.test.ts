@@ -1,5 +1,5 @@
 // 1. Mock the Redux selector hook before importing the hook
-jest.mock("../../store", () => ({
+jest.mock("../../../store", () => ({
   useAppSelector: jest.fn(),
 }));
 
@@ -10,11 +10,11 @@ jest.mock("@core/viewModelBuilders/pedigreeTree", () => ({
 }));
 
 // 3. Mock the export utils so we don't actually try to render/export anything
-jest.mock("../../utils/exportTreeSvg", () => ({
+jest.mock("../../../utils/exportTreeSvg", () => ({
   exportFullTreeSVG: jest.fn(),
 }));
 
-jest.mock("../../utils/exportTreePdf", () => ({
+jest.mock("../../../utils/exportTreePdf", () => ({
   exportFullTreePDF: jest.fn(),
 }));
 
@@ -22,15 +22,15 @@ import { renderHook, act } from "@testing-library/react";
 import { usePedigreeTreeViewModel } from "../usePedigreeTreeViewModel";
 
 import { pickRootById, derivePedigreeTreeState } from "@core/viewModelBuilders/pedigreeTree";
-import { exportFullTreeSVG } from "../../utils/exportTreeSvg";
-import { exportFullTreePDF } from "../../utils/exportTreePdf";
+import { exportFullTreeSVG } from "../../../utils/exportTreeSvg";
+import { exportFullTreePDF } from "../../../utils/exportTreePdf";
 
 const mockPickRootById = pickRootById as jest.Mock;
 const mockDeriveState = derivePedigreeTreeState as jest.Mock;
 const mockExportSvg = exportFullTreeSVG as jest.Mock;
 const mockExportPdf = exportFullTreePDF as jest.Mock;
 
-const { useAppSelector } = require("../../store") as {
+const { useAppSelector } = require("../../../store") as {
   useAppSelector: jest.Mock;
 };
 

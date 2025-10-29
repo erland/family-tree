@@ -1,6 +1,6 @@
 // src/components/CircularPedigree.tsx
 import React, { useMemo, useState, useEffect } from "react";
-import { useAppSelector } from "../store";
+import { useAppSelector } from "../../store";
 import { buildAncestorMatrix } from "@core/domain";
 import { Individual } from "@core/domain";
 import { Relationship } from "@core/domain";

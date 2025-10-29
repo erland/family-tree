@@ -11,13 +11,13 @@ import {
 } from "@mui/material";
 import { ReactFlowProvider } from "reactflow";
 
-import SearchBar from "../components/SearchBar";
-import IndividualDetails from "../components/IndividualDetails";
-import IndividualFormDialog from "../components/IndividualFormDialog";
+import SearchBar from "../../components/SearchBar";
+import IndividualDetails from "../../components/IndividualDetails";
+import IndividualFormDialog from "../../components/IndividualFormDialog";
 import CircularPedigree from "./CircularPedigree";
 import { PedigreeCanvas } from "./PedigreeCanvas";
 
-import { usePedigreeTreeViewModel } from "../hooks/usePedigreeTreeViewModel";
+import { usePedigreeTreeViewModel } from "./usePedigreeTreeViewModel";
 
 export default function PedigreeTree() {
   const vm = usePedigreeTreeViewModel();
