@@ -1,18 +1,18 @@
 // --- Mocks must come first ---
-jest.mock("../../store", () => ({
+jest.mock("../../../store", () => ({
   useAppSelector: jest.fn(),
   useAppDispatch: jest.fn(),
 }));
 
 // Generate ids like the real thunks do, so tests can control via setUUIDs(...)
-jest.mock("../../features/individualsSlice", () => ({
+jest.mock("../../../features/individualsSlice", () => ({
   addIndividual: jest.fn((payload: any) => {
     const id = payload?.id ?? (global as any).crypto?.randomUUID?.();
     return { type: "individuals/add", payload: { ...payload, id } };
   }),
 }));
 
-jest.mock("../../features/relationshipsSlice", () => ({
+jest.mock("../../../features/relationshipsSlice", () => ({
   addRelationship: jest.fn((payload: any) => {
     const id = payload?.id ?? (global as any).crypto?.randomUUID?.();
     return { type: "relationships/add", payload: { ...payload, id } };
@@ -24,14 +24,14 @@ jest.mock("../../features/relationshipsSlice", () => ({
 import { renderHook, act } from "@testing-library/react";
 import { useAddParent } from "../useAddParent";
 
-const { useAppSelector, useAppDispatch } = require("../../store") as {
+const { useAppSelector, useAppDispatch } = require("../../../store") as {
   useAppSelector: jest.Mock;
   useAppDispatch: jest.Mock;
 };
-const { addIndividual } = require("../../features/individualsSlice") as {
+const { addIndividual } = require("../../../features/individualsSlice") as {
   addIndividual: jest.Mock;
 };
-const { addRelationship, updateRelationship } = require("../../features/relationshipsSlice") as {
+const { addRelationship, updateRelationship } = require("../../../features/relationshipsSlice") as {
   addRelationship: jest.Mock;
   updateRelationship: jest.Mock;
 };

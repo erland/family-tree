@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAppDispatch, useAppSelector } from "../store";
-import { addIndividual } from "../features/individualsSlice";
-import { addRelationship, updateRelationship } from "../features/relationshipsSlice";
+import { useAppDispatch, useAppSelector } from "../../store";
+import { addIndividual } from "../../features/individualsSlice";
+import { addRelationship, updateRelationship } from "../../features/relationshipsSlice";
 import type { Individual } from "@core/domain";
 import type { Relationship } from "@core/domain";
 

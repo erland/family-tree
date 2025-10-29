@@ -1,6 +1,6 @@
 import React from "react";
 import { Autocomplete, TextField } from "@mui/material";
-import { useAppSelector } from "../store";
+import { useAppSelector } from "../../store";
 import { Individual } from "@core/domain"
 import { fullName } from "@core/domain";
 

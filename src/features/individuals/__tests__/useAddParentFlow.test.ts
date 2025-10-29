@@ -1,7 +1,7 @@
 // --- Mocks must come first ---
 
 // Mock selector hook so useAddParentFlow can read relationships from state
-jest.mock("../../store", () => ({
+jest.mock("../../../store", () => ({
   useAppSelector: jest.fn(),
 }));
 
@@ -41,7 +41,7 @@ jest.mock("@core/domain", () => {
 import { renderHook, act } from "@testing-library/react";
 import { useAddParentFlow } from "../useAddParentFlow";
 
-const { useAppSelector } = require("../../store") as {
+const { useAppSelector } = require("../../../store") as {
   useAppSelector: jest.Mock;
 };
 

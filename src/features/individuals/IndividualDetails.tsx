@@ -11,11 +11,11 @@ import {
 import { Edit, Close } from "@mui/icons-material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import { useState } from "react";
-import { useAppSelector } from "../store";
+import { useAppSelector } from "../../store";
 import { Individual } from "@core/domain";
 import { Relationship } from "@core/domain";
 import { fullName } from "@core/domain";
-import { exportPersonPdf } from "../utils/exportPersonPdf";
+import { exportPersonPdf } from "../../utils/exportPersonPdf";
 import {
   getParentsOf,
   getSpousesOf,
@@ -26,7 +26,7 @@ import { formatLocation } from "@core/domain"; // ✅ NEW import
 
 import AddChildDialog from "./AddChildDialog";
 import AddParentDialog from "./AddParentDialog";
-import RelationshipEditor from "../features/relationships/RelationshipEditor";
+import RelationshipEditor from "../relationships/RelationshipEditor";
 
 type Props = {
   individualId: string;

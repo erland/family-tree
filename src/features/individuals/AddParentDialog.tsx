@@ -13,12 +13,12 @@ import {
   Typography,
   Chip,
 } from "@mui/material";
-import { useAppSelector } from "../store";
+import { useAppSelector } from "../../store";
 import { Individual } from "@core/domain";
 import { Relationship } from "@core/domain";
 import { fullName } from "@core/domain";
 import IndividualFormFields from "./IndividualFormFields";
-import { useAddParentFlow } from "../hooks/useAddParentFlow";
+import { useAddParentFlow } from "./useAddParentFlow";
 
 type Props = {
   open: boolean;

@@ -12,8 +12,8 @@ import {
 import { ReactFlowProvider } from "reactflow";
 
 import SearchBar from "../../components/SearchBar";
-import IndividualDetails from "../../components/IndividualDetails";
-import IndividualFormDialog from "../../components/IndividualFormDialog";
+import IndividualDetails from "../individuals/IndividualDetails";
+import IndividualFormDialog from "../individuals/IndividualFormDialog";
 import CircularPedigree from "./CircularPedigree";
 import { PedigreeCanvas } from "./PedigreeCanvas";
 

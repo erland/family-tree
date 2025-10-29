@@ -8,8 +8,8 @@ import {
 } from "@mui/material";
 import { Individual, IndividualSchema } from "@core/domain";
 import { v4 as uuidv4 } from "uuid";
-import { useAppDispatch } from "../store";
-import { addIndividual, updateIndividual } from "../features/individualsSlice";
+import { useAppDispatch } from "../../store";
+import { addIndividual, updateIndividual } from "../../features/individualsSlice";
 import IndividualFormFields, { PersonFormValues } from "./IndividualFormFields";
 import MoveListEditor from "./MoveListEditor";
 

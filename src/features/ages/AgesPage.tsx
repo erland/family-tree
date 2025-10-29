@@ -13,8 +13,8 @@ import { AgeBucketPeopleList } from "./AgeBucketPeopleList";
 import { genderMatchesFilter } from "./genderUtils";
 
 // Reuse your existing dialogs/components
-import IndividualDetails from "../../components/IndividualDetails";
-import IndividualFormDialog from "../../components/IndividualFormDialog";
+import IndividualDetails from "../individuals/IndividualDetails";
+import IndividualFormDialog from "../individuals/IndividualFormDialog";
 
 export default function AgesPage() {
   // Pull all individuals

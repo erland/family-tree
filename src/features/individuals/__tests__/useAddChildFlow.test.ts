@@ -1,7 +1,7 @@
 // Mocks must come before imports of the module under test
 
 // 1. Mock store hooks so we can control selector output
-jest.mock("../../store", () => ({
+jest.mock("../../../store", () => ({
   useAppSelector: jest.fn(),
 }));
 
@@ -35,7 +35,7 @@ import { renderHook, act } from "@testing-library/react";
 import { useAddChildFlow } from "../useAddChildFlow";
 
 // Grab the mocks we declared above
-const { useAppSelector } = require("../../store") as {
+const { useAppSelector } = require("../../../store") as {
   useAppSelector: jest.Mock;
 };
 

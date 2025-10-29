@@ -12,11 +12,11 @@ import {
   Autocomplete,
   Typography,
 } from "@mui/material";
-import { useAppSelector } from "../store";
+import { useAppSelector } from "../../store";
 import { Individual } from "@core/domain";
 import { fullName } from "@core/domain";
 import IndividualFormFields from "./IndividualFormFields";
-import { useAddChildFlow } from "../hooks/useAddChildFlow";
+import { useAddChildFlow } from "./useAddChildFlow";
 
 type Props = {
   open: boolean;

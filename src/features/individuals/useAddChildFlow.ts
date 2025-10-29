@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { useAppSelector } from "../store";
+import { useAppSelector } from "../../store";
 import { Individual, IndividualSchema } from "@core/domain";
 import { canAddParentChild } from "@core/domain";
 import { useAddChild } from "./useAddChild";

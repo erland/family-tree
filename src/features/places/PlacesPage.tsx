@@ -11,8 +11,8 @@ import {
 } from "@mui/material";
 import { useAppSelector } from "../../store";
 import { Individual } from "@core/domain";
-import IndividualDetails from "../../components/IndividualDetails";
-import IndividualFormDialog from "../../components/IndividualFormDialog";
+import IndividualDetails from "../individuals/IndividualDetails";
+import IndividualFormDialog from "../individuals/IndividualFormDialog";
 
 import { usePlacesViewModel } from "./usePlacesViewModel";
 import { PlaceEventsList } from "./PlaceEventsList";
