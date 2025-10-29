@@ -1,8 +1,8 @@
 // src/features/individuals/index.ts
 
 // Page
-export { default as IndividualsPage } from "./IndividualsPage.tsx";
-export { default } from "./IndividualsPage.tsx";
+export { default as IndividualsPage } from "./IndividualsPage";
+export { default } from "./IndividualsPage";
 
 // Person UI / dialogs
 export { default as IndividualDetails } from "./IndividualDetails";
