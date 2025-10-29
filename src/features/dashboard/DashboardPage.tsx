@@ -35,69 +35,70 @@ export default function DashboardPage() {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-
       {/* Summary cards */}
-      <Grid container spacing={2}>
-        <Grid item xs={12} sm={4}>
-          <Paper
-            elevation={2}
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-            }}
-          >
-            <PeopleIcon color="primary" sx={{ fontSize: 36 }} />
-            <Box>
-              <Typography variant="h6">Individer</Typography>
-              <Typography variant="h5" fontWeight={600}>
-                {individualCount}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
+      <Box sx={{ mt: 2 }}>
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={4}>
+            <Paper
+              elevation={2}
+              sx={{
+                p: 2,
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+              }}
+            >
+              <PeopleIcon color="primary" sx={{ fontSize: 36 }} />
+              <Box>
+                <Typography variant="h6">Individer</Typography>
+                <Typography variant="h5" fontWeight={600}>
+                  {individualCount}
+                </Typography>
+              </Box>
+            </Paper>
+          </Grid>
 
-        <Grid item xs={12} sm={4}>
-          <Paper
-            elevation={2}
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-            }}
-          >
-            <FavoriteIcon color="error" sx={{ fontSize: 36 }} />
-            <Box>
-              <Typography variant="h6">Äktenskap</Typography>
-              <Typography variant="h5" fontWeight={600}>
-                {marriageCount}
-              </Typography>
-            </Box>
-          </Paper>
-        </Grid>
+          <Grid item xs={12} sm={4}>
+            <Paper
+              elevation={2}
+              sx={{
+                p: 2,
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+              }}
+            >
+              <FavoriteIcon color="error" sx={{ fontSize: 36 }} />
+              <Box>
+                <Typography variant="h6">Äktenskap</Typography>
+                <Typography variant="h5" fontWeight={600}>
+                  {marriageCount}
+                </Typography>
+              </Box>
+            </Paper>
+          </Grid>
 
-        <Grid item xs={12} sm={4}>
-          <Paper
-            elevation={2}
-            sx={{
-              p: 2,
-              display: "flex",
-              alignItems: "center",
-              gap: 2,
-            }}
-          >
-            <FamilyRestroomIcon color="success" sx={{ fontSize: 36 }} />
-            <Box>
-              <Typography variant="h6">Familjer</Typography>
-              <Typography variant="h5" fontWeight={600}>
-                {familyCount}
-              </Typography>
-            </Box>
-          </Paper>
+          <Grid item xs={12} sm={4}>
+            <Paper
+              elevation={2}
+              sx={{
+                p: 2,
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+              }}
+            >
+              <FamilyRestroomIcon color="success" sx={{ fontSize: 36 }} />
+              <Box>
+                <Typography variant="h6">Familjer</Typography>
+                <Typography variant="h5" fontWeight={600}>
+                  {familyCount}
+                </Typography>
+              </Box>
+            </Paper>
+          </Grid>
         </Grid>
-      </Grid>
+      </Box>
 
       {/* Import/Export actions */}
       <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mt: 2 }}>
