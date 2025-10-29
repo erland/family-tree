@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
   const isGitHubPages = process.env.GITHUB_PAGES === "true";
 
   return {
-    base: isGitHubPages ? "/family-tree/" : "./",
+    base: isGitHubPages ? "/pwa-family-tree/" : "./",
 
     plugins: [
       react(),
