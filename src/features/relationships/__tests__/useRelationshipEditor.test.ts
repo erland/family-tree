@@ -8,7 +8,7 @@ import type { Relationship } from "@core/domain";
 jest.mock("uuid", () => ({ v4: jest.fn(() => "uuid-1") }));
 
 // plain action creators so we can assert dispatch payloads
-jest.mock("../../features/relationshipsSlice", () => ({
+jest.mock("../../../features/relationshipsSlice", () => ({
   addRelationship: (payload: any) => ({
     type: "relationships/addRelationship",
     payload,
@@ -24,7 +24,7 @@ const mockDispatch = jest.fn();
 let selectorState: any = { relationships: { items: [] } };
 
 // mock the store hooks
-jest.mock("../../store", () => ({
+jest.mock("../../../store", () => ({
   useAppDispatch: () => mockDispatch,
   useAppSelector: (sel: any) => sel(selectorState),
 }));

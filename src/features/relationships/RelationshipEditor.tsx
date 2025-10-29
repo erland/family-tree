@@ -9,11 +9,11 @@ import {
   ToggleButton,
   Typography,
 } from "@mui/material";
-import { useAppSelector } from "../store";
+import { useAppSelector } from "../../store";
 import { Relationship } from "@core/domain";
 import RelationshipEditorSpouseForm from "./RelationshipEditorSpouseForm";
 import RelationshipEditorParentChildForm from "./RelationshipEditorParentChildForm";
-import { useRelationshipEditor } from "../hooks/useRelationshipEditor";
+import { useRelationshipEditor } from "./useRelationshipEditor";
 
 type Props = {
   open: boolean;

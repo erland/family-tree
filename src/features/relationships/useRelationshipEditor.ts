@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { useAppDispatch, useAppSelector } from "../store";
-import { addRelationship, updateRelationship } from "../features/relationshipsSlice";
+import { useAppDispatch, useAppSelector } from "../../store";
+import { addRelationship, updateRelationship } from "../relationshipsSlice";
 import { Relationship } from "@core/domain";
 import { wouldCreateCycle } from "@core/domain";
 

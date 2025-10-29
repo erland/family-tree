@@ -26,7 +26,7 @@ import { formatLocation } from "@core/domain"; // ✅ NEW import
 
 import AddChildDialog from "./AddChildDialog";
 import AddParentDialog from "./AddParentDialog";
-import RelationshipEditor from "./RelationshipEditor";
+import RelationshipEditor from "../features/relationships";
 
 type Props = {
   individualId: string;
