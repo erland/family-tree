@@ -5,13 +5,13 @@ import { store } from "./store";
 import { createHashRouter, RouterProvider } from "react-router-dom";
 
 import AppLayout from "./AppLayout";
-import Dashboard from "./pages/Dashboard";
-import Tree from "./pages/Tree";
-import Timeline from "./pages/Timeline";
-import IndividualsPage from "./pages/Individuals";
-import RelationshipsPage from "./pages/Relationships";
-import PlacesPage from "./pages/PlacesPage";
-import AgesPage from "./pages/AgesPage";
+import Dashboard from "./features/dashboard";
+import PedigreePage from "./features/pedigree";
+import TimelinePage from "./features/timeline";
+import IndividualsPage from "./features/individuals";
+import RelationshipsPage from "./features/relationships";
+import PlacesPage from "./features/places";
+import AgesPage from "./features/ages";
 
 import "./i18n";
 
@@ -40,8 +40,8 @@ const router = createHashRouter([
     element: <AppLayout />,
     children: [
       { index: true, element: <Dashboard /> },
-      { path: "tree", element: <Tree /> },
-      { path: "timeline", element: <Timeline /> },
+      { path: "tree", element: <PedigreePage /> },
+      { path: "timeline", element: <TimelinePage /> },
       { path: "places", element: <PlacesPage /> },
       { path: "ages", element: <AgesPage /> },
       { path: "individuals", element: <IndividualsPage /> },
