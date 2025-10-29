@@ -1,5 +1,5 @@
 // 1. Mock store selector before importing the hook
-jest.mock("../../store", () => ({
+jest.mock("../../../store", () => ({
   useAppSelector: jest.fn(),
 }));
 
@@ -14,7 +14,7 @@ import { useTimelineViewModel } from "../useTimelineViewModel";
 import { buildTimelineViewModel } from "@core/viewModelBuilders/timeline";
 const mockBuildTimelineViewModel = buildTimelineViewModel as jest.Mock;
 
-const { useAppSelector } = require("../../store") as {
+const { useAppSelector } = require("../../../store") as {
   useAppSelector: jest.Mock;
 };
 
