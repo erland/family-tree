@@ -1,6 +1,6 @@
 // src/hooks/usePlacesViewModel.ts
 import { useCallback, useMemo } from "react";
-import { useAppSelector } from "../store";
+import { useAppSelector } from "../../store";
 import type { Individual, Relationship } from "@core/domain";
 
 import {

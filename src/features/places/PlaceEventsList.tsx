@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Box, Typography, Link, Divider } from "@mui/material";
-import { EventsTable, type EventRow } from "./EventsTable";
-import type { PlaceVM } from "../../hooks/usePlacesViewModel";
+import { EventsTable, type EventRow } from "../../components/presentational/EventsTable";
+import type { PlaceVM } from "./usePlacesViewModel";
 
 /**
  * A dumb renderer for places + their events.

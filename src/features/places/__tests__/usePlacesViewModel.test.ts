@@ -1,5 +1,5 @@
 // 1. Mock the Redux selector hook before importing the hook under test
-jest.mock("../../store", () => ({
+jest.mock("../../../store", () => ({
   useAppSelector: jest.fn(),
 }));
 
@@ -28,7 +28,7 @@ const mockBuildPlacesList = buildPlacesList as jest.Mock;
 const mockCountTotalEvents = countTotalEvents as jest.Mock;
 const mockExpandPlacesById = expandPlacesById as jest.Mock;
 
-const { useAppSelector } = require("../../store") as {
+const { useAppSelector } = require("../../../store") as {
   useAppSelector: jest.Mock;
 };
 
