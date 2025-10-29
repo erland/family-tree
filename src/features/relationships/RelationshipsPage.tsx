@@ -95,10 +95,6 @@ export default function RelationshipsPage() {
 
   return (
     <Box p={2} sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <Typography variant="h4" gutterBottom>
-        Relationer
-      </Typography>
-
       <Box sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center" }}>
         <SearchBar
           onResults={setFilteredIds}
