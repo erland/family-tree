@@ -35,7 +35,6 @@ export default function DashboardPage() {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-      <Typography variant="h6">{t("dashboard")}</Typography>
 
       {/* Summary cards */}
       <Grid container spacing={2}>
