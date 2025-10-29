@@ -1,16 +1,16 @@
 // 1. Mock the Redux hooks before importing the hook
-jest.mock("../../store", () => ({
+jest.mock("../../../store", () => ({
   useAppSelector: jest.fn(),
   useAppDispatch: jest.fn(),
 }));
 
 // 2. Mock the slices' action creators (thunks + plain actions)
-jest.mock("../../features/individualsSlice", () => ({
+jest.mock("../../../features/individualsSlice", () => ({
   fetchIndividuals: jest.fn(() => ({ type: "individuals/fetch" })),
   clearIndividuals: jest.fn(() => ({ type: "individuals/clear" })),
 }));
 
-jest.mock("../../features/relationshipsSlice", () => ({
+jest.mock("../../../features/relationshipsSlice", () => ({
   fetchRelationships: jest.fn(() => ({ type: "relationships/fetch" })),
   clearRelationships: jest.fn(() => ({ type: "relationships/clear" })),
 }));
@@ -26,7 +26,7 @@ import { buildDashboardStats } from "@core/viewModelBuilders/dashboard";
 
 const mockBuildDashboardStats = buildDashboardStats as jest.Mock;
 
-const { useAppSelector, useAppDispatch } = require("../../store") as {
+const { useAppSelector, useAppDispatch } = require("../../../store") as {
   useAppSelector: jest.Mock;
   useAppDispatch: jest.Mock;
 };

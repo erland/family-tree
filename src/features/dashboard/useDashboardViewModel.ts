@@ -1,14 +1,14 @@
 // src/hooks/useDashboardViewModel.ts
 import { useCallback, useMemo } from "react";
-import { useAppDispatch, useAppSelector } from "../store";
+import { useAppDispatch, useAppSelector } from "../../store";
 import {
   fetchIndividuals,
   clearIndividuals,
-} from "../features/individualsSlice";
+} from "../../features/individualsSlice";
 import {
   fetchRelationships,
   clearRelationships,
-} from "../features/relationshipsSlice";
+} from "../../features/relationshipsSlice";
 import type { Individual, Relationship } from "@core/domain";
 import { buildDashboardStats } from "@core/viewModelBuilders/dashboard";
 
