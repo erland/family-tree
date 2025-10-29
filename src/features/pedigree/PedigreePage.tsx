@@ -4,17 +4,17 @@ import PedigreeTree from "./PedigreeTree";
 
 export default function PedigreePage() {
   return (
-    <Box>
+    <Box p={2} sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <Box
         display="flex"
+        gap={2}
         alignItems="center"
         justifyContent="space-between"
         mb={2}
       >
-        <Typography variant="h5">Släktträd</Typography>
-      </Box>
 
       <PedigreeTree />
+      </Box>
     </Box>
   );
 }

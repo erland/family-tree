@@ -8,7 +8,16 @@ import {
   Select,
   MenuItem,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
+import CloseIcon from "@mui/icons-material/Close";
+import EditIcon from "@mui/icons-material/Edit";
+
 import { ReactFlowProvider } from "reactflow";
 
 import SearchBar from "../../components/SearchBar";
@@ -22,27 +31,63 @@ import { usePedigreeTreeViewModel } from "./usePedigreeTreeViewModel";
 export default function PedigreeTree() {
   const vm = usePedigreeTreeViewModel();
 
+  const theme = useTheme();
+  const isSmall = useMediaQuery(theme.breakpoints.down("sm"));
+
   return (
-    <Box sx={{ width: "100%", height: "calc(100vh - 120px)", display: "flex" }}>
-      {/* LEFT: toolbars + tree */}
-      <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <Box
+      sx={{
+        width: "100%",
+        // Desktop: lock to viewport height (minus header)
+        // Mobile: allow natural height so nothing gets crushed
+        height: {
+          xs: "auto",
+          md: "calc(100vh - 120px)",
+        },
+        display: "flex",
+        flexDirection: {
+          xs: "column",
+          md: "row",
+        },
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* LEFT: toolbar(s) + canvas */}
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0, // important so flex children can shrink without forcing overflow
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
         {/* Toolbar row 1 */}
         <Box
           sx={{
             p: 1,
             background: "#f5f5f5",
             display: "flex",
-            gap: 2,
+            flexWrap: "wrap",
+            rowGap: 1,
+            columnGap: 1.5,
             alignItems: "center",
+            position: "sticky",
+            top: 0,
+            zIndex: 5,
+            borderBottom: "1px solid",
+            borderColor: "divider",
           }}
         >
           {/* Search selects root individual */}
-          <SearchBar
-            clearOnSelect
-            onSelect={(id) => {
-              vm.handlePickRoot(id);
-            }}
-          />
+          <Box sx={{ flexGrow: 1, minWidth: 200 }}>
+            <SearchBar
+              clearOnSelect
+              onSelect={(id) => {
+                vm.handlePickRoot(id);
+              }}
+            />
+          </Box>
 
           {/* descendants / ancestors toggle */}
           <ToggleButtonGroup
@@ -68,17 +113,19 @@ export default function PedigreeTree() {
             </ToggleButton>
           </ToggleButtonGroup>
 
-          {/* If circular layout is active, expose generations here
-             (the PedigreeCanvas has its own dropdown in Controls for orthogonal) */}
-          {vm.layoutKind === "circular" && (
+          {/* Generations selector for circular */}
+          {vm.layoutKind === "circular" && vm.root && (
             <Select
               size="small"
               value={vm.maxGenerations}
               onChange={(e) => vm.setMaxGenerations(Number(e.target.value))}
               sx={{
-                ml: 1,
                 background: "white",
-                ".MuiSelect-select": { py: 0.5, px: 1, fontSize: "0.75rem" },
+                ".MuiSelect-select": {
+                  py: 0.5,
+                  px: 1,
+                  fontSize: "0.75rem",
+                },
               }}
             >
               {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
@@ -97,11 +144,26 @@ export default function PedigreeTree() {
               p: 1,
               background: "#f5f5f5",
               display: "flex",
-              gap: 2,
+              flexWrap: "wrap",
+              rowGap: 1,
+              columnGap: 1.5,
               alignItems: "center",
+              position: "sticky",
+              top: 48, // sits right under row 1 on mobile scroll
+              zIndex: 4,
+              borderBottom: "1px solid",
+              borderColor: "divider",
             }}
           >
-            <Typography variant="body2">
+            <Typography
+              variant="body2"
+              sx={{
+                maxWidth: "100%",
+                whiteSpace: "nowrap",
+                textOverflow: "ellipsis",
+                overflow: "hidden",
+              }}
+            >
               Rot: {vm.root.firstName} {vm.root.lastName}
             </Typography>
 
@@ -132,8 +194,15 @@ export default function PedigreeTree() {
           </Box>
         )}
 
-        {/* Tree area */}
-        <Box sx={{ flexGrow: 1 }}>
+        {/* Canvas / Tree area */}
+        <Box
+          sx={{
+            flexGrow: 1,
+            minHeight: 0,
+            // scroll on mobile if the tree is tall/wide
+            overflow: "auto",
+          }}
+        >
           {vm.layoutKind === "circular" && vm.root ? (
             <CircularPedigree
               rootId={vm.root.id}
@@ -153,15 +222,16 @@ export default function PedigreeTree() {
         </Box>
       </Box>
 
-      {/* RIGHT SIDE: details / editing */}
-      {vm.selected && (
+      {/* RIGHT SIDE details (desktop / tablet only) */}
+      {!isSmall && vm.selected && (
         <Box
           sx={{
-            width: 300,
+            width: 320,
             borderLeft: "1px solid #ddd",
             p: 2,
             bgcolor: "#fafafa",
             overflowY: "auto",
+            flexShrink: 0,
           }}
         >
           <IndividualDetails
@@ -172,6 +242,40 @@ export default function PedigreeTree() {
         </Box>
       )}
 
+      {/* Mobile full-screen details dialog */}
+      {isSmall && (
+        <Dialog
+          fullScreen
+          open={!!vm.selected}
+          onClose={() => vm.setSelected(null)}
+          PaperProps={{
+            sx: {
+              bgcolor: "background.default",
+              display: "flex",
+              flexDirection: "column",
+            },
+          }}
+        >
+
+          <DialogContent
+            sx={{
+              flex: 1,
+              overflowY: "auto",
+              p: 2,
+            }}
+          >
+            {vm.selected && (
+              <IndividualDetails
+                individualId={vm.selected.id}
+                onClose={() => vm.setSelected(null)}
+                onEdit={(ind) => vm.setEditing(ind)}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Edit/create person dialog (shared for both desktop & mobile) */}
       <IndividualFormDialog
         open={!!vm.editing}
         individual={vm.editing}
