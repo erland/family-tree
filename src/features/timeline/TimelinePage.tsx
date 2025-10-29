@@ -93,12 +93,10 @@ export default function TimelinePage() {
   );
 
   return (
-    <Box>
-      <Typography variant="h5" gutterBottom>
-        Tidslinje
-      </Typography>
-
-      <SearchBar clearOnSelect onSelect={(id) => setSelectedId(id)} />
+    <Box p={2} sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <Box sx={{ display: "flex", gap: 2, mb: 2, alignItems: "center" }}>
+        <SearchBar clearOnSelect onSelect={(id) => setSelectedId(id)} />
+      </Box>
       <Divider sx={{ my: 2 }} />
 
       {selected ? (
