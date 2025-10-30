@@ -72,10 +72,6 @@ export default function SchemaToolbar({
         return (
           <Box key={group} sx={{ display: "flex", alignItems: "center", gap: 1.25, flexWrap: "wrap" }}>
             {idx > 0 && <Divider orientation="vertical" flexItem />}
-            <Typography variant="body2" sx={{ opacity: 0.65 }}>
-              {group}
-            </Typography>
-
             {items.map((d) => {
               const v = values[d.key];
 

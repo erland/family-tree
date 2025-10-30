@@ -6,10 +6,9 @@ import { registerTreeType } from "../registry";
 const options: NonNullable<TreeType["options"]> = [
   {
     key: "maxGenerations",
-    label: "Generations",
+    label: "Antal generationer",
     type: "number",
     default: 6,
-    group: "layout",
     min: 1,
     max: 11,
     step: 1,

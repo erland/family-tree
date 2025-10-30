@@ -59,7 +59,7 @@ export function PedigreeCanvas({
       fitView
       fitViewOptions={fitViewOptions}
       onInit={(inst) => requestAnimationFrame(() => inst.fitView(fitViewOptions))}
-      nodesDraggable
+      nodesDraggable={false}
       nodesConnectable={false}
       elementsSelectable
       zoomOnScroll
