@@ -17,7 +17,7 @@ const options: NonNullable<TreeType["options"]> = [
     key: "mode",
     label: "Visa",
     type: "radio",
-    default: "descendants",
+    default: "ancestors",
     choices: [
       { value: "descendants", label: "Efterkommande" },
       { value: "ancestors", label: "Förfäder" },
