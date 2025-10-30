@@ -22,7 +22,7 @@ import { usePedigreeTreeViewModel } from "./usePedigreeTreeViewModel";
 
 // registry-backed type toggle
 import TreeTypeToggleFromRegistry from "./TreeTypeToggleFromRegistry";
-// schema-driven toolbar (now primary)
+// schema-driven toolbar (primary)
 import SchemaToolbar from "./SchemaToolbar";
 import { LayoutOptionsProvider } from "./LayoutOptionsContext";
 
@@ -35,43 +35,69 @@ export default function PedigreeTree() {
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down("sm"));
 
-  // schema option values per tree type (local)
+  // Per-type bag for any type-specific options you may add later.
+  // Shared options (like maxGenerations) come from the VM so they persist across types.
   const [schemaValuesByType, setSchemaValuesByType] = React.useState<
     Record<string, Record<string, any>>
   >({});
 
-  const currentSchemaValues = schemaValuesByType[vm.layoutKind] ?? {};
+  const currentTypeValues = schemaValuesByType[vm.layoutKind] ?? {};
 
+  // Build initial values for SchemaToolbar so it shows the VM-shared values after a type switch.
+  const initialValuesForToolbar = React.useMemo(() => {
+    const merged: Record<string, any> = { ...currentTypeValues };
+    // Shared across types: show the current VM value
+    merged.maxGenerations = clamp(vm.maxGenerations, 1, 11);
+    // For Orthogonal, mode is effectively shared UX-wise as well
+    if (vm.layoutKind === "orthogonal") merged.mode = vm.mode;
+    return merged;
+  }, [currentTypeValues, vm.maxGenerations, vm.mode, vm.layoutKind]);
+
+  // When toolbar changes, immediately sync shared keys into the VM so they persist across types.
   const handleSchemaValuesChange = React.useCallback(
     (vals: Record<string, any>) => {
+      // Persist per-type values for future type-specific options
       setSchemaValuesByType((prev) => ({
         ...prev,
         [vm.layoutKind]: vals,
       }));
+
+      // Shared: maxGenerations (1..11)
+      if (typeof vals.maxGenerations === "number") {
+        const g = clamp(vals.maxGenerations, 1, 11);
+        if (g !== vm.maxGenerations) vm.setMaxGenerations(g);
+      }
+
+      // Orthogonal-specific but we treat it as shared UX: mode
+      if (
+        vm.layoutKind === "orthogonal" &&
+        (vals.mode === "descendants" || vals.mode === "ancestors") &&
+        vals.mode !== vm.mode
+      ) {
+        vm.setMode(vals.mode as "descendants" | "ancestors");
+      }
+
       // eslint-disable-next-line no-console
-      console.debug("[schema]", vm.layoutKind, vals);
+      console.debug("[schema->vm]", vm.layoutKind, vals);
     },
-    [vm.layoutKind]
+    [vm.layoutKind, vm.maxGenerations, vm.mode, vm.setMaxGenerations, vm.setMode]
   );
 
-  // Circular: schema override for generations; clamp to 1..11
-  const rawCircularGenerations =
-    vm.layoutKind === "circular" && typeof currentSchemaValues.maxGenerations === "number"
-      ? currentSchemaValues.maxGenerations
-      : vm.maxGenerations;
-  const effectiveCircularGenerations = clamp(rawCircularGenerations, 1, 11);
+  // Effective values for rendering are always taken from the VM (shared across types)
+  const effectiveCircularGenerations = clamp(vm.maxGenerations, 1, 11);
+  const effectiveOrthMode = vm.mode;
+  const effectiveOrthGenerations = clamp(vm.maxGenerations, 1, 11);
 
-  // Orthogonal: schema override for mode + generations
-  const effectiveOrthMode =
-    vm.layoutKind === "orthogonal" && typeof currentSchemaValues.mode === "string"
-      ? (currentSchemaValues.mode as "descendants" | "ancestors")
-      : vm.mode;
+  // Keys to force remount when critical options change (avoids stale memo inside subtrees)
+  const circularKey = `c-${vm.root?.id ?? "none"}-${effectiveCircularGenerations}`;
+  const orthoKey = `o-${vm.rootId ?? "none"}-${effectiveOrthMode}-${effectiveOrthGenerations}`;
 
-  const rawOrthGenerations =
-    vm.layoutKind === "orthogonal" && typeof currentSchemaValues.maxGenerations === "number"
-      ? currentSchemaValues.maxGenerations
-      : vm.maxGenerations;
-  const effectiveOrthGenerations = clamp(rawOrthGenerations, 1, 11);
+  // Provide resolved options to context (builders can read them if needed)
+  const resolvedOptionsForContext = React.useMemo(() => {
+    const o = { ...currentTypeValues, maxGenerations: effectiveCircularGenerations };
+    if (vm.layoutKind === "orthogonal") o.mode = effectiveOrthMode;
+    return o;
+  }, [currentTypeValues, effectiveCircularGenerations, effectiveOrthMode, vm.layoutKind]);
 
   return (
     <Box
@@ -120,7 +146,7 @@ export default function PedigreeTree() {
           />
         </Box>
 
-        {/* Toolbar row 2: per-tree options (schema-driven) */}
+        {/* Toolbar row 2: per-tree options (schema-driven; shows VM-shared values) */}
         <Box
           sx={{
             p: 1,
@@ -139,7 +165,7 @@ export default function PedigreeTree() {
             treeTypeId={vm.layoutKind}
             size="small"
             onValuesChange={handleSchemaValuesChange}
-            initialValues={currentSchemaValues}
+            initialValues={initialValuesForToolbar}
           />
         </Box>
 
@@ -189,16 +215,18 @@ export default function PedigreeTree() {
         )}
 
         {/* Canvas / Tree area */}
-        <LayoutOptionsProvider treeTypeId={vm.layoutKind} values={currentSchemaValues}>
+        <LayoutOptionsProvider treeTypeId={vm.layoutKind} values={resolvedOptionsForContext}>
           <Box sx={{ flexGrow: 1, minHeight: 0, height: 1, overflow: "hidden" }}>
             {vm.layoutKind === "circular" && vm.root ? (
               <CircularPedigree
+                key={circularKey} // remount on root/generation change
                 rootId={vm.root.id}
                 generations={effectiveCircularGenerations}
               />
             ) : (
               <ReactFlowProvider>
                 <PedigreeCanvas
+                  key={orthoKey} // remount on root/mode/generation change
                   rootId={vm.rootId}
                   mode={effectiveOrthMode}
                   maxGenerations={effectiveOrthGenerations}

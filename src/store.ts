@@ -3,11 +3,13 @@ import { useDispatch, useSelector, TypedUseSelectorHook } from "react-redux";
 
 import individualsReducer from "./features/individualsSlice";
 import relationshipsReducer from "./features/relationshipsSlice";
+import pedigreeOptionsReducer from "./features/pedigree/state/pedigreeOptionsSlice";
 
 export const store = configureStore({
   reducer: {
     individuals: individualsReducer,
     relationships: relationshipsReducer,
+    pedigreeOptions: pedigreeOptionsReducer,
   },
 });
 
