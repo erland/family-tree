@@ -1,5 +1,5 @@
 // src/pages/PlacesPage.tsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Box,
   List,
@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import EditIcon from "@mui/icons-material/Edit";
+import SearchIcon from "@mui/icons-material/Search";
 
 import { useAppSelector } from "../../store";
 import { Individual } from "@core/domain";
@@ -60,6 +61,21 @@ export default function PlacesPage() {
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down("sm"));
 
+  // 📱 Mobile: collapsible results list + scroll to events
+  const [resultsOpen, setResultsOpen] = useState(true);
+  const eventsRef = useRef<HTMLDivElement>(null);
+
+  const handleSelectPlace = (placeId: string) => {
+    setSelectedPlaceId(placeId);
+    if (isSmall) {
+      setResultsOpen(false); // collapse results on mobile
+      // wait for collapse transition, then scroll events into view
+      window.setTimeout(() => {
+        eventsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 220);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -91,15 +107,18 @@ export default function PlacesPage() {
           borderBottom: { xs: "1px solid #ddd", md: "none" },
           position: "relative",
 
-          // 👇 On desktop/tablet, this column behaves like a scrollable sidebar.
-          // On mobile we let it flow naturally (no maxHeight clamp).
+          // 🪄 Mobile collapse animation for results
           maxHeight: {
-            xs: "none",
+            xs: resultsOpen ? "52vh" : 0, // tune 52vh as preferred
             md: "calc(100vh - 120px)",
           },
           overflowY: {
-            xs: "visible",
+            xs: "hidden",
             md: "auto",
+          },
+          transition: {
+            xs: "max-height 220ms ease",
+            md: "none",
           },
         }}
       >
@@ -119,6 +138,9 @@ export default function PlacesPage() {
             placeholder="Sök plats..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onFocus={() => {
+              if (isSmall) setResultsOpen(true); // focus reopens results on mobile
+            }}
             size="small"
             fullWidth
           />
@@ -147,19 +169,13 @@ export default function PlacesPage() {
               <ListItemButton
                 key={p.id}
                 selected={selectedPlaceId === p.id}
-                onClick={() => setSelectedPlaceId(p.id)}
+                onClick={() => handleSelectPlace(p.id)}
               >
                 <ListItemText
                   primary={p.title}
-                  secondary={
-                    p.subtitle ?? `${p.events.length} händelser`
-                  }
-                  primaryTypographyProps={{
-                    noWrap: true,
-                  }}
-                  secondaryTypographyProps={{
-                    noWrap: true,
-                  }}
+                  secondary={p.subtitle ?? `${p.events.length} händelser`}
+                  primaryTypographyProps={{ noWrap: true }}
+                  secondaryTypographyProps={{ noWrap: true }}
                 />
               </ListItemButton>
             ))}
@@ -178,6 +194,7 @@ export default function PlacesPage() {
         }}
       >
         <Box
+          ref={eventsRef}
           sx={{
             height: { xs: "auto", md: "100%" },
             overflowY: "auto",
@@ -209,17 +226,10 @@ export default function PlacesPage() {
             </>
           ) : (
             <>
-              <Typography
-                variant="body1"
-                color="text.secondary"
-                sx={{ mb: 1 }}
-              >
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
                 Välj en plats för att visa personer.
               </Typography>
-              <Typography
-                variant="body2"
-                sx={{ color: "text.secondary" }}
-              >
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
                 {places.length} plats
                 {places.length === 1 ? "" : "er"} • {totalEvents} händelse
                 {totalEvents === 1 ? "" : "r"}
@@ -267,7 +277,6 @@ export default function PlacesPage() {
             },
           }}
         >
-
           <DialogContent
             sx={{
               flex: 1,
@@ -286,12 +295,28 @@ export default function PlacesPage() {
         </Dialog>
       )}
 
+      {/* 📱 Mobile: floating reopen button when list is collapsed */}
+      {isSmall && !resultsOpen && (
+        <IconButton
+          aria-label="Visa platser"
+          onClick={() => setResultsOpen(true)}
+          sx={{
+            position: "fixed",
+            right: 12,
+            bottom: 12,
+            bgcolor: "background.paper",
+            border: "1px solid",
+            borderColor: "divider",
+            boxShadow: 2,
+            "&:hover": { bgcolor: "background.default" },
+          }}
+        >
+          <SearchIcon />
+        </IconButton>
+      )}
+
       {/* Reusable Form Dialog for editing person */}
-      <IndividualFormDialog
-        open={formOpen}
-        onClose={handleClose}
-        individual={editing}
-      />
+      <IndividualFormDialog open={formOpen} onClose={handleClose} individual={editing} />
     </Box>
   );
 }
