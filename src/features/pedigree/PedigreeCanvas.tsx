@@ -7,7 +7,6 @@ import ReactFlow, {
   SelectionMode,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { Select, MenuItem } from "@mui/material";
 
 import FamilyNode from "./FamilyNode";
 import MarriageNode from "./MarriageNode";
@@ -42,11 +41,14 @@ export function PedigreeCanvas({
     fitViewOptions,
   } = usePedigreeGraph({ rootId, mode, maxGenerations });
 
+  // Force smooth edges globally
+  const smoothEdges = edges.map((e) => ({ ...e, type: "smoothstep" as const }));
+
   return (
     <ReactFlow
       style={{ width: "100%", height: "100%" }}
       nodes={nodes}
-      edges={edges}
+      edges={smoothEdges}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeClick={(_, node) => {
@@ -66,28 +68,11 @@ export function PedigreeCanvas({
       selectionOnDrag
       selectionMode={SelectionMode.Full}
       nodeTypes={nodeTypes}
+      defaultEdgeOptions={{ type: "smoothstep" }}
     >
       <Background />
       <MiniMap pannable zoomable />
-      <Controls showInteractive>
-        {/* Same dropdown you currently render inside Controls */}
-        <Select
-          size="small"
-          value={maxGenerations}
-          onChange={(e) => setMaxGenerations(Number(e.target.value))}
-          sx={{
-            ml: 1,
-            background: "white",
-            ".MuiSelect-select": { py: 0.5, px: 1, fontSize: "0.75rem" },
-          }}
-        >
-          {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((g) => (
-            <MenuItem key={g} value={g}>
-              {g}
-            </MenuItem>
-          ))}
-        </Select>
-      </Controls>
+      <Controls showInteractive />
     </ReactFlow>
   );
 }
