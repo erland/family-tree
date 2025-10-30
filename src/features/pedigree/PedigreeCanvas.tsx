@@ -44,6 +44,7 @@ export function PedigreeCanvas({
 
   return (
     <ReactFlow
+      style={{ width: "100%", height: "100%" }}
       nodes={nodes}
       edges={edges}
       onNodesChange={onNodesChange}
@@ -55,6 +56,7 @@ export function PedigreeCanvas({
       }}
       fitView
       fitViewOptions={fitViewOptions}
+      onInit={(inst) => requestAnimationFrame(() => inst.fitView(fitViewOptions))}
       nodesDraggable
       nodesConnectable={false}
       elementsSelectable

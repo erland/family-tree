@@ -41,8 +41,8 @@ export default function PedigreeTree() {
         // Desktop: lock to viewport height (minus header)
         // Mobile: allow natural height so nothing gets crushed
         height: {
-          xs: "auto",
-          md: "calc(100vh - 120px)",
+          xs: "100dvh",                 // mobile-safe viewport height
+          md: "calc(100dvh - 120px)",   // keep your desktop offset
         },
         display: "flex",
         flexDirection: {
@@ -51,6 +51,7 @@ export default function PedigreeTree() {
         },
         position: "relative",
         overflow: "hidden",
+        minHeight: 0,                   // allow children to shrink in flex
       }}
     >
       {/* LEFT: toolbar(s) + canvas */}
@@ -199,8 +200,8 @@ export default function PedigreeTree() {
           sx={{
             flexGrow: 1,
             minHeight: 0,
-            // scroll on mobile if the tree is tall/wide
-            overflow: "auto",
+            height: 1,        // 100% of the left column
+            overflow: "hidden" // let React Flow handle pan/zoom instead of scroll
           }}
         >
           {vm.layoutKind === "circular" && vm.root ? (
